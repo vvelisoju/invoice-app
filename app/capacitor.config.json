@@ -1,0 +1,13 @@
+{
+  "appId": "com.invoiceapp.mobile",
+  "appName": "Invoice App",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

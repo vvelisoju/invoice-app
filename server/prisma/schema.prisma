@@ -1,0 +1,420 @@
+// Invoice App - Prisma Schema V1
+// India + GST, Offline-sync ready, Plan enforcement, Template customization
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTH & USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  otpVerifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businesses Business[]
+  otpRequests OtpRequest[]
+
+  @@index([phone])
+}
+
+model OtpRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  phone     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phone, createdAt])
+  @@index([userId])
+}
+
+// ============================================================================
+// BUSINESS & SETTINGS
+// ============================================================================
+
+model Business {
+  id          String   @id @default(uuid())
+  ownerUserId String
+  name        String
+  stateCode   String?  // India state code for GST
+  gstEnabled  Boolean  @default(false)
+  gstin       String?  // GST Identification Number
+  logoUrl     String?
+  phone       String?
+  email       String?
+  address     String?
+  
+  // Bank & Payment details (optional, for invoice templates)
+  bankName       String?
+  accountNumber  String?
+  ifscCode       String?
+  upiId          String?
+  
+  // Signature (optional, for invoice templates)
+  signatureUrl   String?
+  signatureName  String?  // e.g., "Authorized Signatory"
+  
+  // Invoice defaults
+  invoicePrefix      String  @default("INV-")
+  nextInvoiceNumber  Int     @default(1)
+  defaultNotes       String?
+  defaultTerms       String?
+  defaultTaxRate     Decimal? @db.Decimal(5, 2)
+  
+  // Plan & subscription
+  planId         String?
+  subscriptionId String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  owner                User                      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  plan                 Plan?                     @relation(fields: [planId], references: [id])
+  subscription         Subscription?             @relation(fields: [subscriptionId], references: [id])
+  customers            Customer[]
+  products             ProductService[]
+  invoices             Invoice[]
+  templateConfigs      BusinessTemplateConfig[]
+  usageCounters        UsageCounter[]
+
+  @@index([ownerUserId])
+  @@index([planId])
+  @@index([updatedAt])
+}
+
+// ============================================================================
+// CUSTOMERS
+// ============================================================================
+
+model Customer {
+  id         String   @id @default(uuid())
+  businessId String
+  name       String
+  phone      String?
+  email      String?
+  gstin      String?  // Customer GST number
+  stateCode  String?  // For place of supply
+  address    String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([businessId, name])
+  @@index([businessId, phone])
+  @@index([businessId, updatedAt])
+  // Note: No unique constraint on phone since it's optional per PRD
+  // Deduplication handled at application level (normalize name/phone)
+}
+
+// ============================================================================
+// PRODUCTS / SERVICES
+// ============================================================================
+
+model ProductService {
+  id          String   @id @default(uuid())
+  businessId  String
+  name        String
+  defaultRate Decimal? @db.Decimal(10, 2)
+  unit        String?  // e.g., "hour", "item", "kg"
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business       Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceLineItems InvoiceLineItem[]
+
+  @@index([businessId, name])
+  @@index([businessId, updatedAt])
+}
+
+// ============================================================================
+// INVOICES (Core Domain)
+// ============================================================================
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+  VOID
+}
+
+enum TaxMode {
+  NONE
+  IGST
+  CGST_SGST
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  businessId    String
+  customerId    String?
+  invoiceNumber String
+  date          DateTime      @default(now())
+  dueDate       DateTime?
+  status        InvoiceStatus @default(DRAFT)
+  
+  // Amounts (all in business currency, assumed INR for India)
+  subtotal      Decimal @db.Decimal(12, 2)
+  discountTotal Decimal @default(0) @db.Decimal(12, 2)
+  taxTotal      Decimal @default(0) @db.Decimal(12, 2)
+  total         Decimal @db.Decimal(12, 2)
+  
+  // GST specific (invoice-level tax in V1)
+  taxMode              TaxMode? @default(NONE)
+  taxRate              Decimal? @db.Decimal(5, 2)
+  placeOfSupplyStateCode String?
+  
+  // Tax breakup (JSON for flexibility)
+  // Example: { "cgst": 9.0, "sgst": 9.0, "cgstAmount": 450, "sgstAmount": 450 }
+  // or { "igst": 18.0, "igstAmount": 900 }
+  taxBreakup Json?
+  
+  // Notes and terms
+  notes String?
+  terms String?
+  
+  // Template snapshot (immutable after issuance)
+  // Client-side PDF generation: template config is snapshotted for consistent rendering
+  templateBaseId       String?
+  templateConfigSnapshot Json?
+  templateVersion      Int?
+  
+  // Issuance tracking (no server PDF storage - generated on-demand by client)
+  issuedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer   Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lineItems  InvoiceLineItem[]
+
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId, status])
+  @@index([businessId, date])
+  @@index([businessId, customerId])
+  @@index([businessId, updatedAt])
+  @@index([status, issuedAt])
+}
+
+model InvoiceLineItem {
+  id        String  @id @default(uuid())
+  invoiceId String
+  name      String
+  quantity  Decimal @default(1) @db.Decimal(10, 3)
+  rate      Decimal @db.Decimal(10, 2)
+  lineTotal Decimal @db.Decimal(12, 2)
+  
+  // Optional link to product/service (for suggestions)
+  productServiceId String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  invoice        Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productService ProductService? @relation(fields: [productServiceId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+}
+
+// ============================================================================
+// TEMPLATES (Two-layer: Base + Business Config)
+// ============================================================================
+
+model BaseTemplate {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  
+  // Schema definition for what can be customized
+  // Example: { "supports": ["colors", "logo", "layout", "visibility"] }
+  configSchema Json
+  
+  // Client-side rendering definition
+  // Contains: component structure, default styles, layout rules
+  // Example: { 
+  //   "componentId": "clean-template-v1",
+  //   "layout": { "type": "single-column", "sections": [...] },
+  //   "defaultStyles": { "fonts": {...}, "spacing": {...} },
+  //   "printSettings": { "pageSize": "A4", "margins": {...} }
+  // }
+  renderConfig Json
+  
+  // Preview thumbnail URL (optional, for template selection UI)
+  previewImageUrl String?
+  
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businessConfigs BusinessTemplateConfig[]
+
+  @@index([active])
+}
+
+model BusinessTemplateConfig {
+  id             String @id @default(uuid())
+  businessId     String
+  baseTemplateId String
+  
+  // Business customization config (validated against baseTemplate.configSchema)
+  // Example: { "primaryColor": "#3B82F6", "logo": true, "showGSTIN": true, ... }
+  config  Json
+  version Int    @default(1)
+  
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  baseTemplate BaseTemplate @relation(fields: [baseTemplateId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, baseTemplateId])
+  @@index([businessId, isActive])
+  @@index([businessId, updatedAt])
+}
+
+// ============================================================================
+// PLANS & SUBSCRIPTIONS (Premium readiness)
+// ============================================================================
+
+model Plan {
+  id          String @id @default(uuid())
+  name        String @unique
+  displayName String
+  description String?
+  
+  // Entitlements (JSON for flexibility)
+  // Example: { "monthlyInvoicesLimit": 20, "customersLimit": 100, "productsLimit": 50, "templatesLimit": 1 }
+  entitlements Json
+  
+  // Pricing (optional for V1)
+  priceMonthly Decimal? @db.Decimal(10, 2)
+  priceYearly  Decimal? @db.Decimal(10, 2)
+  
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businesses    Business[]
+  subscriptions Subscription[]
+
+  @@index([active])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+model Subscription {
+  id         String             @id @default(uuid())
+  businessId String?
+  planId     String
+  status     SubscriptionStatus @default(ACTIVE)
+  
+  startDate DateTime @default(now())
+  renewAt   DateTime?
+  cancelledAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  plan       Plan       @relation(fields: [planId], references: [id], onDelete: Restrict)
+  businesses Business[]
+
+  @@index([businessId, status])
+  @@index([status, renewAt])
+}
+
+// ============================================================================
+// USAGE TRACKING (Monthly limits enforcement)
+// ============================================================================
+
+model UsageCounter {
+  id         String @id @default(uuid())
+  businessId String
+  monthKey   String // Format: "YYYY-MM" for easy querying
+  
+  // Counters
+  invoicesIssuedCount Int @default(0)
+  customersCount      Int @default(0)
+  productsCount       Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, monthKey])
+  @@index([businessId, monthKey])
+}
+
+// ============================================================================
+// SYNC & IDEMPOTENCY (Offline support)
+// ============================================================================
+
+model IdempotencyKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  businessId String?
+  response  Json?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// AUDIT LOG (Optional but recommended for compliance)
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  businessId String?
+  userId     String?
+  entityType String   // e.g., "Invoice", "Customer"
+  entityId   String
+  action     String   // e.g., "CREATE", "UPDATE", "DELETE", "ISSUE"
+  changes    Json?    // Before/after snapshot
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+}
