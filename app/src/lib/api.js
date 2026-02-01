@@ -35,7 +35,19 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  requestOTP: (phone) => api.post('/auth/request-otp', { phone }),
+  requestOTP: (phone) => {
+    console.log('API: Requesting OTP for phone:', phone)
+    console.log('API: Base URL:', API_BASE_URL)
+    return api.post('/auth/request-otp', { phone })
+      .then(response => {
+        console.log('API: OTP request successful', response)
+        return response
+      })
+      .catch(error => {
+        console.error('API: OTP request failed', error)
+        throw error
+      })
+  },
   verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
   getCurrentUser: () => api.get('/auth/me'),
   logout: () => api.post('/auth/logout')

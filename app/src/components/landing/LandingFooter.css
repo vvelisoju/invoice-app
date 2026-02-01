@@ -1,0 +1,146 @@
+.landing-footer {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.footer-cta-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.footer-cta-content {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.footer-cta-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0 0 16px;
+  color: #ffffff;
+}
+
+.footer-cta-subtitle {
+  font-size: 1.125rem;
+  margin: 0 0 32px;
+  opacity: 0.95;
+}
+
+.footer-cta-btn {
+  --background: #ffffff;
+  --color: #667eea;
+  --border-radius: 8px;
+  --padding-start: 32px;
+  --padding-end: 32px;
+  font-weight: 600;
+}
+
+.footer-main {
+  padding: 64px 24px;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px;
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-brand {
+  gap: 12px;
+}
+
+.footer-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.footer-tagline {
+  color: #9ca3af;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.footer-heading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links a {
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: #ffffff;
+}
+
+.footer-bottom {
+  border-top: 1px solid #374151;
+  padding: 24px;
+}
+
+.footer-copyright {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+@media (max-width: 968px) {
+  .footer-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  
+  .footer-cta-title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer-cta-section {
+    padding: 48px 16px;
+  }
+  
+  .footer-cta-title {
+    font-size: 1.75rem;
+  }
+  
+  .footer-cta-subtitle {
+    font-size: 1rem;
+  }
+  
+  .footer-main {
+    padding: 48px 16px;
+  }
+  
+  .footer-container {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}

@@ -1,0 +1,85 @@
+.landing-header {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.landing-toolbar {
+  --background: #ffffff;
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+.landing-nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+}
+
+.landing-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  cursor: pointer;
+  user-select: none;
+}
+
+.landing-nav-links {
+  display: flex;
+  gap: 32px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-link {
+  color: #4b5563;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: #1a1a1a;
+}
+
+.landing-nav-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn-secondary {
+  --color: #4b5563;
+}
+
+.nav-btn-primary {
+  --background: #2563eb;
+  --background-hover: #1d4ed8;
+  --color: #ffffff;
+  --border-radius: 8px;
+  --padding-start: 24px;
+  --padding-end: 24px;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .landing-nav-links {
+    display: none;
+  }
+  
+  .landing-nav-actions {
+    display: none;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  .landing-nav-container {
+    padding: 0 16px;
+  }
+}

@@ -175,13 +175,21 @@ export default function VerifyOTPPage() {
             </div>
           )}
 
-          <IonButton
-            fill="clear"
+          <button
             onClick={handleResendOTP}
             disabled={verifyOTPMutation.isPending}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: verifyOTPMutation.isPending ? '#ccc' : '#3880ff',
+              fontSize: '14px',
+              cursor: verifyOTPMutation.isPending ? 'not-allowed' : 'pointer',
+              padding: '8px 16px',
+              textDecoration: 'underline'
+            }}
           >
             Didn't receive code? Resend
-          </IonButton>
+          </button>
         </div>
       </IonContent>
     </IonPage>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useHistory } from 'react-router-dom'
 import {
   IonPage,
@@ -17,6 +17,7 @@ import { authApi } from '../../lib/api'
 
 export default function PhonePage() {
   const [phone, setPhone] = useState('')
+  const inputRef = useRef(null)
   const [present] = useIonToast()
   const history = useHistory()
 
@@ -41,10 +42,12 @@ export default function PhonePage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    console.log('Form submitted with phone:', phone)
     
     // Validate phone
     const phoneRegex = /^[6-9]\d{9}$/
     if (!phoneRegex.test(phone)) {
+      console.log('Phone validation failed')
       present({
         message: 'Please enter a valid 10-digit phone number',
         duration: 3000,
@@ -53,6 +56,7 @@ export default function PhonePage() {
       return
     }
 
+    console.log('Calling API with phone:', phone)
     requestOTPMutation.mutate(phone)
   }
 
@@ -71,7 +75,7 @@ export default function PhonePage() {
           textAlign: 'center'
         }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-            Invoice App 123123
+            Invoice App 
           </h1>
           <IonText color="medium">
             <p style={{ marginBottom: '40px' }}>
@@ -80,37 +84,66 @@ export default function PhonePage() {
           </IonText>
 
           <form onSubmit={handleSubmit}>
-            <IonInput
+            <input
+              ref={inputRef}
               type="tel"
               placeholder="10-digit phone number"
               value={phone}
-              onIonInput={(e) => setPhone(e.detail.value || '')}
-              maxlength={10}
-              inputmode="numeric"
-              style={{
-                '--background': '#f5f5f5',
-                '--padding-start': '16px',
-                '--padding-end': '16px',
-                marginBottom: '24px',
-                fontSize: '18px',
-                height: '56px',
-                borderRadius: '8px'
-              }}
+              onChange={(e) => setPhone(e.target.value)}
+              maxLength={10}
+              inputMode="numeric"
               disabled={requestOTPMutation.isPending}
+              style={{
+                width: '100%',
+                height: '56px',
+                padding: '0 16px',
+                fontSize: '18px',
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3880ff'}
+              onBlur={(e) => e.target.style.borderColor = '#ddd'}
             />
 
-            <IonButton
-              expand="block"
+            <button
               type="submit"
               disabled={requestOTPMutation.isPending || phone.length !== 10}
-              style={{ height: '56px', fontSize: '16px', fontWeight: '600' }}
+              style={{
+                width: '100%',
+                height: '56px',
+                fontSize: '16px',
+                fontWeight: '600',
+                backgroundColor: (requestOTPMutation.isPending || phone.length !== 10) ? '#ccc' : '#3880ff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: (requestOTPMutation.isPending || phone.length !== 10) ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!requestOTPMutation.isPending && phone.length === 10) {
+                  e.target.style.backgroundColor = '#3171e0'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!requestOTPMutation.isPending && phone.length === 10) {
+                  e.target.style.backgroundColor = '#3880ff'
+                }
+              }}
             >
               {requestOTPMutation.isPending ? (
                 <IonSpinner name="crescent" />
               ) : (
-                'Send OTP'
+                'SEND OTP'
               )}
-            </IonButton>
+            </button>
           </form>
 
           <IonText color="medium">

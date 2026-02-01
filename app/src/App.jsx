@@ -13,6 +13,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { homeOutline, documentTextOutline, statsChartOutline, settingsOutline } from 'ionicons/icons'
 import { useAuthStore } from './store/authStore'
 
+import LandingPage from './pages/LandingPage'
+import DemoPage from './pages/DemoPage'
 import PhonePage from './features/auth/PhonePage'
 import VerifyOTPPage from './features/auth/VerifyOTPPage'
 import HomePage from './features/home/HomePage'
@@ -81,13 +83,19 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <IonApp>
         <IonReactRouter>
-          <IonRouterOutlet>
-            <Route exact path="/auth/phone" component={PhonePage} />
-            <Route exact path="/auth/verify" component={VerifyOTPPage} />
-            <Route exact path="/" render={() => (
-              token ? <AuthenticatedApp /> : <Redirect to="/auth/phone" />
-            )} />
-          </IonRouterOutlet>
+          {!token ? (
+            <IonRouterOutlet>
+              <Route exact path="/" component={LandingPage} />
+              <Route exact path="/demo" component={DemoPage} />
+              <Route exact path="/auth/phone" component={PhonePage} />
+              <Route exact path="/auth/verify" component={VerifyOTPPage} />
+              <Route>
+                <Redirect to="/" />
+              </Route>
+            </IonRouterOutlet>
+          ) : (
+            <AuthenticatedApp />
+          )}
         </IonReactRouter>
       </IonApp>
     </QueryClientProvider>
