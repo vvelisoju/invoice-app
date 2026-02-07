@@ -9,84 +9,77 @@ function HeroSection() {
   return (
     <section className="hero-section">
       <div className="hero-container">
-        <div className="hero-content">
-          <h1 className="hero-title">
-            Create professional invoices in minutes
-          </h1>
-          <p className="hero-subtitle">
-            Fast, reliable invoicing for businesses of all sizes. Create invoices on web or mobile. 
-            Download PDF, print, or share instantly. Works offline with automatic sync.
-          </p>
-          <div className="hero-actions">
-            <IonButton 
-              size="large" 
-              className="hero-btn-primary"
-              onClick={() => history.push('/demo')}
-            >
-              Create Invoice Free
-            </IonButton>
-            <IonButton 
-              size="large" 
-              fill="outline" 
-              className="hero-btn-secondary"
-              onClick={() => {
-                document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            >
-              See how it works
-            </IonButton>
-          </div>
-          <div className="hero-badges">
-            <span className="badge">✓ GST Ready</span>
-            <span className="badge">✓ Offline Drafts</span>
-            <span className="badge">✓ PDF Download</span>
-            <span className="badge">✓ WhatsApp Share</span>
-          </div>
-        </div>
-        <div className="hero-visual">
-          <div className="hero-mockup">
-            <div className="mockup-header">
-              <div className="mockup-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <div className="mockup-title">New Invoice</div>
+        <div className="hero-main-content">
+          <div className="hero-left">
+            <div className="hero-header">
+              <h1 className="hero-title">
+                Free Invoice Templates | Print & Email Invoices
+              </h1>
+              <IonButton 
+                size="large" 
+                className="hero-btn-primary"
+                onClick={() => history.push('/demo')}
+              >
+                Create Invoice Now!
+              </IonButton>
             </div>
-            <div className="mockup-content">
-              <div className="mockup-form">
-                <div className="form-field">
-                  <div className="field-label">Customer</div>
-                  <div className="field-input">Acme Corp</div>
-                </div>
-                <div className="form-field">
-                  <div className="field-label">Invoice Date</div>
-                  <div className="field-input">Feb 1, 2026</div>
-                </div>
-                <div className="form-section">
-                  <div className="section-title">Line Items</div>
-                  <div className="line-item">
-                    <span>Web Design</span>
-                    <span>₹50,000</span>
-                  </div>
-                  <div className="line-item">
-                    <span>Logo Design</span>
-                    <span>₹10,000</span>
+
+            <div className="hero-steps">
+              <div className="step-card">
+                <div className="step-icon">
+                  <div className="icon-circle">
+                    <span className="icon-emoji">✏️</span>
                   </div>
                 </div>
-                <div className="form-totals">
-                  <div className="total-row">
-                    <span>Subtotal</span>
-                    <span>₹60,000</span>
+                <h3 className="step-title">Create an Invoice</h3>
+                <p className="step-desc">Choose from templates and various logos</p>
+              </div>
+              <div className="step-card">
+                <div className="step-icon">
+                  <div className="icon-circle">
+                    <span className="icon-emoji">📧</span>
                   </div>
-                  <div className="total-row">
-                    <span>Tax (18%)</span>
-                    <span>₹10,800</span>
+                </div>
+                <h3 className="step-title">Send as a PDF</h3>
+                <p className="step-desc">Email or print your invoice to send to your clients</p>
+              </div>
+              <div className="step-card">
+                <div className="step-icon">
+                  <div className="icon-circle">
+                    <span className="icon-emoji">💰</span>
                   </div>
-                  <div className="total-row total-final">
-                    <span>Total</span>
-                    <span>₹70,800</span>
-                  </div>
+                </div>
+                <h3 className="step-title">Get Paid</h3>
+                <p className="step-desc">Receive payments in seconds by card or PayPal</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="hero-templates-grid">
+              <div className="template-card">
+                <div className="template-icon">📄</div>
+              </div>
+              <div className="template-card">
+                <div className="template-icon">📄</div>
+              </div>
+              <div className="template-card">
+                <div className="template-icon">📄</div>
+              </div>
+              <div className="template-card active">
+                <div className="template-icon">📄</div>
+              </div>
+              <div className="template-card">
+                <div className="template-icon">📄</div>
+              </div>
+              <div className="template-card">
+                <div className="template-icon">📄</div>
+              </div>
+            </div>
+            <div className="hero-device">
+              <div className="device-frame">
+                <div className="device-content">
+                  <div className="device-app-icon">🟦</div>
                 </div>
               </div>
             </div>
