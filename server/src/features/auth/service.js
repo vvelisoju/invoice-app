@@ -3,13 +3,15 @@ import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 
 const generateOTP = () => {
-  const length = config.otp.length
-  const digits = '0123456789'
-  let otp = ''
-  for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * 10)]
-  }
-  return otp
+  // TODO: Generate random OTP once SMS gateway is integrated
+  // const length = config.otp.length
+  // const digits = '0123456789'
+  // let otp = ''
+  // for (let i = 0; i < length; i++) {
+  //   otp += digits[Math.floor(Math.random() * 10)]
+  // }
+  // return otp
+  return '222222' // Default OTP until SMS gateway is configured
 }
 
 const sendOTP = async (phone, otp) => {
