@@ -14,7 +14,7 @@ export default function FormTextarea({
       onChange={onChange}
       placeholder={placeholder}
       rows={rows}
-      className={`w-full p-4 bg-bgPrimary/30 hover:bg-bgPrimary/50 focus:bg-white border border-transparent hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed ${className}`}
+      className={`w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed ${className}`}
     />
   )
 }

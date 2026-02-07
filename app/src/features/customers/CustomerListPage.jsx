@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react'
+import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal } from 'lucide-react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import {
@@ -257,7 +257,7 @@ export default function CustomerListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
           className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
@@ -283,12 +283,32 @@ export default function CustomerListPage() {
     ]
   }
 
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
       <PageToolbar
         title="Customers"
         subtitle="Manage your client relationships and contact details"
+        mobileActions={
+          <>
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors ${
+                showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </>
+        }
         actions={
           <>
             <div className="relative">
@@ -297,7 +317,7 @@ export default function CustomerListPage() {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search customers..."
-                className="pl-9 pr-4 py-2 text-sm border border-border rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
@@ -311,15 +331,38 @@ export default function CustomerListPage() {
           </>
         }
       >
-        <StatusFilterPills
-          filters={filtersWithCounts}
-          activeKey={statusFilter}
-          onChange={handleFilterChange}
-        />
+        {/* Mobile: collapsible filters */}
+        {showMobileFilters && (
+          <div className="md:hidden space-y-3 mb-1">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search customers..."
+                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
+            </div>
+            <StatusFilterPills
+              filters={filtersWithCounts}
+              activeKey={statusFilter}
+              onChange={handleFilterChange}
+            />
+          </div>
+        )}
+        {/* Desktop: always visible */}
+        <div className="hidden md:block">
+          <StatusFilterPills
+            filters={filtersWithCounts}
+            activeKey={statusFilter}
+            onChange={handleFilterChange}
+          />
+        </div>
       </PageToolbar>
 
       {/* Table */}
-      <div className="flex-1 px-8 py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <DataTable
             columns={TABLE_COLUMNS}
@@ -333,6 +376,31 @@ export default function CustomerListPage() {
             emptyIcon={<Users className="w-16 h-16 text-gray-300 mb-4" />}
             emptyTitle={statusFilter !== 'active' ? 'No customers match this filter' : 'No customers yet'}
             emptyMessage={statusFilter !== 'active' ? 'Try a different filter or add new customers' : 'Add your first customer to get started'}
+            renderMobileCard={(customer) => {
+              const initials = getInitials(customer.name)
+              const color = getAvatarColor(customer.name)
+              const balance = computeBalance(customer)
+              return (
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full ${color.bg} ${color.text} flex items-center justify-center font-bold text-xs shrink-0`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-sm text-textPrimary truncate">{customer.name}</div>
+                    <div className="text-xs text-textSecondary">
+                      {customer.phone ? `+91 ${customer.phone}` : customer.email || 'No contact'}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {balance > 0 ? (
+                      <span className="font-bold text-sm text-accentOrange">{formatCurrency(balance)}</span>
+                    ) : (
+                      <span className="font-medium text-xs text-textSecondary">{formatCurrency(0)}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            }}
             loadMore={statusFilter === 'active' ? {
               hasMore: hasNextPage,
               isLoading: isFetchingNextPage,
@@ -350,7 +418,7 @@ export default function CustomerListPage() {
                     <button
                       onClick={() => setPage(p => Math.max(0, p - 1))}
                       disabled={page === 0}
-                      className="px-3 py-1 text-xs border border-border rounded bg-white text-textSecondary hover:bg-gray-50 hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 text-xs border border-border rounded bg-white text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Previous
                     </button>
@@ -366,7 +434,7 @@ export default function CustomerListPage() {
                         }
                       }}
                       disabled={page + 1 >= totalPages && !hasNextPage}
-                      className="px-3 py-1 text-xs border border-border rounded bg-white text-textSecondary hover:bg-gray-50 hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 text-xs border border-border rounded bg-white text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {isFetchingNextPage ? 'Loading...' : 'Next'}
                     </button>
@@ -378,8 +446,8 @@ export default function CustomerListPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center py-4 bg-bgPrimary">
+      {/* Footer — hidden on mobile */}
+      <div className="hidden md:block text-center py-4 bg-bgPrimary">
         <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
       </div>
 

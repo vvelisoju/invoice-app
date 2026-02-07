@@ -14,24 +14,24 @@ export default function PageHeader({
   const history = useHistory()
 
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
+      <div className="flex items-center gap-3 min-w-0">
         {backTo && (
           <button
             onClick={() => history.push(backTo)}
-            className="w-9 h-9 flex items-center justify-center text-textSecondary hover:bg-bgPrimary rounded-lg transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
-        <div>
-          <h1 className="text-2xl font-bold text-textPrimary">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-textPrimary truncate">{title}</h1>
           {subtitle && (
-            <p className="text-sm text-textSecondary mt-0.5">{subtitle}</p>
+            <p className="text-xs md:text-sm text-textSecondary mt-0.5">{subtitle}</p>
           )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-3">{actions}</div>}
+      {actions && <div className="flex items-center gap-2 md:gap-3 shrink-0">{actions}</div>}
       {children}
     </div>
   )

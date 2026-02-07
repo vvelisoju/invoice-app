@@ -74,9 +74,9 @@ function FieldToggle({ label, description, checked, onChange }) {
       </div>
       <button
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ml-4 ${checked ? 'bg-primary' : 'bg-gray-300'}`}
+        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ml-4 ${checked ? 'bg-primary' : 'bg-gray-300'}`}
       >
-        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
       </button>
     </div>
   )
@@ -104,7 +104,7 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
         </div>
       </div>
       <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {ALL_INVOICE_TYPES.map((type) => {
             const isEnabled = enabledTypes.includes(type.key)
             const Icon = type.icon
@@ -112,10 +112,10 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
               <button
                 key={type.key}
                 onClick={() => toggleType(type.key)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-lg border transition-all text-left ${
                   isEnabled
                     ? 'bg-primary/5 border-primary/30 text-primary'
-                    : 'bg-gray-50 border-border text-textSecondary hover:bg-gray-100'
+                    : 'bg-gray-50 border-border text-textSecondary active:bg-gray-100 md:hover:bg-gray-100'
                 }`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isEnabled ? 'text-primary' : 'text-gray-400'}`} />
@@ -495,17 +495,17 @@ export default function SettingsPage() {
         }
       >
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mt-2">
+        <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
           {SETTINGS_TABS.map((tab) => {
             const active = activeTab === tab.key
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 md:gap-2 whitespace-nowrap shrink-0 ${
                   active
                     ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
-                    : 'text-textSecondary hover:text-textPrimary hover:bg-gray-50 border border-transparent'
+                    : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-50 md:hover:bg-gray-50 border border-transparent'
                 }`}
               >
                 <tab.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
@@ -517,8 +517,8 @@ export default function SettingsPage() {
       </PageToolbar>
 
       {/* Content Area */}
-      <div className="flex-1 px-8 py-6 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
+        <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
 
           {/* Business Information Tab */}
           {activeTab === 'business' && (
@@ -776,8 +776,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center py-4 bg-bgPrimary">
+      {/* Footer — hidden on mobile */}
+      <div className="hidden md:block text-center py-4 bg-bgPrimary">
         <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
       </div>
 

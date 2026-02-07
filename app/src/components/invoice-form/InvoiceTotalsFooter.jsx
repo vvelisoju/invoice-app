@@ -35,7 +35,7 @@ export default function InvoiceTotalsFooter({
   const totalTaxFromItems = taxBreakdown.reduce((sum, t) => sum + t.amount, 0)
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6 border-t border-border">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 pt-4 md:pt-6 border-t border-border">
       {/* Terms & Conditions */}
       <div>
         <div className="flex justify-between items-center mb-2">
@@ -49,7 +49,7 @@ export default function InvoiceTotalsFooter({
           rows={4}
           value={terms}
           onChange={(e) => onTermsChange(e.target.value)}
-          className="w-full p-4 bg-bgPrimary/30 hover:bg-bgPrimary/50 focus:bg-white border border-transparent hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
+          className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
         />
       </div>
 
@@ -90,10 +90,10 @@ export default function InvoiceTotalsFooter({
           )}
         </div>
 
-        <div className="mt-6 pt-5 border-t border-border border-dashed">
+        <div className="mt-4 md:mt-6 pt-4 md:pt-5 border-t border-border border-dashed">
           <div className="flex justify-between items-end px-2">
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-textPrimary">TOTAL</span>
+              <span className="text-lg md:text-xl font-bold text-textPrimary">TOTAL</span>
               <div className="flex items-center gap-1 mt-1 cursor-pointer group">
                 <span className="text-xs font-bold text-primary bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 group-hover:bg-blue-100 transition-colors">
                   {currency}
@@ -101,14 +101,14 @@ export default function InvoiceTotalsFooter({
                 <Pencil className="w-2.5 h-2.5 text-textSecondary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <span className="text-2xl font-bold text-primary tracking-tight">
+            <span className="text-xl md:text-2xl font-bold text-primary tracking-tight">
               {formatCurrency(totalTaxFromItems > 0 ? (subtotal - discountTotal + totalTaxFromItems) : total)}
             </span>
           </div>
         </div>
 
         {/* Signature Area */}
-        <div className="mt-6 bg-yellow-50/50 border border-yellow-100 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-yellow-50 transition-colors group h-28">
+        <div className="mt-4 md:mt-6 bg-yellow-50/50 border border-yellow-100 rounded-xl p-4 md:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:bg-yellow-50 md:hover:bg-yellow-50 transition-colors group h-24 md:h-28">
           <span className="text-sm font-medium text-yellow-800 mb-1 group-hover:scale-105 transition-transform">
             Add Your Signature
           </span>

@@ -352,14 +352,14 @@ export default function ReportsPage() {
   }, [documents])
 
   return (
-    <div className="flex-1 overflow-y-auto bg-bgPrimary p-6">
+    <div className="flex-1 overflow-y-auto bg-bgPrimary p-3 md:p-6">
       <div className="max-w-7xl mx-auto flex flex-col h-full">
 
         {/* Filter & Search Section (Top Card) */}
-        <div className="bg-white border border-border rounded-t-xl px-6 py-6 shadow-sm z-10 relative">
-          <div className="grid grid-cols-12 gap-6 items-end">
+        <div className="bg-white border border-border rounded-t-xl px-4 md:px-6 py-4 md:py-6 shadow-sm z-10 relative">
+          <div className="grid grid-cols-2 md:grid-cols-12 gap-3 md:gap-6 items-end">
             {/* Date From */}
-            <div className="col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-1">Date From</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -375,7 +375,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Date To */}
-            <div className="col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-1">Date To</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -391,7 +391,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Status Dropdown */}
-            <div className="col-span-3">
+            <div className="col-span-1 md:col-span-3">
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-1">Status</label>
               <div className="relative">
                 <select
@@ -410,7 +410,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Document Type Dropdown */}
-            <div className="col-span-3">
+            <div className="col-span-1 md:col-span-3">
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-1">Document</label>
               <div className="relative">
                 <select
@@ -429,7 +429,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Search Button */}
-            <div className="col-span-2">
+            <div className="col-span-2 md:col-span-2">
               <button
                 onClick={handleSearch}
                 className="w-full bg-blue-800 hover:bg-blue-900 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center justify-center gap-2"
@@ -442,7 +442,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Action Toolbar */}
-        <div className="bg-white border-x border-b border-border px-6 py-3 flex items-center gap-3 bg-gray-50/50">
+        <div className="bg-white border-x border-b border-border px-4 md:px-6 py-3 flex items-center gap-2 md:gap-3 bg-gray-50/50 overflow-x-auto no-scrollbar">
           {QUICK_FILTERS.map((f) => (
             <button
               key={f.key}
@@ -470,7 +470,7 @@ export default function ReportsPage() {
         {/* GST Summary Card */}
         {gstSummary && gstSummary.invoiceCount > 0 && (
           <div className="bg-white border-x border-b border-border px-6 py-4">
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
                 <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Taxable Value</p>
                 <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.totalTaxableValue)}</p>
@@ -497,7 +497,7 @@ export default function ReportsPage() {
 
         {/* Data Table */}
         <div className="bg-white border-x border-b border-border rounded-b-xl flex-1 flex flex-col shadow-sm overflow-hidden">
-          <div className="overflow-auto flex-1">
+          <div className="overflow-auto flex-1 -webkit-overflow-scrolling-touch">
             <table className="w-full min-w-full">
               <thead className="bg-white text-xs font-semibold text-textSecondary uppercase tracking-wider sticky top-0 z-10 shadow-[0_1px_0_0_rgba(229,231,235,1)]">
                 <tr>
@@ -567,8 +567,8 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center py-4 mt-auto">
+        {/* Footer — hidden on mobile */}
+        <div className="hidden md:block text-center py-4 mt-auto">
           <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
         </div>
       </div>

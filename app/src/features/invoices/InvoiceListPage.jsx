@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
-import { Plus, Download, FileText } from 'lucide-react'
+import { Plus, Download, FileText, Loader2, SlidersHorizontal, Search } from 'lucide-react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { invoiceApi } from '../../lib/api'
 import {
@@ -24,13 +24,8 @@ const STATUS_FILTERS = [
   { key: 'all', label: 'All Documents' },
   { key: 'ISSUED', label: 'Unpaid', badgeColor: 'bg-accentOrange' },
   { key: 'OVERDUE', label: 'Overdue', badgeColor: 'bg-red-500' },
-  { key: 'PARTIAL', label: 'Partially Paid', badgeColor: 'bg-blue-500' },
   { key: 'PAID', label: 'Paid', badgeColor: 'bg-green-600' },
-]
-
-const STATUS_EXTRAS = [
-  { key: 'SENT', label: 'Sent by Email' },
-  { key: 'TRASH', label: 'Trash', badgeColor: 'bg-gray-400' },
+  { key: 'DRAFT', label: 'Draft', badgeColor: 'bg-gray-400' },
 ]
 
 const DOC_TYPE_OPTIONS = [
@@ -44,7 +39,7 @@ const TABLE_COLUMNS = [
   { key: 'docType', label: 'Document', colSpan: 2, headerAlign: 'center', align: 'center' },
   { key: 'number', label: 'Number', colSpan: 1, headerAlign: 'center', align: 'center' },
   { key: 'date', label: 'Date', colSpan: 2, headerAlign: 'center', align: 'center' },
-  { key: 'paid', label: 'Paid', colSpan: 1, headerAlign: 'right', align: 'right' },
+  { key: 'tax', label: 'Tax', colSpan: 1, headerAlign: 'right', align: 'right' },
   { key: 'total', label: 'Total', colSpan: 2, headerAlign: 'right', align: 'right' },
 ]
 
@@ -103,28 +98,38 @@ export default function InvoiceListPage() {
     })
   }
 
+  // Filter by doc type checkboxes
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const type = inv.documentType || 'INVOICE'
+      return docTypeFilters[type] !== false
+    })
+  }, [invoices, docTypeFilters])
+
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    const c = { all: invoices.length, ISSUED: 0, PAID: 0, OVERDUE: 0, PARTIAL: 0, SENT: 0, TRASH: 0 }
-    invoices.forEach((inv) => {
+    const c = { all: filteredInvoices.length, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0 }
+    filteredInvoices.forEach((inv) => {
       if (inv.status === 'ISSUED') c.ISSUED++
-      if (inv.status === 'PAID') c.PAID++
+      else if (inv.status === 'PAID') c.PAID++
+      else if (inv.status === 'OVERDUE') c.OVERDUE++
+      else if (inv.status === 'DRAFT') c.DRAFT++
     })
     return c
-  }, [invoices])
+  }, [filteredInvoices])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
-  const extrasWithCounts = STATUS_EXTRAS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
 
-  // Compute summary totals
+  // Compute summary totals (Prisma Decimals come as strings — must parseFloat)
   const summary = useMemo(() => {
-    let total = 0, paid = 0
-    invoices.forEach((inv) => {
-      total += inv.total || 0
-      paid += inv.paidAmount || 0
+    let total = 0, subtotal = 0, tax = 0
+    filteredInvoices.forEach((inv) => {
+      total += parseFloat(inv.total) || 0
+      subtotal += parseFloat(inv.subtotal) || 0
+      tax += parseFloat(inv.taxTotal) || 0
     })
-    return { total, paid, balance: total - paid }
-  }, [invoices])
+    return { total, subtotal, tax }
+  }, [filteredInvoices])
 
   const handleDocTypeChange = (key, checked) => {
     setDocTypeFilters((prev) => ({ ...prev, [key]: checked }))
@@ -137,6 +142,30 @@ export default function InvoiceListPage() {
 
   const isPaid = (invoice) => invoice.status === 'PAID'
 
+  // Export filtered invoices as CSV
+  const handleExport = useCallback(() => {
+    if (filteredInvoices.length === 0) return
+    const headers = ['Customer', 'Document Type', 'Number', 'Date', 'Subtotal', 'Tax', 'Total', 'Status']
+    const rows = filteredInvoices.map(inv => [
+      `"${(inv.customer?.name || '').replace(/"/g, '""')}"`,
+      (DOC_TYPE_BADGE[inv.documentType || 'INVOICE']?.label || inv.documentType),
+      inv.invoiceNumber || '',
+      formatDate(inv.date),
+      (parseFloat(inv.subtotal) || 0).toFixed(2),
+      (parseFloat(inv.taxTotal) || 0).toFixed(2),
+      (parseFloat(inv.total) || 0).toFixed(2),
+      inv.status || '',
+    ])
+    rows.push(['', '', '', 'TOTAL', (summary.subtotal).toFixed(2), (summary.tax).toFixed(2), (summary.total).toFixed(2), ''])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `documents_${Date.now()}.csv`
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [filteredInvoices, summary])
+
   const getRowClassName = (invoice) => {
     if (isPaid(invoice)) return 'opacity-50 hover:opacity-80 border-l-2 border-transparent'
     return 'border-l-2 border-accentOrange'
@@ -144,8 +173,7 @@ export default function InvoiceListPage() {
 
   const renderRow = (invoice) => {
     const badge = getDocBadge(invoice)
-    const paidAmount = invoice.paidAmount || 0
-    const paidColor = isPaid(invoice) ? 'text-green-600' : 'text-accentOrange'
+    const taxAmount = parseFloat(invoice.taxTotal) || 0
 
     return [
       // Customer
@@ -153,8 +181,8 @@ export default function InvoiceListPage() {
         <div className={`font-semibold ${invoice.customer?.name ? 'text-textPrimary' : 'text-textSecondary italic'}`}>
           {invoice.customer?.name || '<No Name>'}
         </div>
-        {invoice.customer?.gst && (
-          <div className="text-xs text-textSecondary">GST: {invoice.customer.gst}</div>
+        {invoice.customer?.gstin && (
+          <div className="text-xs text-textSecondary">GST: {invoice.customer.gstin}</div>
         )}
       </div>,
       // Document type badge
@@ -165,12 +193,14 @@ export default function InvoiceListPage() {
       <span key="number" className="text-textSecondary font-mono text-xs">{invoice.invoiceNumber}</span>,
       // Date
       <span key="date" className="text-textSecondary text-sm">{formatDate(invoice.date)}</span>,
-      // Paid
-      <span key="paid" className={`${paidColor} font-semibold`}>{formatCurrency(paidAmount)}</span>,
+      // Tax
+      <span key="tax" className="text-textSecondary font-medium">{formatCurrency(taxAmount)}</span>,
       // Total
-      <span key="total" className="font-bold text-textPrimary text-base">{formatCurrency(invoice.total)}</span>,
+      <span key="total" className="font-bold text-textPrimary text-base">{formatCurrency(parseFloat(invoice.total) || 0)}</span>,
     ]
   }
+
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   return (
     <div className="h-full flex flex-col">
@@ -178,9 +208,31 @@ export default function InvoiceListPage() {
       <PageToolbar
         title="Documents"
         subtitle="Track and manage all your business documents"
+        mobileActions={
+          <>
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors ${
+                showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => history.push('/invoices/new')}
+              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </>
+        }
         actions={
           <>
-            <button className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              disabled={filteredInvoices.length === 0}
+              className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-40"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -194,27 +246,46 @@ export default function InvoiceListPage() {
           </>
         }
       >
-        <StatusFilterPills
-          filters={filtersWithCounts}
-          activeKey={statusFilter}
-          onChange={setStatusFilter}
-          extras={extrasWithCounts}
-        />
+        {/* Mobile: collapsible filters */}
+        {showMobileFilters && (
+          <div className="md:hidden space-y-3 mb-1">
+            <StatusFilterPills
+              filters={filtersWithCounts}
+              activeKey={statusFilter}
+              onChange={setStatusFilter}
+            />
+            <CheckboxFilter
+              label="Document Type:"
+              options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+              onChange={handleDocTypeChange}
+            />
+          </div>
+        )}
+        {/* Desktop: always visible */}
+        <div className="hidden md:block">
+          <StatusFilterPills
+            filters={filtersWithCounts}
+            activeKey={statusFilter}
+            onChange={setStatusFilter}
+          />
+        </div>
       </PageToolbar>
 
-      {/* Secondary Filters */}
-      <CheckboxFilter
-        label="Document Type:"
-        options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
-        onChange={handleDocTypeChange}
-      />
+      {/* Secondary Filters — desktop only */}
+      <div className="hidden md:block">
+        <CheckboxFilter
+          label="Document Type:"
+          options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+          onChange={handleDocTypeChange}
+        />
+      </div>
 
       {/* Table Section */}
-      <div className="flex-1 px-8 py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <DataTable
             columns={TABLE_COLUMNS}
-            rows={invoices}
+            rows={filteredInvoices}
             rowKey={(inv) => inv.id}
             renderRow={renderRow}
             onRowClick={(inv) => history.push(`/invoices/${inv.id}`)}
@@ -224,22 +295,43 @@ export default function InvoiceListPage() {
             emptyIcon={<FileText className="w-16 h-16 text-gray-300 mb-4" />}
             emptyTitle="No documents yet"
             emptyMessage="Create your first invoice to get started"
+            renderMobileCard={(invoice) => {
+              const badge = getDocBadge(invoice)
+              return (
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <div className="min-w-0 flex-1">
+                      <div className={`font-semibold text-sm ${invoice.customer?.name ? 'text-textPrimary' : 'text-textSecondary italic'}`}>
+                        {invoice.customer?.name || '<No Name>'}
+                      </div>
+                    </div>
+                    <span className="font-bold text-textPrimary text-base shrink-0">{formatCurrency(parseFloat(invoice.total) || 0)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border tap-target-auto ${badge.className}`}>{badge.label}</span>
+                    <span className="text-xs text-textSecondary font-mono tap-target-auto">{invoice.invoiceNumber}</span>
+                    <span className="text-xs text-textSecondary tap-target-auto">{formatDate(invoice.date)}</span>
+                    <span className="text-xs text-textSecondary font-medium ml-auto tap-target-auto">{invoice.status}</span>
+                  </div>
+                </div>
+              )
+            }}
             loadMore={{
               hasMore: hasNextPage,
               isLoading: isFetchingNextPage,
               onLoadMore: fetchNextPage
             }}
             footer={
-              invoices.length > 0 && (
+              filteredInvoices.length > 0 && (
                 <TableSummary
                   rows={[
-                    { label: 'Total', value: `${formatCurrency(summary.total).replace('₹', '').trim()} INR` },
-                    { label: 'Paid Amount', value: `${formatCurrency(summary.paid).replace('₹', '').trim()} INR`, valueClassName: 'text-green-600' },
+                    { label: 'Subtotal', value: `${formatCurrency(summary.subtotal).replace('₹', '').trim()} INR` },
+                    { label: 'Tax', value: `${formatCurrency(summary.tax).replace('₹', '').trim()} INR`, valueClassName: 'text-textSecondary' },
                   ]}
                   totalRow={{
-                    label: 'Balance Due',
-                    value: `${formatCurrency(summary.balance).replace('₹', '').trim()} INR`,
-                    valueClassName: 'text-accentOrange'
+                    label: 'Total',
+                    value: `${formatCurrency(summary.total).replace('₹', '').trim()} INR`,
+                    valueClassName: 'text-primary'
                   }}
                 />
               )
@@ -248,8 +340,8 @@ export default function InvoiceListPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center py-4 bg-bgPrimary">
+      {/* Footer — hidden on mobile */}
+      <div className="hidden md:block text-center py-4 bg-bgPrimary">
         <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
       </div>
     </div>

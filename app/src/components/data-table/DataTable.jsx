@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, Loader2 } from 'lucide-react'
 import DataTableCheckbox from './DataTableCheckbox'
 
@@ -9,6 +9,7 @@ import DataTableCheckbox from './DataTableCheckbox'
  * - columns: Array<{ key, label, colSpan, align?, headerAlign? }>
  * - rows: Array<object> — data items
  * - renderRow: (row, index, { isSelected, toggleSelect }) => ReactNode[] — returns array of cell contents
+ * - renderMobileCard?: (row, index) => ReactNode — optional custom mobile card renderer
  * - rowKey: (row) => string|number — unique key extractor
  * - onRowClick?: (row) => void
  * - getRowClassName?: (row) => string — extra classes per row (e.g. border-l color)
@@ -24,10 +25,12 @@ export default function DataTable({
   columns,
   rows,
   renderRow,
+  renderMobileCard,
   rowKey,
   onRowClick,
   getRowClassName,
   selectable = true,
+  onSelectionChange,
   isLoading = false,
   emptyIcon,
   emptyTitle = 'No data found',
@@ -36,6 +39,10 @@ export default function DataTable({
   loadMore
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set())
+
+  useEffect(() => {
+    onSelectionChange?.(selectedIds)
+  }, [selectedIds])
 
   const allSelected = rows.length > 0 && selectedIds.size === rows.length
   const toggleAll = () => {
@@ -67,7 +74,7 @@ export default function DataTable({
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex flex-col items-center justify-center py-20 text-center px-4">
         {emptyIcon || <FileText className="w-16 h-16 text-gray-300 mb-4" />}
         <h2 className="text-lg font-semibold text-textSecondary mb-1">{emptyTitle}</h2>
         {emptyMessage && <p className="text-sm text-textSecondary">{emptyMessage}</p>}
@@ -76,10 +83,10 @@ export default function DataTable({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden flex flex-col" style={{ minHeight: 400 }}>
-      {/* Table Header */}
+    <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden flex flex-col" style={{ minHeight: 300 }}>
+      {/* Desktop Table Header — hidden on mobile */}
       <div
-        className="grid gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-textSecondary uppercase tracking-wider items-center border-b border-border"
+        className="hidden md:grid gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-textSecondary uppercase tracking-wider items-center border-b border-border"
         style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
       >
         {selectable && (
@@ -107,26 +114,56 @@ export default function DataTable({
           const cells = renderRow(row, index, { isSelected, toggleSelect: () => toggleSelect(id) })
 
           return (
-            <div
-              key={id}
-              onClick={() => onRowClick?.(row)}
-              className={`grid gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors group text-sm ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
-              style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
-            >
-              {selectable && (
-                <div className="col-span-1 flex items-center justify-center">
-                  <DataTableCheckbox checked={isSelected} onChange={() => toggleSelect(id)} />
+            <div key={id}>
+              {/* Mobile Card View */}
+              {renderMobileCard ? (
+                <div
+                  onClick={() => onRowClick?.(row)}
+                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                >
+                  {renderMobileCard(row, index)}
+                </div>
+              ) : (
+                <div
+                  onClick={() => onRowClick?.(row)}
+                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                >
+                  {/* Default mobile: show first and last cells */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">{cells[0]}</div>
+                    <div className="shrink-0 text-right">{cells[cells.length - 1]}</div>
+                  </div>
+                  {cells.length > 2 && (
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      {cells.slice(1, -1).map((cell, ci) => (
+                        <div key={ci} className="text-xs text-textSecondary tap-target-auto">{cell}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-              {cells.map((cell, ci) => (
-                <div
-                  key={columns[ci]?.key || ci}
-                  className={`${columns[ci]?.align === 'center' ? 'text-center' : columns[ci]?.align === 'right' ? 'text-right' : ''}`}
-                  style={{ gridColumn: `span ${columns[ci]?.colSpan || 1} / span ${columns[ci]?.colSpan || 1}` }}
-                >
-                  {cell}
-                </div>
-              ))}
+
+              {/* Desktop Grid Row */}
+              <div
+                onClick={() => onRowClick?.(row)}
+                className={`hidden md:grid gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors group text-sm ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
+              >
+                {selectable && (
+                  <div className="col-span-1 flex items-center justify-center">
+                    <DataTableCheckbox checked={isSelected} onChange={() => toggleSelect(id)} />
+                  </div>
+                )}
+                {cells.map((cell, ci) => (
+                  <div
+                    key={columns[ci]?.key || ci}
+                    className={`${columns[ci]?.align === 'center' ? 'text-center' : columns[ci]?.align === 'right' ? 'text-right' : ''}`}
+                    style={{ gridColumn: `span ${columns[ci]?.colSpan || 1} / span ${columns[ci]?.colSpan || 1}` }}
+                  >
+                    {cell}
+                  </div>
+                ))}
+              </div>
             </div>
           )
         })}
@@ -138,7 +175,7 @@ export default function DataTable({
           <button
             onClick={loadMore.onLoadMore}
             disabled={loadMore.isLoading}
-            className="text-sm text-primary hover:underline font-medium"
+            className="text-sm text-primary active:underline md:hover:underline font-medium px-4 py-2"
           >
             {loadMore.isLoading ? 'Loading...' : 'Load more'}
           </button>

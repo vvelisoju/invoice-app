@@ -114,7 +114,7 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden h-6 leading-6 focus:outline-none"
+        className="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none"
       />
 
       {showSuggestions && value?.length >= 1 && (
@@ -257,7 +257,7 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
             </div>
             <h2 className="text-sm font-semibold text-textPrimary">Select Tax Rate</h2>
           </div>
-          <button onClick={handleClose} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-textSecondary hover:text-textPrimary transition-colors">
+          <button onClick={handleClose} className="w-10 h-10 rounded-lg active:bg-gray-100 md:hover:bg-gray-100 flex items-center justify-center text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -267,8 +267,8 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
           {/* No Tax option */}
           <button
             onClick={() => { onSelect(null); handleClose() }}
-            className={`w-full px-5 py-3 text-left flex items-center justify-between transition-colors border-b border-border/50 ${
-              !currentTaxRate ? 'bg-blue-50/50' : 'hover:bg-gray-50'
+            className={`w-full px-5 py-3.5 text-left flex items-center justify-between transition-colors border-b border-border/50 ${
+              !currentTaxRate ? 'bg-blue-50/50' : 'active:bg-gray-50 md:hover:bg-gray-50'
             }`}
           >
             <span className="text-sm text-textSecondary">No Tax</span>
@@ -287,10 +287,10 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
             <button
               key={tr.id}
               onClick={() => { onSelect(tr); handleClose() }}
-              className={`w-full px-5 py-3 text-left flex items-center justify-between transition-colors border-b border-border/50 last:border-b-0 ${
+              className={`w-full px-5 py-3.5 text-left flex items-center justify-between transition-colors border-b border-border/50 last:border-b-0 ${
                 currentTaxRate && Number(currentTaxRate) === Number(tr.rate)
                   ? 'bg-blue-50/50'
-                  : 'hover:bg-gray-50'
+                  : 'active:bg-gray-50 md:hover:bg-gray-50'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -318,7 +318,7 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
           {!showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="w-full px-5 py-3 text-left flex items-center gap-2.5 text-primary hover:bg-blue-50/50 transition-colors"
+              className="w-full px-5 py-3.5 text-left flex items-center gap-2.5 text-primary active:bg-blue-50/50 md:hover:bg-blue-50/50 transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span className="text-sm font-medium">Create New Tax Rate</span>
@@ -399,10 +399,10 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className={`flex-1 text-xs font-medium py-1.5 px-2 rounded border transition-colors truncate ${
+        className={`flex-1 text-xs font-medium py-2 md:py-1.5 px-2 rounded border transition-colors truncate ${
           item.taxRate
-            ? 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200/50'
-            : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200/50'
+            ? 'bg-green-50 active:bg-green-100 md:hover:bg-green-100 text-green-700 border-green-200/50'
+            : 'bg-yellow-50 active:bg-yellow-100 md:hover:bg-yellow-100 text-yellow-700 border-yellow-200/50'
         }`}
         title={label}
       >
@@ -421,10 +421,10 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
 
 function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
   return (
-    <div className="group relative bg-white border border-transparent hover:border-border hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
-      <div className="grid grid-cols-12 gap-4 items-start p-3">
+    <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
+      <div className="grid grid-cols-12 gap-2 md:gap-4 items-start p-2 md:p-3">
         {/* Description — Product Typeahead */}
-        <div className="col-span-6 md:col-span-7">
+        <div className="col-span-12 md:col-span-7">
           <ProductTypeaheadInput
             value={item.name}
             onChange={(val) => onUpdate(index, 'name', val)}
@@ -434,22 +434,22 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
           />
         </div>
         {/* Amount */}
-        <div className="col-span-3 md:col-span-2">
+        <div className="col-span-5 md:col-span-2">
           <input
             type="number"
             value={item.rate || ''}
             onChange={(e) => onUpdate(index, 'rate', e.target.value)}
             placeholder="0.00"
-            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
           />
         </div>
         {/* Tax & Delete */}
-        <div className="col-span-3 md:col-span-3 flex items-center gap-2">
+        <div className="col-span-7 md:col-span-3 flex items-center gap-2">
           <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
           {canRemove && (
             <button
               onClick={() => onRemove(index)}
-              className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+              className="w-10 h-10 md:w-8 md:h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
             >
               <X className="w-4 h-4" />
             </button>
@@ -462,19 +462,10 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
 
 function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
   return (
-    <div className="group relative bg-white border border-transparent hover:border-border hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
-      <div className="grid grid-cols-12 gap-4 items-start p-3">
-        {/* Qty */}
-        <div className="col-span-1">
-          <input
-            type="number"
-            value={item.quantity || ''}
-            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
-            className="w-full bg-bgPrimary/30 px-2 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
-          />
-        </div>
-        {/* Description — Product Typeahead */}
-        <div className="col-span-5">
+    <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
+      <div className="grid grid-cols-12 gap-2 md:gap-4 items-start p-2 md:p-3">
+        {/* Description — Product Typeahead (full width on mobile) */}
+        <div className="col-span-12 md:col-span-5">
           <ProductTypeaheadInput
             value={item.name}
             onChange={(val) => onUpdate(index, 'name', val)}
@@ -483,33 +474,43 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
             placeholder="Description"
           />
         </div>
+        {/* Qty */}
+        <div className="col-span-3 md:col-span-1">
+          <input
+            type="number"
+            value={item.quantity || ''}
+            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+            placeholder="Qty"
+            className="w-full bg-bgPrimary/30 px-2 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
+          />
+        </div>
         {/* Unit Price */}
-        <div className="col-span-2">
+        <div className="col-span-4 md:col-span-2">
           <input
             type="number"
             value={item.rate || ''}
             onChange={(e) => onUpdate(index, 'rate', e.target.value)}
-            placeholder="0.00"
-            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+            placeholder="Price"
+            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
           />
         </div>
         {/* Amount */}
-        <div className="col-span-2">
+        <div className="col-span-5 md:col-span-2">
           <input
             type="number"
             value={item.lineTotal || ''}
             readOnly
             placeholder="0.00"
-            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent text-sm text-right transition-all cursor-default"
+            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent text-sm text-right transition-all cursor-default"
           />
         </div>
         {/* Tax & Delete */}
-        <div className="col-span-2 flex items-center gap-2">
+        <div className="col-span-7 md:col-span-2 flex items-center gap-2">
           <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
           {canRemove && (
             <button
               onClick={() => onRemove(index)}
-              className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+              className="w-10 h-10 md:w-8 md:h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
             >
               <X className="w-4 h-4" />
             </button>
@@ -553,7 +554,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
               <p className="text-xs text-textSecondary">Select a product to add as a line item</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-textSecondary hover:text-textPrimary transition-colors">
+          <button onClick={onClose} className="w-10 h-10 rounded-lg active:bg-gray-100 md:hover:bg-gray-100 flex items-center justify-center text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -574,7 +575,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
               <button
                 key={product.id}
                 onClick={() => { onSelect(product); onClose() }}
-                className="w-full px-5 py-3 text-left flex items-center gap-3 hover:bg-blue-50/50 transition-colors border-b border-border/50 last:border-b-0"
+                className="w-full px-5 py-3.5 text-left flex items-center gap-3 active:bg-blue-50/50 md:hover:bg-blue-50/50 transition-colors border-b border-border/50 last:border-b-0"
               >
                 <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
                   {product.name?.substring(0, 2).toUpperCase()}
@@ -615,9 +616,9 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
 
   return (
     <div className="mb-6">
-      {/* Header Row */}
+      {/* Header Row — hidden on mobile for cleaner card-like layout */}
       {isAdvanced ? (
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
           <div className="col-span-1">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Qty</span>
           </div>
@@ -635,14 +636,14 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
-          <div className="col-span-6 md:col-span-7">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
+          <div className="col-span-7">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Description</span>
           </div>
-          <div className="col-span-3 md:col-span-2">
+          <div className="col-span-2">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Amount</span>
           </div>
-          <div className="col-span-3 md:col-span-3">
+          <div className="col-span-3">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Tax</span>
           </div>
         </div>
@@ -680,18 +681,18 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 mt-5">
+      <div className="flex gap-2 md:gap-3 mt-4 md:mt-5">
         <button
           onClick={() => setShowSavedItems(true)}
-          className="flex-1 py-2.5 border border-dashed border-yellow-300 bg-yellow-50/30 text-yellow-800 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-3 md:py-2.5 border border-dashed border-yellow-300 bg-yellow-50/30 text-yellow-800 active:bg-yellow-50 md:hover:bg-yellow-50 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-2"
         >
-          <List className="w-4 h-4" /> Add Saved Items
+          <List className="w-4 h-4" /> Saved Items
         </button>
         <button
           onClick={onAddItem}
-          className="flex-1 py-2.5 border border-dashed border-yellow-300 bg-yellow-50/50 text-yellow-800 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-3 md:py-2.5 border border-dashed border-yellow-300 bg-yellow-50/50 text-yellow-800 active:bg-yellow-50 md:hover:bg-yellow-50 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Add New Item
+          <Plus className="w-4 h-4" /> Add Item
         </button>
       </div>
 

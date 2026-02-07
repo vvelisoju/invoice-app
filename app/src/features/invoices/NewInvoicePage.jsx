@@ -133,9 +133,9 @@ export default function NewInvoicePage() {
   const fromAddress = business?.name || ''
 
   return (
-    <div className="p-4 md:p-6 relative">
+    <div className="p-2 md:p-6 relative">
       {/* Document Container */}
-      <div className={`${formMode === 'advanced' ? 'max-w-5xl' : 'max-w-4xl'} mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[800px] flex flex-col relative`}>
+      <div className={`${formMode === 'advanced' ? 'max-w-5xl' : 'max-w-4xl'} mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[600px] md:min-h-[800px] flex flex-col relative`}>
         {/* Toolbar: Basic/Advanced toggle + Preview + Save */}
         <InvoiceFormToolbar
           formMode={formMode}
@@ -146,13 +146,13 @@ export default function NewInvoicePage() {
 
         {/* Error */}
         {error && (
-          <div className="mx-8 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="mx-3 md:mx-8 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
             {error}
           </div>
         )}
 
         {/* Invoice Form Content */}
-        <div className="p-6 md:p-10 flex-1">
+        <div className="p-3 md:p-10 flex-1">
           {/* Invoice Title Selector */}
           <div className="mb-6 flex items-center gap-3">
             <div className="relative">
@@ -246,7 +246,7 @@ export default function NewInvoicePage() {
         {/* Bottom Action Bar */}
         <div
           onClick={handleSave}
-          className="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg hover:bg-primaryHover transition-colors cursor-pointer mt-auto"
+          className="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer mt-auto safe-bottom"
         >
           <button className="font-semibold text-sm flex items-center gap-2" disabled={createMutation.isPending}>
             {createMutation.isPending ? (
@@ -259,8 +259,8 @@ export default function NewInvoicePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center mt-6 mb-4">
+      {/* Footer — hidden on mobile */}
+      <div className="hidden md:block text-center mt-4 md:mt-6 mb-4">
         <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
       </div>
 

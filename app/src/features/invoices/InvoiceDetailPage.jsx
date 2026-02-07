@@ -227,14 +227,14 @@ export default function InvoiceDetailPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Compact Top Bar */}
-      <div className="px-4 md:px-6 py-3 border-b border-border bg-white flex items-center justify-between gap-4 shrink-0">
+      <div className="px-3 md:px-6 py-2 md:py-3 border-b border-border bg-white flex items-center justify-between gap-2 md:gap-4 shrink-0">
         {/* Left: Back + Title + Status */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => history.push('/invoices')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bgPrimary text-textSecondary hover:text-textPrimary transition-colors shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-lg active:bg-bgPrimary md:hover:bg-bgPrimary text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-colors shrink-0"
           >
-            <ArrowLeft className="w-4.5 h-4.5" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
@@ -251,7 +251,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Right: Action Buttons */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 md:gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
           {/* Primary action: Issue / Mark Paid */}
           {invoice.status === 'DRAFT' && (
             <button
@@ -276,10 +276,10 @@ export default function InvoiceDetailPage() {
           {/* Select Template */}
           <button
             onClick={() => setShowTemplateModal(true)}
-            className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-blue-50 rounded-lg border border-primary/30 transition-colors flex items-center gap-1.5"
+            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-primary/30 transition-colors flex items-center justify-center gap-1.5 shrink-0"
             title="Select Template"
           >
-            <Palette className="w-3.5 h-3.5" />
+            <Palette className="w-4 h-4" />
             <span className="hidden lg:inline">Template</span>
           </button>
 
@@ -287,10 +287,10 @@ export default function InvoiceDetailPage() {
           <button
             onClick={handleWhatsAppShare}
             disabled={!pdfBlob}
-            className="px-3 py-1.5 text-sm font-medium text-[#25D366] hover:bg-green-50 rounded-lg border border-[#25D366]/30 transition-colors flex items-center gap-1.5 disabled:opacity-40"
+            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-[#25D366] active:bg-green-50 md:hover:bg-green-50 rounded-lg border border-[#25D366]/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
             title="Share on WhatsApp"
           >
-            <MessageCircle className="w-3.5 h-3.5" />
+            <MessageCircle className="w-4 h-4" />
             <span className="hidden lg:inline">WhatsApp</span>
           </button>
 
@@ -298,21 +298,21 @@ export default function InvoiceDetailPage() {
           <button
             onClick={handleDownload}
             disabled={!pdfBlob}
-            className="px-3 py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
             title="Download PDF"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-4 h-4" />
             <span className="hidden lg:inline">Download</span>
           </button>
 
-          {/* Print */}
+          {/* Print — hidden on mobile (not useful in WebView) */}
           <button
             onClick={handlePrint}
             disabled={!pdfBlob}
-            className="px-3 py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+            className="hidden md:flex w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
             title="Print"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-4 h-4" />
             <span className="hidden lg:inline">Print</span>
           </button>
 
@@ -320,18 +320,18 @@ export default function InvoiceDetailPage() {
           <button
             onClick={handleShare}
             disabled={!pdfBlob}
-            className="px-3 py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
             title="Share"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 className="w-4 h-4" />
             <span className="hidden lg:inline">Share</span>
           </button>
 
           {/* More Actions */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setShowMoreActions(!showMoreActions)}
-              className="w-8 h-8 flex items-center justify-center text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -339,30 +339,31 @@ export default function InvoiceDetailPage() {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
                 <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+
                   {invoice.status === 'DRAFT' && (
                     <button
                       onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
-                      className="w-full px-4 py-2.5 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
                     >
                       <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
                     </button>
                   )}
                   <button
                     onClick={() => { setShowMoreActions(false); handleCopyLink() }}
-                    className="w-full px-4 py-2.5 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
                   >
                     <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
                   </button>
                   <button
                     onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
-                    className="w-full px-4 py-2.5 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
                   >
                     <Plus className="w-4 h-4 text-textSecondary" /> Create Another
                   </button>
                   {invoice.status === 'ISSUED' && (
                     <button
                       onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
-                      className="w-full px-4 py-2.5 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                      className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 md:hover:bg-red-50 flex items-center gap-2.5"
                     >
                       <Ban className="w-4 h-4" /> Cancel Invoice
                     </button>
@@ -370,7 +371,7 @@ export default function InvoiceDetailPage() {
                   {invoice.status === 'PAID' && (
                     <button
                       onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
-                      className="w-full px-4 py-2.5 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
                     >
                       <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                     </button>
@@ -380,7 +381,7 @@ export default function InvoiceDetailPage() {
                       <div className="border-t border-border my-1" />
                       <button
                         onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                        className="w-full px-4 py-2.5 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                        className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 md:hover:bg-red-50 flex items-center gap-2.5"
                       >
                         <Trash2 className="w-4 h-4" /> Delete Invoice
                       </button>

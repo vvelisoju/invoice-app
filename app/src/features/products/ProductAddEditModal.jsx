@@ -249,7 +249,7 @@ export default function ProductAddEditModal({
             </div>
           </div>
 
-          {/* Unit — type-and-select combobox */}
+          {/* Unit — commented out: units can be handled via product name/description
           <div>
             <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">
               Unit
@@ -310,6 +310,7 @@ export default function ProductAddEditModal({
               )}
             </div>
           </div>
+          */}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-2">

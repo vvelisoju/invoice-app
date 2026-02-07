@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2 } from 'lucide-react'
+import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2, Download, X, SlidersHorizontal } from 'lucide-react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productApi } from '../../lib/api'
 import {
@@ -28,7 +28,7 @@ const STATUS_FILTERS = [
 
 const TABLE_COLUMNS = [
   { key: 'name', label: 'Product / Service', colSpan: 4 },
-  { key: 'unit', label: 'Unit', colSpan: 2 },
+  { key: 'taxRate', label: 'Tax Rate', colSpan: 2 },
   { key: 'rate', label: 'Default Rate', colSpan: 2, headerAlign: 'right', align: 'right' },
   { key: 'actions', label: 'Actions', colSpan: 3, headerAlign: 'center', align: 'center' },
 ]
@@ -97,6 +97,9 @@ export default function ProductListPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   // Page state
   const [page, setPage] = useState(0)
@@ -194,7 +197,14 @@ export default function ProductListPage() {
   }, [])
 
   const confirmDelete = () => {
-    if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+    if (!deleteTarget) return
+    if (deleteTarget._bulkIds) {
+      // Bulk delete: delete one by one
+      deleteTarget._bulkIds.forEach(id => deleteMutation.mutate(id))
+      setSelectedIds(new Set())
+    } else {
+      deleteMutation.mutate(deleteTarget.id)
+    }
   }
 
   const renderRow = (product) => {
@@ -215,8 +225,10 @@ export default function ProductListPage() {
         </div>
       </div>,
 
-      // Unit
-      <span key="unit" className="text-textSecondary">{product.unit || '--'}</span>,
+      // Tax Rate
+      <span key="taxRate" className="text-textSecondary">
+        {product.taxRate != null && Number(product.taxRate) > 0 ? `${Number(product.taxRate)}%` : '--'}
+      </span>,
 
       // Default Rate
       <div key="rate" className="text-right">
@@ -228,7 +240,7 @@ export default function ProductListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); history.push('/invoices/new') }}
           className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
@@ -254,12 +266,32 @@ export default function ProductListPage() {
     ]
   }
 
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
       <PageToolbar
         title="Products & Services"
         subtitle="Manage your product catalog and service offerings"
+        mobileActions={
+          <>
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors ${
+                showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </>
+        }
         actions={
           <>
             <div className="relative">
@@ -268,7 +300,7 @@ export default function ProductListPage() {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search products..."
-                className="pl-9 pr-4 py-2 text-sm border border-border rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
@@ -282,16 +314,92 @@ export default function ProductListPage() {
           </>
         }
       >
-        <StatusFilterPills
-          filters={filtersWithCounts}
-          activeKey={statusFilter}
-          onChange={handleFilterChange}
-        />
+        {/* Mobile: collapsible filters */}
+        {showMobileFilters && (
+          <div className="md:hidden space-y-3 mb-1">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search products..."
+                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
+            </div>
+            <StatusFilterPills
+              filters={filtersWithCounts}
+              activeKey={statusFilter}
+              onChange={handleFilterChange}
+            />
+          </div>
+        )}
+        {/* Desktop: always visible */}
+        <div className="hidden md:block">
+          <StatusFilterPills
+            filters={filtersWithCounts}
+            activeKey={statusFilter}
+            onChange={handleFilterChange}
+          />
+        </div>
       </PageToolbar>
 
       {/* Table */}
-      <div className="flex-1 px-8 py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
+          {/* Bulk Action Bar */}
+          {selectedIds.size > 0 && (
+            <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
+              <span className="text-sm font-semibold text-primary">{selectedIds.size} selected</span>
+              <div className="w-px h-5 bg-blue-200" />
+              <button
+                onClick={() => {
+                  const selected = products.filter(p => selectedIds.has(p.id))
+                  const headers = ['Name', 'Default Rate', 'Tax Rate']
+                  const rows = selected.map(p => [
+                    `"${(p.name || '').replace(/"/g, '""')}"`,
+                    p.defaultRate != null ? Number(p.defaultRate).toFixed(2) : '',
+                    p.taxRate != null ? `${Number(p.taxRate)}%` : '',
+                  ])
+                  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+                  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `products_${Date.now()}.csv`
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                  URL.revokeObjectURL(url)
+                }}
+                className="text-xs font-medium text-primary hover:text-primaryHover flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+              <button
+                onClick={() => {
+                  const ids = Array.from(selectedIds)
+                  if (ids.length === 1) {
+                    const p = products.find(pr => pr.id === ids[0])
+                    if (p) setDeleteTarget(p)
+                  } else {
+                    setDeleteTarget({ id: '__bulk__', name: `${ids.length} products`, _bulkIds: ids })
+                  }
+                }}
+                className="text-xs font-medium text-red-600 hover:text-red-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-xs text-textSecondary hover:text-textPrimary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            </div>
+          )}
+
           <DataTable
             columns={TABLE_COLUMNS}
             rows={paginatedProducts}
@@ -300,10 +408,35 @@ export default function ProductListPage() {
             onRowClick={(p) => handleEdit(p)}
             getRowClassName={() => ''}
             selectable={true}
+            onSelectionChange={setSelectedIds}
             isLoading={isLoading}
             emptyIcon={<Package className="w-16 h-16 text-gray-300 mb-4" />}
             emptyTitle={statusFilter !== 'all' ? 'No products match this filter' : 'No products yet'}
             emptyMessage={statusFilter !== 'all' ? 'Try a different filter or add new products' : 'Add your first product or service to get started'}
+            renderMobileCard={(product) => {
+              const initials = getInitials(product.name)
+              const color = getAvatarColor(product.name)
+              return (
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${color.bg} ${color.text} flex items-center justify-center font-bold text-xs shrink-0`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-sm text-textPrimary truncate">{product.name}</div>
+                    <div className="text-xs text-textSecondary">
+                      {product.unit || 'No unit'}{product.description ? ` · ${product.description}` : ''}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {product.defaultRate ? (
+                      <span className="font-semibold text-sm text-textPrimary">{formatCurrency(product.defaultRate)}</span>
+                    ) : (
+                      <span className="font-medium text-xs text-textSecondary">--</span>
+                    )}
+                  </div>
+                </div>
+              )
+            }}
             loadMore={statusFilter === 'all' ? {
               hasMore: hasNextPage,
               isLoading: isFetchingNextPage,
@@ -321,7 +454,7 @@ export default function ProductListPage() {
                     <button
                       onClick={() => setPage(p => Math.max(0, p - 1))}
                       disabled={page === 0}
-                      className="px-3 py-1 text-xs border border-border rounded bg-white text-textSecondary hover:bg-gray-50 hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 text-xs border border-border rounded bg-white text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Previous
                     </button>
@@ -337,7 +470,7 @@ export default function ProductListPage() {
                         }
                       }}
                       disabled={page + 1 >= totalPages && !hasNextPage}
-                      className="px-3 py-1 text-xs border border-border rounded bg-white text-textSecondary hover:bg-gray-50 hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 text-xs border border-border rounded bg-white text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {isFetchingNextPage ? 'Loading...' : 'Next'}
                     </button>
@@ -349,8 +482,8 @@ export default function ProductListPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center py-4 bg-bgPrimary">
+      {/* Footer — hidden on mobile */}
+      <div className="hidden md:block text-center py-4 bg-bgPrimary">
         <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
       </div>
 

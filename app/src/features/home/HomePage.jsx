@@ -6,10 +6,10 @@ import { PageHeader } from '../../components/layout'
 
 function StatCard({ icon: Icon, value, label, iconColorClass = 'text-primary', valueColorClass = '' }) {
   return (
-    <div className="bg-bgSecondary rounded-xl border border-border p-6 shadow-card text-center hover:shadow-soft transition-shadow">
-      <Icon className={`w-7 h-7 mx-auto mb-3 ${iconColorClass}`} />
-      <div className={`text-2xl font-bold ${valueColorClass || 'text-textPrimary'}`}>{value}</div>
-      <p className="text-xs text-textSecondary mt-1">{label}</p>
+    <div className="bg-bgSecondary rounded-xl border border-border p-4 md:p-6 shadow-card text-center active:shadow-soft md:hover:shadow-soft transition-shadow">
+      <Icon className={`w-6 h-6 md:w-7 md:h-7 mx-auto mb-2 md:mb-3 ${iconColorClass}`} />
+      <div className={`text-xl md:text-2xl font-bold ${valueColorClass || 'text-textPrimary'}`}>{value}</div>
+      <p className="text-[11px] md:text-xs text-textSecondary mt-1">{label}</p>
     </div>
   )
 }
@@ -35,13 +35,13 @@ export default function HomePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8">
+    <div className="max-w-5xl mx-auto p-3 md:p-8">
       <PageHeader
         title="Dashboard"
         actions={
           <button
             onClick={() => history.push('/invoices/new')}
-            className="px-5 py-2.5 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2"
+            className="px-4 md:px-5 py-2.5 bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             New Invoice
@@ -55,7 +55,7 @@ export default function HomePage() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <StatCard
             icon={FileText}
             value={stats?.totalInvoices || 0}
@@ -88,7 +88,7 @@ export default function HomePage() {
       {/* Quick Links */}
       <button
         onClick={() => history.push('/invoices')}
-        className="w-full py-3 border border-border bg-bgSecondary hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary hover:text-textPrimary transition-all flex items-center justify-center gap-2"
+        className="w-full py-3.5 border border-border bg-bgSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-all flex items-center justify-center gap-2"
       >
         View All Invoices
         <ArrowRight className="w-4 h-4" />

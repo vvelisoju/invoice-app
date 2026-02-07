@@ -91,7 +91,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
           </div>
           <button
             onClick={handleClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-textSecondary hover:text-textPrimary transition-colors"
+            className="w-10 h-10 rounded-lg active:bg-gray-100 md:hover:bg-gray-100 flex items-center justify-center text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -121,7 +121,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
           </div>
 
           {/* Phone & Email */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">Phone</label>
               <input
@@ -145,7 +145,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
           </div>
 
           {/* GSTIN & State Code */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">GSTIN</label>
               <input
@@ -187,14 +187,14 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2.5 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors border border-border"
+              className="px-4 py-2.5 text-sm font-medium text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-50 md:hover:bg-gray-50 rounded-lg transition-colors border border-border"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
             >
               {createMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
