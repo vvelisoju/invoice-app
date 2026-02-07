@@ -6,47 +6,64 @@ async function main() {
   console.log('🌱 Seeding database...')
 
   // Create default plans
+  const freePlanData = {
+    displayName: 'Free',
+    description: 'Get started with basic invoicing',
+    entitlements: {
+      monthlyInvoicesLimit: 10,
+      customersLimit: 20,
+      productsLimit: 20,
+      templatesLimit: 1
+    },
+    priceMonthly: null,
+    priceYearly: null,
+    active: true
+  }
   const freePlan = await prisma.plan.upsert({
     where: { name: 'free' },
-    update: {},
-    create: {
-      name: 'free',
-      displayName: 'Free Plan',
-      description: 'Perfect for getting started',
-      entitlements: {
-        monthlyInvoicesLimit: 20,
-        customersLimit: 50,
-        productsLimit: 50,
-        templatesLimit: 1,
-        advancedTemplateCustomization: false,
-        csvExport: false
-      },
-      active: true
-    }
+    update: freePlanData,
+    create: { name: 'free', ...freePlanData }
   })
 
+  const starterPlanData = {
+    displayName: 'Starter',
+    description: 'For small businesses',
+    entitlements: {
+      monthlyInvoicesLimit: 200,
+      customersLimit: 500,
+      productsLimit: 200,
+      templatesLimit: 3
+    },
+    priceMonthly: 149.00,
+    priceYearly: 1188.00,
+    active: true
+  }
+  const starterPlan = await prisma.plan.upsert({
+    where: { name: 'starter' },
+    update: starterPlanData,
+    create: { name: 'starter', ...starterPlanData }
+  })
+
+  const proPlanData = {
+    displayName: 'Pro',
+    description: 'Unlimited invoicing for growing businesses',
+    entitlements: {
+      monthlyInvoicesLimit: 999999,
+      customersLimit: 999999,
+      productsLimit: 999999,
+      templatesLimit: 10
+    },
+    priceMonthly: 449.00,
+    priceYearly: 3588.00,
+    active: true
+  }
   const proPlan = await prisma.plan.upsert({
     where: { name: 'pro' },
-    update: {},
-    create: {
-      name: 'pro',
-      displayName: 'Pro Plan',
-      description: 'For growing businesses',
-      entitlements: {
-        monthlyInvoicesLimit: 500,
-        customersLimit: 1000,
-        productsLimit: 500,
-        templatesLimit: 5,
-        advancedTemplateCustomization: true,
-        csvExport: true
-      },
-      priceMonthly: 499.00,
-      priceYearly: 4990.00,
-      active: true
-    }
+    update: proPlanData,
+    create: { name: 'pro', ...proPlanData }
   })
 
-  console.log('✅ Created plans:', { freePlan: freePlan.name, proPlan: proPlan.name })
+  console.log('✅ Created plans:', { free: freePlan.name, starter: starterPlan.name, pro: proPlan.name })
 
   // Create base templates
   const cleanTemplate = await prisma.baseTemplate.upsert({
@@ -125,7 +142,82 @@ async function main() {
     }
   })
 
-  console.log('✅ Created base template:', cleanTemplate.name)
+  const modernRedTemplate = await prisma.baseTemplate.upsert({
+    where: { name: 'modern-red' },
+    update: {},
+    create: {
+      name: 'modern-red',
+      description: 'Bold red accents with a modern sidebar layout',
+      configSchema: {
+        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
+        defaults: { primaryColor: '#DC2626' }
+      },
+      renderConfig: { componentId: 'modern-red', layout: { type: 'sidebar-accent' } },
+      active: true
+    }
+  })
+
+  const classicRedTemplate = await prisma.baseTemplate.upsert({
+    where: { name: 'classic-red' },
+    update: {},
+    create: {
+      name: 'classic-red',
+      description: 'Traditional invoice layout with green header stripe',
+      configSchema: {
+        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
+        defaults: { primaryColor: '#047857' }
+      },
+      renderConfig: { componentId: 'classic-red', layout: { type: 'header-stripe' } },
+      active: true
+    }
+  })
+
+  const wexlerTemplate = await prisma.baseTemplate.upsert({
+    where: { name: 'wexler' },
+    update: {},
+    create: {
+      name: 'wexler',
+      description: 'Colorful accent band with bold typography',
+      configSchema: {
+        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
+        defaults: { primaryColor: '#1E3A5F' }
+      },
+      renderConfig: { componentId: 'wexler', layout: { type: 'accent-band' } },
+      active: true
+    }
+  })
+
+  const plexerTemplate = await prisma.baseTemplate.upsert({
+    where: { name: 'plexer' },
+    update: {},
+    create: {
+      name: 'plexer',
+      description: 'Professional two-tone layout with clean lines',
+      configSchema: {
+        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
+        defaults: { primaryColor: '#374151' }
+      },
+      renderConfig: { componentId: 'plexer', layout: { type: 'two-tone' } },
+      active: true
+    }
+  })
+
+  const contemporaryTemplate = await prisma.baseTemplate.upsert({
+    where: { name: 'contemporary' },
+    update: {},
+    create: {
+      name: 'contemporary',
+      description: 'Modern gradient header with spacious layout',
+      configSchema: {
+        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
+        defaults: { primaryColor: '#E11D48' }
+      },
+      renderConfig: { componentId: 'contemporary', layout: { type: 'gradient-header' } },
+      active: true
+    }
+  })
+
+  console.log('✅ Created base templates:', [cleanTemplate.name, modernRedTemplate.name, classicRedTemplate.name, wexlerTemplate.name, plexerTemplate.name, contemporaryTemplate.name].join(', '))
 
   // =========================================================================
   // SAMPLE DATA — Test user, business, customers, invoices
@@ -313,6 +405,49 @@ async function main() {
     })
     console.log('  ✅ Invoice', inv.invoiceNumber, '—', inv.status, '— ₹' + total.toFixed(2))
   }
+
+  // Create products & services
+  const productData = [
+    { name: 'Web Development', defaultRate: 15000, unit: 'project' },
+    { name: 'Hosting (Annual)', defaultRate: 2300, unit: 'year' },
+    { name: 'SEO Optimization', defaultRate: 5000, unit: 'month' },
+    { name: 'Content Writing', defaultRate: 680, unit: 'page' },
+    { name: 'Logo Design', defaultRate: 3500, unit: 'item' },
+    { name: 'Brand Guidelines', defaultRate: 2000, unit: 'item' },
+    { name: 'Consulting', defaultRate: 1200, unit: 'hour' },
+    { name: 'Plumbing Materials', defaultRate: 120, unit: 'piece' },
+    { name: 'Labour Charges', defaultRate: 800, unit: 'day' },
+    { name: 'Cement', defaultRate: 380, unit: 'bag' },
+    { name: 'Steel Rods', defaultRate: 65, unit: 'kg' },
+    { name: 'Transport', defaultRate: 2500, unit: 'trip' },
+    { name: 'UI/UX Design', defaultRate: 8000, unit: 'screen' },
+    { name: 'Mobile App Development', defaultRate: 50000, unit: 'project' },
+    { name: 'Server Maintenance', defaultRate: 3000, unit: 'month' },
+    { name: 'Domain Registration', defaultRate: 800, unit: 'year' },
+    { name: 'SSL Certificate', defaultRate: 1500, unit: 'year' },
+    { name: 'Email Marketing', defaultRate: 2000, unit: 'campaign' },
+    { name: 'Social Media Management', defaultRate: 4500, unit: 'month' },
+    { name: 'Photography', defaultRate: 5000, unit: 'session' },
+  ]
+
+  let productCount = 0
+  for (const pd of productData) {
+    const existing = await prisma.productService.findFirst({
+      where: { businessId: business.id, name: pd.name }
+    })
+    if (!existing) {
+      await prisma.productService.create({
+        data: {
+          businessId: business.id,
+          name: pd.name,
+          defaultRate: pd.defaultRate,
+          unit: pd.unit
+        }
+      })
+      productCount++
+    }
+  }
+  console.log('✅ Created', productCount, 'products/services')
 
   console.log('🎉 Seeding completed successfully!')
 }

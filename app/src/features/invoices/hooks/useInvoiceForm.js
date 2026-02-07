@@ -190,6 +190,7 @@ export function useInvoiceForm(invoiceId = null) {
         name: product?.name || newLineItems[index].name,
         rate: product?.defaultRate || newLineItems[index].rate,
         productServiceId: product?.id || null,
+        taxRate: product?.taxRate || null,
         lineTotal: (parseFloat(newLineItems[index].quantity) || 0) * (parseFloat(product?.defaultRate) || 0)
       }
 

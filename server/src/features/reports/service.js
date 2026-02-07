@@ -125,6 +125,74 @@ export async function getGSTSummary(businessId, dateFrom, dateTo) {
   }
 }
 
+export async function getDocumentReport(businessId, filters = {}) {
+  const { dateFrom, dateTo, status, documentType } = filters
+
+  const where = {
+    businessId,
+    ...(dateFrom && dateTo
+      ? { date: { gte: new Date(dateFrom), lte: new Date(dateTo) } }
+      : dateFrom
+        ? { date: { gte: new Date(dateFrom) } }
+        : dateTo
+          ? { date: { lte: new Date(dateTo) } }
+          : {}),
+    ...(status && status !== 'all' && { status }),
+    ...(documentType && documentType !== 'all' && { documentType })
+  }
+
+  const invoices = await prisma.invoice.findMany({
+    where,
+    include: {
+      customer: {
+        select: { id: true, name: true, gstin: true, phone: true }
+      }
+    },
+    orderBy: { date: 'desc' }
+  })
+
+  let totalSubtotal = 0
+  let totalTax = 0
+  let totalPaid = 0
+  let totalAmount = 0
+
+  const documents = invoices.map(inv => {
+    const subtotal = parseFloat(inv.subtotal || 0)
+    const tax = parseFloat(inv.taxTotal || 0)
+    const paid = parseFloat(inv.paidAmount || 0)
+    const total = parseFloat(inv.total || 0)
+
+    totalSubtotal += subtotal
+    totalTax += tax
+    totalPaid += paid
+    totalAmount += total
+
+    return {
+      id: inv.id,
+      customerName: inv.customer?.name || inv.customerName || '',
+      customerGstin: inv.customer?.gstin || '',
+      documentType: inv.documentType || 'INVOICE',
+      invoiceNumber: inv.invoiceNumber || '',
+      date: inv.date,
+      subtotal,
+      tax,
+      paidAmount: paid,
+      total
+    }
+  })
+
+  return {
+    documents,
+    totals: {
+      count: documents.length,
+      subtotal: totalSubtotal,
+      tax: totalTax,
+      paidAmount: totalPaid,
+      total: totalAmount
+    }
+  }
+}
+
 export async function getMonthlyTrend(businessId, months = 6) {
   const startDate = new Date()
   startDate.setMonth(startDate.getMonth() - months + 1)

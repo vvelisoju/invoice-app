@@ -85,6 +85,28 @@ export const getCustomer = async (prisma, customerId, businessId) => {
   return customer
 }
 
+export const deleteCustomer = async (prisma, customerId, businessId) => {
+  const customer = await prisma.customer.findUnique({
+    where: { id: customerId },
+    include: { invoices: { select: { id: true }, take: 1 } }
+  })
+
+  if (!customer) {
+    throw new NotFoundError('Customer not found')
+  }
+
+  if (customer.businessId !== businessId) {
+    throw new ForbiddenError('Access denied')
+  }
+
+  if (customer.invoices.length > 0) {
+    throw new ForbiddenError('Cannot delete customer with existing invoices')
+  }
+
+  await prisma.customer.delete({ where: { id: customerId } })
+  return { success: true }
+}
+
 export const updateCustomer = async (prisma, customerId, businessId, data) => {
   const customer = await prisma.customer.findUnique({
     where: { id: customerId }

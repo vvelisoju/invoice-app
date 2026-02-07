@@ -13,6 +13,7 @@ export async function getBusinessProfile(businessId) {
       logoUrl: true,
       phone: true,
       email: true,
+      website: true,
       address: true,
       bankName: true,
       accountNumber: true,
@@ -25,6 +26,7 @@ export async function getBusinessProfile(businessId) {
       defaultNotes: true,
       defaultTerms: true,
       defaultTaxRate: true,
+      enabledInvoiceTypes: true,
       createdAt: true,
       updatedAt: true
     }
@@ -53,6 +55,7 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.phone !== undefined) updateData.phone = data.phone
   if (data.email !== undefined) updateData.email = data.email
   if (data.address !== undefined) updateData.address = data.address
+  if (data.website !== undefined) updateData.website = data.website
   if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl
 
   // GST settings
@@ -75,6 +78,7 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.invoicePrefix !== undefined) updateData.invoicePrefix = data.invoicePrefix
   if (data.defaultNotes !== undefined) updateData.defaultNotes = data.defaultNotes
   if (data.defaultTerms !== undefined) updateData.defaultTerms = data.defaultTerms
+  if (data.enabledInvoiceTypes !== undefined) updateData.enabledInvoiceTypes = data.enabledInvoiceTypes
 
   // Next invoice number (with validation)
   if (data.nextInvoiceNumber !== undefined) {
@@ -110,6 +114,7 @@ export async function updateBusinessProfile(businessId, data) {
       logoUrl: true,
       phone: true,
       email: true,
+      website: true,
       address: true,
       bankName: true,
       accountNumber: true,
@@ -122,6 +127,7 @@ export async function updateBusinessProfile(businessId, data) {
       defaultNotes: true,
       defaultTerms: true,
       defaultTaxRate: true,
+      enabledInvoiceTypes: true,
       createdAt: true,
       updatedAt: true
     }

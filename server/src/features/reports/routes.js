@@ -34,6 +34,23 @@ export default async function reportsRoutes(fastify) {
     }
   }, handlers.getGSTSummary)
 
+  // Document-level report
+  fastify.get('/documents', {
+    schema: {
+      description: 'Get document-level report with filters',
+      tags: ['reports'],
+      querystring: {
+        type: 'object',
+        properties: {
+          dateFrom: { type: 'string', format: 'date' },
+          dateTo: { type: 'string', format: 'date' },
+          status: { type: 'string' },
+          documentType: { type: 'string' }
+        }
+      }
+    }
+  }, handlers.getDocumentReport)
+
   // Monthly trend
   fastify.get('/trend', {
     schema: {

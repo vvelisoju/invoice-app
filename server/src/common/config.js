@@ -29,6 +29,10 @@ export const config = {
     expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '5', 10),
     length: parseInt(process.env.OTP_LENGTH || '6', 10)
   },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET
+  },
   logLevel: process.env.LOG_LEVEL || 'info'
 }
 

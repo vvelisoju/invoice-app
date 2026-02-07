@@ -1,31 +1,45 @@
 import { z } from 'zod'
 
+// Helper: treat empty strings as null
+const emptyToNull = (val) => (val === '' ? null : val)
+
 export const updateBusinessSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number').optional().nullable(),
-  email: z.string().email().optional().nullable(),
-  address: z.string().max(500).optional().nullable(),
-  logoUrl: z.string().url().optional().nullable(),
+  phone: z.preprocess(emptyToNull, z.string().max(20).optional().nullable()),
+  email: z.preprocess(emptyToNull, z.string().email().optional().nullable()),
+  website: z.preprocess(emptyToNull, z.string().max(500).optional().nullable()),
+  address: z.preprocess(emptyToNull, z.string().max(500).optional().nullable()),
+  logoUrl: z.preprocess(emptyToNull, z.string().max(2000).optional().nullable()),
 
-  // GST
+  // GST — lenient save; strict format enforced at invoice issuance
   gstEnabled: z.boolean().optional(),
-  gstin: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GSTIN format').optional().nullable(),
-  stateCode: z.string().length(2).optional().nullable(),
-  defaultTaxRate: z.number().min(0).max(100).optional().nullable(),
+  gstin: z.preprocess(emptyToNull, z.string().max(15).optional().nullable()),
+  stateCode: z.preprocess(emptyToNull, z.string().max(2).optional().nullable()),
+  defaultTaxRate: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined) ? null : Number(val),
+    z.number().min(0).max(100).optional().nullable()
+  ),
 
-  // Bank
-  bankName: z.string().max(100).optional().nullable(),
-  accountNumber: z.string().max(20).optional().nullable(),
-  ifscCode: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code').optional().nullable(),
-  upiId: z.string().max(100).optional().nullable(),
+  // Bank — lenient save; no strict regex on settings
+  bankName: z.preprocess(emptyToNull, z.string().max(100).optional().nullable()),
+  accountNumber: z.preprocess(emptyToNull, z.string().max(20).optional().nullable()),
+  ifscCode: z.preprocess(emptyToNull, z.string().max(11).optional().nullable()),
+  upiId: z.preprocess(emptyToNull, z.string().max(100).optional().nullable()),
 
   // Signature
-  signatureUrl: z.string().url().optional().nullable(),
-  signatureName: z.string().max(100).optional().nullable(),
+  signatureUrl: z.preprocess(emptyToNull, z.string().max(2000).optional().nullable()),
+  signatureName: z.preprocess(emptyToNull, z.string().max(100).optional().nullable()),
 
   // Invoice defaults
-  invoicePrefix: z.string().max(10).optional(),
-  nextInvoiceNumber: z.number().int().positive().optional(),
-  defaultNotes: z.string().max(1000).optional().nullable(),
-  defaultTerms: z.string().max(1000).optional().nullable()
-})
+  invoicePrefix: z.preprocess(emptyToNull, z.string().max(10).optional().nullable()),
+  nextInvoiceNumber: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined) ? undefined : Number(val),
+    z.number().int().positive().optional()
+  ),
+  defaultNotes: z.preprocess(emptyToNull, z.string().max(1000).optional().nullable()),
+  defaultTerms: z.preprocess(emptyToNull, z.string().max(1000).optional().nullable()),
+  enabledInvoiceTypes: z.preprocess(
+    (val) => (val === null || val === undefined) ? undefined : val,
+    z.array(z.string()).min(1, 'At least one document type must be selected').optional()
+  )
+}).strip()

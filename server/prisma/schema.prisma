@@ -58,6 +58,7 @@ model Business {
   logoUrl     String?
   phone       String?
   email       String?
+  website     String?
   address     String?
   
   // Bank & Payment details (optional, for invoice templates)
@@ -76,6 +77,7 @@ model Business {
   defaultNotes       String?
   defaultTerms       String?
   defaultTaxRate     Decimal? @db.Decimal(5, 2)
+  enabledInvoiceTypes Json?  // JSON array of enabled invoice type keys for sidebar
   
   // Plan & subscription
   planId         String?
@@ -92,11 +94,33 @@ model Business {
   products             ProductService[]
   invoices             Invoice[]
   templateConfigs      BusinessTemplateConfig[]
+  taxRates             TaxRate[]
   usageCounters        UsageCounter[]
 
   @@index([ownerUserId])
   @@index([planId])
   @@index([updatedAt])
+}
+
+// ============================================================================
+// TAX RATES (Configurable per business)
+// ============================================================================
+
+model TaxRate {
+  id         String   @id @default(uuid())
+  businessId String
+  name       String   // e.g., "GST 18%", "GST 5%", "IGST 12%"
+  rate       Decimal  @db.Decimal(5, 2) // e.g., 18.00
+  isDefault  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, isDefault])
 }
 
 // ============================================================================
@@ -137,6 +161,7 @@ model ProductService {
   name        String
   defaultRate Decimal? @db.Decimal(10, 2)
   unit        String?  // e.g., "hour", "item", "kg"
+  taxRate     Decimal? @db.Decimal(5, 2) // e.g., 18.00 for 18% GST
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -342,6 +367,13 @@ model Subscription {
   businessId String?
   planId     String
   status     SubscriptionStatus @default(ACTIVE)
+  
+  // Razorpay fields
+  razorpayOrderId   String?  @unique
+  razorpayPaymentId String?  @unique
+  razorpaySignature String?
+  amount            Decimal? @db.Decimal(10, 2)
+  currency          String   @default("INR")
   
   startDate DateTime @default(now())
   renewAt   DateTime?

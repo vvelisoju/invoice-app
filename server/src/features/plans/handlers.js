@@ -39,3 +39,15 @@ export async function assignPlan(request, reply) {
   const business = await planService.assignPlanToBusiness(businessId, planId)
   return { data: business }
 }
+
+// Razorpay payment flow
+export async function createOrder(request, reply) {
+  const { planId, billingPeriod } = request.body
+  const order = await planService.createSubscriptionOrder(request.businessId, planId, billingPeriod || 'yearly')
+  return { data: order }
+}
+
+export async function verifyPayment(request, reply) {
+  const result = await planService.verifySubscriptionPayment(request.businessId, request.body)
+  return { data: result }
+}

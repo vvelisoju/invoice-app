@@ -14,7 +14,7 @@ export default async function businessRoutes(fastify) {
         200: {
           type: 'object',
           properties: {
-            data: { type: 'object' }
+            data: { type: 'object', additionalProperties: true }
           }
         }
       }
@@ -28,33 +28,13 @@ export default async function businessRoutes(fastify) {
       tags: ['business'],
       body: {
         type: 'object',
-        properties: {
-          name: { type: 'string' },
-          phone: { type: 'string' },
-          email: { type: 'string' },
-          address: { type: 'string' },
-          logoUrl: { type: 'string' },
-          gstEnabled: { type: 'boolean' },
-          gstin: { type: 'string' },
-          stateCode: { type: 'string' },
-          defaultTaxRate: { type: 'number' },
-          bankName: { type: 'string' },
-          accountNumber: { type: 'string' },
-          ifscCode: { type: 'string' },
-          upiId: { type: 'string' },
-          signatureUrl: { type: 'string' },
-          signatureName: { type: 'string' },
-          invoicePrefix: { type: 'string' },
-          nextInvoiceNumber: { type: 'integer' },
-          defaultNotes: { type: 'string' },
-          defaultTerms: { type: 'string' }
-        }
+        additionalProperties: true
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            data: { type: 'object' }
+            data: { type: 'object', additionalProperties: true }
           }
         }
       }

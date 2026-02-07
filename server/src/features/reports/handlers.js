@@ -20,6 +20,14 @@ export async function getGSTSummary(request, reply) {
   return { data: summary }
 }
 
+export async function getDocumentReport(request, reply) {
+  const result = await reportsService.getDocumentReport(
+    request.businessId,
+    request.query
+  )
+  return { data: result }
+}
+
 export async function getMonthlyTrend(request, reply) {
   const { months } = request.query
   const trend = await reportsService.getMonthlyTrend(

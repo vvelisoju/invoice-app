@@ -21,6 +21,40 @@ export default async function planRoutes(fastify) {
         tags: ['plans']
       }
     }, handlers.listPlans)
+
+    // Create Razorpay order for plan subscription
+    userRoutes.post('/create-order', {
+      schema: {
+        description: 'Create a Razorpay order for subscribing to a plan',
+        tags: ['plans'],
+        body: {
+          type: 'object',
+          properties: {
+            planId: { type: 'string' },
+            billingPeriod: { type: 'string', enum: ['monthly', 'yearly'] }
+          },
+          required: ['planId']
+        }
+      }
+    }, handlers.createOrder)
+
+    // Verify Razorpay payment and activate subscription
+    userRoutes.post('/verify-payment', {
+      schema: {
+        description: 'Verify Razorpay payment signature and activate subscription',
+        tags: ['plans'],
+        body: {
+          type: 'object',
+          properties: {
+            razorpayOrderId: { type: 'string' },
+            razorpayPaymentId: { type: 'string' },
+            razorpaySignature: { type: 'string' },
+            planId: { type: 'string' }
+          },
+          required: ['razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature', 'planId']
+        }
+      }
+    }, handlers.verifyPayment)
   })
 
   // Admin routes

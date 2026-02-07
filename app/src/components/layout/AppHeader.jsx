@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { FileText, Bell, LogOut } from 'lucide-react'
+import { FileText, Bell, LogOut, Settings, Palette, ChevronDown, User, HelpCircle } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
 
@@ -8,13 +9,32 @@ export default function AppHeader() {
   const location = useLocation()
   const business = useAuthStore((state) => state.business)
   const logout = useAuthStore((state) => state.logout)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsRef = useRef(null)
 
   const activeTabKey = getActiveTabKey(location.pathname)
+  const isSettingsActive = activeTabKey === 'settings'
 
   const handleLogout = () => {
     logout()
     history.replace('/auth/phone')
   }
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+        setSettingsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setSettingsOpen(false)
+  }, [location.pathname])
 
   return (
     <nav className="bg-bgSecondary border-b border-border h-14 flex items-center px-6 shrink-0 z-20 justify-between">
@@ -69,18 +89,73 @@ export default function AppHeader() {
       </div>
 
       {/* Right Side Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <div className="relative cursor-pointer">
           <Bell className="w-[18px] h-[18px] text-textSecondary hover:text-textPrimary transition-colors" />
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-8 h-8 rounded-full border border-border bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
-          title="Logout"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
+
+        {/* Settings Dropdown */}
+        <div className="relative" ref={settingsRef}>
+          <button
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isSettingsActive || settingsOpen
+                ? 'text-primary bg-blue-50 border border-blue-100'
+                : 'text-textSecondary hover:bg-bgPrimary border border-transparent'
+            }`}
+          >
+            <Settings className={`w-4 h-4 ${isSettingsActive || settingsOpen ? 'text-primary' : 'text-gray-400'}`} />
+            <ChevronDown className={`w-3 h-3 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {settingsOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-border rounded-xl shadow-lg py-2 z-50">
+              <div className="px-4 py-2.5 border-b border-border">
+                <p className="text-xs font-semibold text-textSecondary uppercase tracking-wider">Settings</p>
+              </div>
+              <div className="py-1">
+                <button
+                  onClick={() => history.push('/settings')}
+                  className="w-full px-4 py-2.5 text-sm text-textPrimary hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-gray-400" />
+                  Business Settings
+                </button>
+                <button
+                  onClick={() => history.push('/templates')}
+                  className="w-full px-4 py-2.5 text-sm text-textPrimary hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors"
+                >
+                  <Palette className="w-4 h-4 text-gray-400" />
+                  Invoice Templates
+                </button>
+                <button
+                  onClick={() => {}}
+                  className="w-full px-4 py-2.5 text-sm text-textPrimary hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors"
+                >
+                  <User className="w-4 h-4 text-gray-400" />
+                  Account Profile
+                </button>
+                <button
+                  onClick={() => {}}
+                  className="w-full px-4 py-2.5 text-sm text-textPrimary hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors"
+                >
+                  <HelpCircle className="w-4 h-4 text-gray-400" />
+                  Help & Support
+                </button>
+              </div>
+              <div className="border-t border-border pt-1">
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   )

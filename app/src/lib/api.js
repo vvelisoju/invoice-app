@@ -66,18 +66,23 @@ export const invoiceApi = {
 
 // Customer API
 export const customerApi = {
+  list: (params) => api.get('/customers/list', { params }),
   search: (query) => api.get('/customers', { params: { search: query } }),
   get: (id) => api.get(`/customers/${id}`),
   create: (data) => api.post('/customers', data),
-  update: (id, data) => api.patch(`/customers/${id}`, data)
+  update: (id, data) => api.patch(`/customers/${id}`, data),
+  delete: (id) => api.delete(`/customers/${id}`)
 }
 
 // Product API
 export const productApi = {
+  list: (params) => api.get('/products/list', { params }),
   search: (query) => api.get('/products', { params: { search: query } }),
   get: (id) => api.get(`/products/${id}`),
   create: (data) => api.post('/products', data),
-  update: (id, data) => api.patch(`/products/${id}`, data)
+  update: (id, data) => api.patch(`/products/${id}`, data),
+  delete: (id) => api.delete(`/products/${id}`),
+  listUnits: () => api.get('/products/units')
 }
 
 // Business API
@@ -91,6 +96,7 @@ export const businessApi = {
 export const reportsApi = {
   getSummary: (params) => api.get('/reports/summary', { params }),
   getGSTSummary: (params) => api.get('/reports/gst', { params }),
+  getDocuments: (params) => api.get('/reports/documents', { params }),
   getMonthlyTrend: (months) => api.get('/reports/trend', { params: { months } })
 }
 
@@ -113,5 +119,15 @@ export const syncApi = {
 // Plans API
 export const plansApi = {
   list: () => api.get('/plans'),
-  getUsage: () => api.get('/plans/usage')
+  getUsage: () => api.get('/plans/usage'),
+  createOrder: (data) => api.post('/plans/create-order', data),
+  verifyPayment: (data) => api.post('/plans/verify-payment', data)
+}
+
+// Tax Rates API
+export const taxRateApi = {
+  list: () => api.get('/tax-rates'),
+  create: (data) => api.post('/tax-rates', data),
+  update: (id, data) => api.patch(`/tax-rates/${id}`, data),
+  delete: (id) => api.delete(`/tax-rates/${id}`)
 }

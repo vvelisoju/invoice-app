@@ -59,7 +59,11 @@ export async function getBusinessTemplateConfig(businessId) {
     return null
   }
 
-  return config
+  // Normalize: schema field is 'config', API returns 'customConfig'
+  return {
+    ...config,
+    customConfig: config.config || config.customConfig || getDefaultCustomConfig()
+  }
 }
 
 export async function updateBusinessTemplateConfig(businessId, data) {
@@ -91,7 +95,7 @@ export async function updateBusinessTemplateConfig(businessId, data) {
     config = await prisma.businessTemplateConfig.update({
       where: { id: existingConfig.id },
       data: {
-        customConfig: customConfig || existingConfig.customConfig,
+        config: customConfig || existingConfig.config,
         isActive: true,
         version: { increment: 1 }
       },
@@ -102,7 +106,7 @@ export async function updateBusinessTemplateConfig(businessId, data) {
       data: {
         businessId,
         baseTemplateId,
-        customConfig: customConfig || getDefaultCustomConfig(),
+        config: customConfig || getDefaultCustomConfig(),
         isActive: true,
         version: 1
       },
@@ -124,7 +128,7 @@ export async function getTemplateSnapshot(businessId) {
     templateBaseId: config.baseTemplateId,
     templateConfigSnapshot: {
       baseTemplate: config.baseTemplate,
-      customConfig: config.customConfig
+      customConfig: config.customConfig || config.config
     },
     templateVersion: config.version || 1
   }

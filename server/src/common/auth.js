@@ -28,6 +28,7 @@ export const authMiddleware = async (request, reply) => {
     const decoded = verifyToken(token)
     
     request.user = decoded
+    request.businessId = decoded.businessId
   } catch (error) {
     throw new UnauthorizedError(error.message)
   }

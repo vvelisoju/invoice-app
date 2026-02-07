@@ -1,9 +1,13 @@
-import { handleSearchCustomers, handleCreateCustomer, handleGetCustomer, handleUpdateCustomer } from './handlers.js'
+import { handleSearchCustomers, handleListCustomers, handleCreateCustomer, handleGetCustomer, handleUpdateCustomer, handleDeleteCustomer } from './handlers.js'
 import { authMiddleware } from '../../common/auth.js'
 
 export const customerRoutes = async (fastify) => {
   fastify.addHook('preHandler', authMiddleware)
 
+  // List customers (paginated) — when limit/offset params present
+  fastify.get('/customers/list', handleListCustomers)
+
+  // Search customers (typeahead) — legacy flat array
   fastify.get('/customers', handleSearchCustomers)
 
   fastify.post('/customers', handleCreateCustomer)
@@ -11,4 +15,6 @@ export const customerRoutes = async (fastify) => {
   fastify.get('/customers/:id', handleGetCustomer)
 
   fastify.patch('/customers/:id', handleUpdateCustomer)
+
+  fastify.delete('/customers/:id', handleDeleteCustomer)
 }

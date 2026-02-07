@@ -1,5 +1,7 @@
 import { prisma } from '../../common/prisma.js'
-import { ForbiddenError, NotFoundError } from '../../common/errors.js'
+import { ForbiddenError, NotFoundError, ValidationError } from '../../common/errors.js'
+import { getRazorpay, verifyRazorpaySignature } from '../../common/razorpay.js'
+import { config } from '../../common/config.js'
 
 export async function getBusinessPlanUsage(businessId) {
   const business = await prisma.business.findUnique({
@@ -16,19 +18,21 @@ export async function getBusinessPlanUsage(businessId) {
 
   // Get current month's usage
   const now = new Date()
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-  const usageCounter = await prisma.usageCounter.findFirst({
+  const usageCounter = await prisma.usageCounter.findUnique({
     where: {
-      businessId,
-      periodStart: { gte: startOfMonth },
-      periodEnd: { lte: endOfMonth }
+      businessId_monthKey: {
+        businessId,
+        monthKey
+      }
     }
   })
 
   // Count issued invoices this month
-  const issuedThisMonth = await prisma.invoice.count({
+  const issuedThisMonth = usageCounter?.invoicesIssuedCount || await prisma.invoice.count({
     where: {
       businessId,
       status: { not: 'DRAFT' },
@@ -40,14 +44,15 @@ export async function getBusinessPlanUsage(businessId) {
   })
 
   const plan = business.plan || await getDefaultPlan()
-  const monthlyLimit = plan?.monthlyInvoiceLimit || 10 // Default free plan limit
+  const entitlements = plan?.entitlements || {}
+  const monthlyLimit = entitlements.monthlyInvoicesLimit || 10 // Default free plan limit
 
   return {
     plan: {
       id: plan?.id,
-      name: plan?.name || 'Free',
+      name: plan?.displayName || plan?.name || 'Free',
       monthlyInvoiceLimit: monthlyLimit,
-      features: plan?.features || {}
+      entitlements
     },
     usage: {
       invoicesIssued: issuedThisMonth,
@@ -57,7 +62,7 @@ export async function getBusinessPlanUsage(businessId) {
     },
     subscription: business.subscription ? {
       status: business.subscription.status,
-      currentPeriodEnd: business.subscription.currentPeriodEnd
+      renewAt: business.subscription.renewAt
     } : null,
     canIssueInvoice: issuedThisMonth < monthlyLimit
   }
@@ -78,38 +83,159 @@ export async function checkCanIssueInvoice(businessId) {
 
 export async function incrementUsageCounter(businessId) {
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
   await prisma.usageCounter.upsert({
     where: {
-      businessId_periodStart: {
+      businessId_monthKey: {
         businessId,
-        periodStart: startOfMonth
+        monthKey
       }
     },
     create: {
       businessId,
-      periodStart: startOfMonth,
-      periodEnd: endOfMonth,
-      invoicesIssued: 1
+      monthKey,
+      invoicesIssuedCount: 1
     },
     update: {
-      invoicesIssued: { increment: 1 }
+      invoicesIssuedCount: { increment: 1 }
     }
   })
 }
 
 async function getDefaultPlan() {
   return prisma.plan.findFirst({
-    where: { name: 'Free' }
+    where: { name: 'free' }
   })
+}
+
+// ============================================================================
+// Razorpay Payment Flow
+// ============================================================================
+
+/**
+ * Step 1: Create a Razorpay order for a plan subscription.
+ * @param {string} billingPeriod - 'monthly' or 'yearly'
+ */
+export async function createSubscriptionOrder(businessId, planId, billingPeriod = 'yearly') {
+  const plan = await prisma.plan.findUnique({ where: { id: planId } })
+  if (!plan) throw new NotFoundError('Plan not found')
+  if (!plan.active) throw new ValidationError('This plan is no longer available')
+
+  const isYearly = billingPeriod === 'yearly'
+  const price = isYearly ? Number(plan.priceYearly) : Number(plan.priceMonthly)
+
+  if (!price || price <= 0) {
+    throw new ValidationError('Cannot create an order for a free plan')
+  }
+
+  const razorpay = getRazorpay()
+  const amountInPaise = Math.round(price * 100)
+
+  let order
+  try {
+    order = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `sub_${businessId}_${Date.now()}`,
+      notes: {
+        businessId,
+        planId,
+        planName: plan.displayName || plan.name,
+        billingPeriod
+      }
+    })
+  } catch (err) {
+    throw new ValidationError(`Payment gateway error: ${err.message || 'Unable to create order'}`)
+  }
+
+  // Create a pending subscription record
+  await prisma.subscription.create({
+    data: {
+      businessId,
+      planId,
+      status: 'PAST_DUE',
+      razorpayOrderId: order.id,
+      amount: price,
+      currency: 'INR'
+    }
+  })
+
+  return {
+    razorpayOrderId: order.id,
+    razorpayKeyId: config.razorpay.keyId,
+    amount: amountInPaise,
+    currency: 'INR',
+    billingPeriod,
+    planName: plan.displayName || plan.name
+  }
+}
+
+/**
+ * Step 2: Verify Razorpay payment and activate subscription.
+ */
+export async function verifySubscriptionPayment(businessId, { razorpayOrderId, razorpayPaymentId, razorpaySignature, planId }) {
+  // Verify signature
+  const isValid = verifyRazorpaySignature({
+    orderId: razorpayOrderId,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature
+  })
+
+  if (!isValid) {
+    throw new ValidationError('Payment verification failed — invalid signature')
+  }
+
+  // Find the pending subscription
+  const subscription = await prisma.subscription.findUnique({
+    where: { razorpayOrderId }
+  })
+
+  if (!subscription) {
+    throw new NotFoundError('Subscription order not found')
+  }
+
+  // Determine billing period from the amount paid vs plan prices
+  const plan = await prisma.plan.findUnique({ where: { id: planId } })
+  const isYearly = plan && Number(subscription.amount) === Number(plan.priceYearly)
+
+  // Activate subscription + assign plan to business in a transaction
+  const now = new Date()
+  const renewAt = new Date(now)
+  if (isYearly) {
+    renewAt.setFullYear(renewAt.getFullYear() + 1)
+  } else {
+    renewAt.setMonth(renewAt.getMonth() + 1)
+  }
+
+  const [updatedSub] = await prisma.$transaction([
+    prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: 'ACTIVE',
+        razorpayPaymentId,
+        razorpaySignature,
+        startDate: now,
+        renewAt
+      }
+    }),
+    prisma.business.update({
+      where: { id: businessId },
+      data: {
+        planId,
+        subscriptionId: subscription.id
+      }
+    })
+  ])
+
+  return updatedSub
 }
 
 // Admin functions
 export async function listPlans() {
   return prisma.plan.findMany({
-    orderBy: { monthlyInvoiceLimit: 'asc' }
+    where: { active: true },
+    orderBy: { priceMonthly: 'asc' }
   })
 }
 
@@ -117,10 +243,11 @@ export async function createPlan(data) {
   return prisma.plan.create({
     data: {
       name: data.name,
-      monthlyInvoiceLimit: data.monthlyInvoiceLimit,
-      price: data.price || 0,
-      currency: data.currency || 'INR',
-      features: data.features || {},
+      displayName: data.displayName || data.name,
+      description: data.description || '',
+      entitlements: data.entitlements || {},
+      priceMonthly: data.priceMonthly || null,
+      priceYearly: data.priceYearly || null,
       active: true
     }
   })

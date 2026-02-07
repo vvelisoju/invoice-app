@@ -2,27 +2,20 @@ import {
   FileText,
   Users,
   PieChart,
-  UserPlus,
   Plus,
-  ListChecks,
+  Package,
   FileSpreadsheet,
+  Receipt,
   FilePen,
-  Banknote,
   StickyNote,
   Truck,
   ShoppingCart,
-  Home,
-  Settings,
-  Palette,
-  BarChart3,
-  Receipt,
-  FilePlus,
-  Star,
-  Clock,
-  UserX,
+  Banknote,
+  ClipboardList,
+  FileCheck,
+  FileOutput,
+  FileMinus,
   FileInput,
-  Mail,
-  BookUser
 } from 'lucide-react'
 
 /**
@@ -32,6 +25,7 @@ import {
 export const headerTabs = [
   { key: 'documents', label: 'My Documents', icon: FileText, basePath: '/invoices' },
   { key: 'customers', label: 'My Customers', icon: Users, basePath: '/customers' },
+  { key: 'products', label: 'My Products', icon: Package, basePath: '/products' },
   { key: 'reports', label: 'My Reports', icon: PieChart, basePath: '/reports' },
 ]
 
@@ -43,92 +37,41 @@ export const headerQuickActions = [
 ]
 
 /**
- * Sidebar config per header tab key.
- * Each entry has optional `createNew` grid items and `sections` with nav links.
+ * All available invoice types.
+ * The `key` is stored in the business's `enabledInvoiceTypes` JSON array.
+ * The `label` is the display name and also the invoice title used in the form.
+ * The `icon` is the Lucide icon component for sidebar display.
  */
-export const sidebarConfig = {
-  documents: {
-    createNew: [
-      { label: 'Invoice', icon: FileText, path: '/invoices/new', active: true },
-      { label: 'Quote', icon: FilePen, path: '/invoices/new?type=quote' },
-      { label: 'Receipt', icon: Receipt, path: '/invoices/new?type=receipt' },
-    ],
-    sections: [
-      {
-        title: 'Documents',
-        items: [
-          { path: '/invoices', label: 'All Documents', icon: ListChecks, exact: true },
-          { path: '/invoices?type=invoice', label: 'Invoices', icon: FileSpreadsheet },
-          { path: '/invoices?type=quote', label: 'Quotes / Estimates', icon: FilePen },
-          { path: '/invoices?type=receipt', label: 'Cash Receipts', icon: Banknote },
-          { path: '/invoices?type=credit', label: 'Credit Notes', icon: StickyNote },
-          { path: '/invoices?type=delivery', label: 'Delivery Notes', icon: Truck },
-          { path: '/invoices?type=purchase', label: 'Purchase Orders', icon: ShoppingCart },
-        ]
-      }
-    ]
-  },
-  customers: {
-    createNew: [
-      { label: 'Add', icon: UserPlus, path: '/customers/new', active: true },
-      { label: 'Import', icon: FileInput, path: '/customers/import' },
-      { label: 'Email', icon: Mail, path: '/customers/email' },
-    ],
-    sections: [
-      {
-        title: 'Customers',
-        items: [
-          { path: '/customers', label: 'All Customers', icon: BookUser, exact: true },
-          { path: '/customers?filter=favorites', label: 'Favorites', icon: Star },
-          { path: '/customers?filter=recent', label: 'Recently Active', icon: Clock },
-          { path: '/customers?filter=inactive', label: 'Inactive', icon: UserX },
-        ]
-      }
-    ]
-  },
-  reports: {
-    sections: [
-      {
-        title: 'Reports',
-        items: [
-          { path: '/reports', label: 'Overview', icon: BarChart3, exact: true },
-        ]
-      }
-    ]
-  },
-  settings: {
-    sections: [
-      {
-        title: 'Settings',
-        items: [
-          { path: '/settings', label: 'Business Settings', icon: Settings, exact: true },
-          { path: '/templates', label: 'Invoice Templates', icon: Palette },
-        ]
-      }
-    ]
-  },
-  newInvoice: {
-    sections: [
-      {
-        title: 'Create',
-        items: [
-          { path: '/invoices/new', label: 'Invoice', icon: FileText, exact: true },
-          { path: '/invoices/new?type=estimate', label: 'Estimate', icon: FilePen },
-          { path: '/invoices/new?type=credit', label: 'Credit Note', icon: StickyNote },
-        ]
-      }
-    ]
-  }
-}
+export const ALL_INVOICE_TYPES = [
+  { key: 'invoice', label: 'Invoice', icon: FileSpreadsheet },
+  { key: 'tax_invoice', label: 'Tax Invoice', icon: FileCheck },
+  { key: 'proforma', label: 'Proforma Invoice', icon: FileOutput },
+  { key: 'receipt', label: 'Receipt', icon: Receipt },
+  { key: 'sales_receipt', label: 'Sales Receipt', icon: Banknote },
+  { key: 'cash_receipt', label: 'Cash Receipt', icon: Banknote },
+  { key: 'quote', label: 'Quote', icon: FilePen },
+  { key: 'estimate', label: 'Estimate', icon: ClipboardList },
+  { key: 'credit_memo', label: 'Credit Memo', icon: FileMinus },
+  { key: 'credit_note', label: 'Credit Note', icon: StickyNote },
+  { key: 'purchase_order', label: 'Purchase Order', icon: ShoppingCart },
+  { key: 'delivery_note', label: 'Delivery Note', icon: Truck },
+]
+
+/**
+ * Default enabled invoice types when business has no config yet.
+ */
+export const DEFAULT_ENABLED_TYPES = [
+  'invoice', 'quote', 'receipt'
+]
 
 /**
  * Given a pathname, determine which header tab key is active.
  */
 export function getActiveTabKey(pathname) {
   if (pathname.startsWith('/reports')) return 'reports'
+  if (pathname.startsWith('/products')) return 'products'
   if (pathname.startsWith('/customers')) return 'customers'
-  if (pathname.startsWith('/settings') || pathname.startsWith('/templates')) return 'settings'
-  if (pathname === '/invoices/new') return 'newInvoice'
+  if (pathname.startsWith('/settings') || pathname.startsWith('/templates') || pathname.startsWith('/plans')) return 'settings'
   // Default: documents covers /home, /invoices, and everything else
   return 'documents'
 }

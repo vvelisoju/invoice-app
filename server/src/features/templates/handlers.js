@@ -17,11 +17,16 @@ export async function getBusinessConfig(request, reply) {
 }
 
 export async function updateBusinessConfig(request, reply) {
-  const config = await templateService.updateBusinessTemplateConfig(
-    request.businessId,
-    request.body
-  )
-  return { data: config }
+  try {
+    const config = await templateService.updateBusinessTemplateConfig(
+      request.businessId,
+      request.body
+    )
+    return { data: config }
+  } catch (err) {
+    request.log.error({ err, body: request.body, businessId: request.businessId }, 'updateBusinessConfig failed')
+    throw err
+  }
 }
 
 export async function getSnapshot(request, reply) {
