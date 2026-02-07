@@ -58,7 +58,6 @@ export async function uploadFile(fileBuffer, originalName, folder = 'logos') {
       contentType: contentTypeMap[ext] || 'application/octet-stream',
       cacheControl: 'public, max-age=31536000',
     },
-    public: true,
   })
 
   return `https://storage.googleapis.com/${config.gcs.bucket}/${fileName}`

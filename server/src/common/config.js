@@ -40,12 +40,12 @@ export const config = {
     let privateKey = process.env.GCS_PRIVATE_KEY
     let projectId = process.env.GOOGLE_PROJECT_ID || 'invoice-app'
 
-    // Parse full service-account JSON key if provided
+    // Parse full service-account JSON key if provided (takes priority)
     if (process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY) {
       try {
         const sa = JSON.parse(process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY)
-        clientEmail = clientEmail || sa.client_email
-        privateKey = privateKey || sa.private_key
+        clientEmail = sa.client_email || clientEmail
+        privateKey = sa.private_key || privateKey
         projectId = sa.project_id || projectId
       } catch (e) {
         console.warn('Failed to parse GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY:', e.message)
