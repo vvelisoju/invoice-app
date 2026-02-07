@@ -4,7 +4,8 @@ import { FileText, Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, 
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
 
-function SettingsMenuItem({ icon: Icon, label, onClick, danger = false }) {
+function SettingsMenuItem({ icon, label, onClick, danger = false }) {
+  const IconComponent = icon
   return (
     <button
       onClick={onClick}
@@ -14,7 +15,7 @@ function SettingsMenuItem({ icon: Icon, label, onClick, danger = false }) {
           : 'text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary'
       }`}
     >
-      <Icon className={`w-5 h-5 md:w-4 md:h-4 ${danger ? '' : 'text-gray-400'}`} />
+      <IconComponent className={`w-5 h-5 md:w-4 md:h-4 ${danger ? '' : 'text-gray-400'}`} />
       {label}
     </button>
   )
@@ -27,6 +28,7 @@ export default function AppHeader({ onMenuToggle }) {
   const logout = useAuthStore((state) => state.logout)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef(null)
+  const sheetRef = useRef(null)
 
   const activeTabKey = getActiveTabKey(location.pathname)
   const isSettingsActive = activeTabKey === 'settings'
@@ -41,9 +43,10 @@ export default function AppHeader({ onMenuToggle }) {
     setSettingsOpen(false)
   }
 
-  // Close dropdown on outside click (desktop only)
+  // Close dropdown on outside click (skip if click is inside bottom sheet)
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (sheetRef.current && sheetRef.current.contains(e.target)) return
       if (settingsRef.current && !settingsRef.current.contains(e.target)) {
         setSettingsOpen(false)
       }
@@ -177,7 +180,7 @@ export default function AppHeader({ onMenuToggle }) {
 
       {/* Mobile Bottom Sheet */}
       {settingsOpen && (
-        <div className="md:hidden fixed inset-0 z-50">
+        <div className="md:hidden fixed inset-0 z-50" ref={sheetRef}>
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 transition-opacity"

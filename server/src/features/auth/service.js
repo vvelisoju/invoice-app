@@ -1,27 +1,50 @@
 import { config } from '../../common/config.js'
 import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
+import springedge from 'springedge'
+
+const isProduction = () => config.nodeEnv === 'production' && !!config.sms.springEdgeApiKey
 
 const generateOTP = () => {
-  // TODO: Generate random OTP once SMS gateway is integrated
-  // const length = config.otp.length
-  // const digits = '0123456789'
-  // let otp = ''
-  // for (let i = 0; i < length; i++) {
-  //   otp += digits[Math.floor(Math.random() * 10)]
-  // }
-  // return otp
-  return '222222' // Default OTP until SMS gateway is configured
+  if (!isProduction()) {
+    return '222222' // Default OTP for development
+  }
+
+  const length = config.otp.length
+  const digits = '0123456789'
+  let otp = ''
+  for (let i = 0; i < length; i++) {
+    otp += digits[Math.floor(Math.random() * 10)]
+  }
+  return otp
 }
 
 const sendOTP = async (phone, otp) => {
-  if (config.sms.provider === 'console') {
+  if (!isProduction()) {
     console.log(`[OTP] Phone: ${phone}, OTP: ${otp}`)
     return true
   }
-  
-  // TODO: Integrate with Twilio or other SMS provider
-  throw new Error('SMS provider not configured')
+
+  // Production: use SpringEdge SMS gateway
+  return new Promise((resolve, reject) => {
+    const params = {
+      sender: config.sms.springEdgeSender || 'CODVEL',
+      apikey: config.sms.springEdgeApiKey,
+      to: [`91${phone}`],
+      message: `Your OTP for logging into Lokalhunt is ${otp}. Do not share this with anyone.`,
+      format: 'json'
+    }
+
+    springedge.messages.send(params, 5000, (err, response) => {
+      if (err) {
+        console.error('[SpringEdge] SMS send error:', err)
+        reject(new Error('Failed to send OTP via SMS'))
+        return
+      }
+      console.log('[SpringEdge] SMS response:', JSON.stringify(response))
+      resolve(true)
+    })
+  })
 }
 
 export const requestOTP = async (prisma, phone) => {

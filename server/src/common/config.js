@@ -17,7 +17,9 @@ export const config = {
     apiKey: process.env.SMS_PROVIDER_API_KEY,
     url: process.env.SMS_PROVIDER_URL,
     provider: process.env.SMS_PROVIDER || 'console',
-    apiSecret: process.env.SMS_API_SECRET
+    apiSecret: process.env.SMS_API_SECRET,
+    springEdgeApiKey: process.env.SPRING_EDGE_API_KEY_ID,
+    springEdgeSender: process.env.SPRING_EDGE_SENDER || 'CODVEL'
   },
   storage: {
     bucket: process.env.PDF_STORAGE_BUCKET,
