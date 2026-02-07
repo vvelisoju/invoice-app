@@ -35,12 +35,30 @@ export const config = {
     keyId: process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_KEY_SECRET
   },
-  gcs: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    projectId: process.env.GOOGLE_PROJECT_ID || 'invoice-app',
-    bucket: process.env.GCS_BUCKET || 'invoice-app-uploads'
-  },
+  gcs: (() => {
+    let clientEmail = process.env.GCS_CLIENT_EMAIL
+    let privateKey = process.env.GCS_PRIVATE_KEY
+    let projectId = process.env.GOOGLE_PROJECT_ID || 'invoice-app'
+
+    // Parse full service-account JSON key if provided
+    if (process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY) {
+      try {
+        const sa = JSON.parse(process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY)
+        clientEmail = clientEmail || sa.client_email
+        privateKey = privateKey || sa.private_key
+        projectId = sa.project_id || projectId
+      } catch (e) {
+        console.warn('Failed to parse GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY:', e.message)
+      }
+    }
+
+    return {
+      clientEmail,
+      privateKey,
+      projectId,
+      bucket: process.env.GCS_BUCKET || 'invoice-app-uploads'
+    }
+  })(),
   logLevel: process.env.LOG_LEVEL || 'info'
 }
 

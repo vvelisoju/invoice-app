@@ -24,6 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { invoiceApi, templateApi } from '../../lib/api'
 import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
 import TemplateSelectModal from './components/TemplateSelectModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -46,6 +47,8 @@ export default function InvoiceDetailPage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState(null)
+  const [showPlanLimit, setShowPlanLimit] = useState(false)
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ['invoice', id],
@@ -118,6 +121,13 @@ export default function InvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', id] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+    onError: (err) => {
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        setShowPlanLimit(true)
+      }
     }
   })
 
@@ -480,6 +490,14 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={showPlanLimit}
+        onClose={() => setShowPlanLimit(false)}
+        usage={planLimitData?.usage || planLimitData}
+        plan={planLimitData?.plan || planLimitData}
+      />
     </div>
   )
 }

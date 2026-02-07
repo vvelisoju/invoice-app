@@ -24,7 +24,7 @@ export default function PageToolbar({ title, subtitle, actions, mobileActions, c
         <div className={`${mobileActions ? 'hidden md:flex' : 'flex flex-col gap-3 sm:flex-row sm:items-center'} sm:items-center sm:justify-between mb-4 md:mb-6`}>
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-textPrimary mb-0.5 md:mb-1">{title}</h1>
-            {subtitle && <p className="text-xs md:text-sm text-textSecondary">{subtitle}</p>}
+            {subtitle && <p className="hidden md:block text-xs md:text-sm text-textSecondary">{subtitle}</p>}
           </div>
           {actions && <div className="flex items-center gap-2 md:gap-3 shrink-0">{actions}</div>}
         </div>

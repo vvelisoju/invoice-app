@@ -64,7 +64,17 @@ export async function uploadLogo(request, reply) {
   }
 
   // Upload to GCS
-  const logoUrl = await uploadFile(fileBuffer, file.filename, `logos/${request.businessId}`)
+  let logoUrl
+  try {
+    logoUrl = await uploadFile(fileBuffer, file.filename, `logos/${request.businessId}`)
+  } catch (err) {
+    request.log.error({ err }, 'GCS upload failed')
+    throw new ValidationError(
+      err.message?.includes('Could not load the default credentials')
+        ? 'Cloud storage is not configured. Please set GCS_CLIENT_EMAIL and GCS_PRIVATE_KEY.'
+        : `Failed to upload logo: ${err.message || 'Unknown error'}`
+    )
+  }
 
   // Update business profile with new logo URL
   const updated = await businessService.updateBusinessProfile(request.businessId, { logoUrl })

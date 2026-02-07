@@ -8,6 +8,7 @@ import { invoiceApi, businessApi } from '../../lib/api'
 import { InvoiceFormToolbar, InvoiceHeaderSection, InvoiceLineItems, InvoiceTotalsFooter } from '../../components/invoice-form'
 import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
 
 export default function NewInvoicePage() {
@@ -25,6 +26,8 @@ export default function NewInvoicePage() {
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
   const [showTitleDropdown, setShowTitleDropdown] = useState(false)
   const [termsLoaded, setTermsLoaded] = useState(false)
+  const [showPlanLimit, setShowPlanLimit] = useState(false)
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   // Read ?type= query param and set invoice title on mount / URL change
   useEffect(() => {
@@ -93,7 +96,13 @@ export default function NewInvoicePage() {
       history.push(`/invoices/${data.id}`)
     },
     onError: (err) => {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to create invoice')
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        setShowPlanLimit(true)
+        return
+      }
+      setError(errorData?.message || err.message || 'Failed to create invoice')
     }
   })
 
@@ -285,6 +294,14 @@ export default function NewInvoicePage() {
             setProductForLineItem(createProductLineIndex, product)
           }
         }}
+      />
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={showPlanLimit}
+        onClose={() => setShowPlanLimit(false)}
+        usage={planLimitData?.usage || planLimitData}
+        plan={planLimitData?.plan || planLimitData}
       />
     </div>
   )

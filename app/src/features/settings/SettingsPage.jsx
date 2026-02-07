@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import {
   Building2,
@@ -29,23 +29,23 @@ import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layou
 import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../invoices/utils/templates/registry'
 
 const SETTINGS_TABS = [
-  { key: 'business', label: 'Business Info', icon: Building2 },
-  { key: 'gst', label: 'GST Settings', icon: Receipt },
-  { key: 'bank', label: 'Bank & Payment', icon: CreditCard },
-  { key: 'invoice', label: 'Invoice Settings', icon: FileText },
+  { key: 'business', label: 'Business Info', mobileLabel: 'Business', icon: Building2 },
+  { key: 'gst', label: 'GST Settings', mobileLabel: 'GST', icon: Receipt },
+  { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
+  { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
 ]
 
 function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLength, description }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">{label}</label>
+      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
       <input
         type={type}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
       />
       {description && <p className="text-[11px] text-textSecondary mt-1 ml-0.5">{description}</p>}
     </div>
@@ -55,13 +55,13 @@ function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLen
 function FieldTextarea({ label, value, onChange, placeholder, rows = 3 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">{label}</label>
+      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
       <textarea
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
       />
     </div>
   )
@@ -69,7 +69,7 @@ function FieldTextarea({ label, value, onChange, placeholder, rows = 3 }) {
 
 function FieldToggle({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg border border-border">
+    <div className="flex items-center justify-between py-2.5 px-3 md:py-3 md:px-4 bg-gray-50 rounded-lg border border-border">
       <div>
         <span className="text-sm font-medium text-textPrimary">{label}</span>
         {description && <p className="text-xs text-textSecondary mt-0.5">{description}</p>}
@@ -96,16 +96,16 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-          <FileText className="w-4 h-4 text-violet-600" />
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+          <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-textPrimary">Document Types</h3>
-          <p className="text-xs text-textSecondary">Choose which types appear in your sidebar</p>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Types</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Choose which types appear in your sidebar</p>
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {ALL_INVOICE_TYPES.map((type) => {
             const isEnabled = enabledTypes.includes(type.key)
@@ -202,20 +202,20 @@ function TemplateSection() {
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-            <Palette className="w-4 h-4 text-purple-600" />
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+            <Palette className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-textPrimary">Invoice Template</h3>
-            <p className="text-xs text-textSecondary">Choose the default template for your invoice PDFs</p>
+            <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Template</h3>
+            <p className="text-[11px] md:text-xs text-textSecondary">Default template for invoice PDFs</p>
           </div>
         </div>
       </div>
 
       {/* Color Filter */}
-      <div className="px-6 py-3 border-b border-border flex items-center gap-3">
+      <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-border flex items-center gap-2 md:gap-3">
         <span className="text-xs font-medium text-textSecondary">Filter by Color</span>
         <div className="flex items-center gap-1.5">
           {COLOR_FAMILIES.map(cf => (
@@ -242,7 +242,7 @@ function TemplateSection() {
       </div>
 
       {/* Template Grid */}
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -394,16 +394,16 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center">
-          <ImageIcon className="w-4 h-4 text-cyan-600" />
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
+          <ImageIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-600" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-textPrimary">Business Logo</h3>
-          <p className="text-xs text-textSecondary">Your logo will appear on invoices and documents</p>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Business Logo</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Your logo will appear on invoices</p>
         </div>
       </div>
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           {/* Logo Preview */}
           <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
@@ -473,6 +473,20 @@ export default function SettingsPage() {
   })
   const [newTaxRate, setNewTaxRate] = useState({ name: '', rate: '', isDefault: false })
   const [showAddTaxRate, setShowAddTaxRate] = useState(false)
+  const tabsRef = useRef(null)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const handleTabScroll = useCallback(() => {
+    const el = tabsRef.current
+    if (!el) return
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    handleTabScroll()
+    window.addEventListener('resize', handleTabScroll)
+    return () => window.removeEventListener('resize', handleTabScroll)
+  }, [handleTabScroll])
 
   const { data: business, isLoading } = useQuery({
     queryKey: ['business'],
@@ -576,13 +590,30 @@ export default function SettingsPage() {
       <PageToolbar
         title="Settings"
         subtitle="Manage your business profile, tax configuration, and invoice defaults"
+        mobileActions={
+          isDirty ? (
+            <button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+              className="px-3.5 py-2 bg-primary active:bg-primaryHover text-white rounded-lg font-semibold text-xs flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save
+            </button>
+          ) : updateMutation.isSuccess ? (
+            <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Saved
+            </span>
+          ) : null
+        }
         actions={
           <>
             {isDirty && (
               <button
                 onClick={handleSave}
                 disabled={updateMutation.isPending}
-                className="px-5 py-2.5 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
+                className="px-5 py-2.5 bg-primary md:hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
               >
                 {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save Changes
@@ -598,45 +629,58 @@ export default function SettingsPage() {
         }
       >
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
-          {SETTINGS_TABS.map((tab) => {
-            const active = activeTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 md:gap-2 whitespace-nowrap shrink-0 ${
-                  active
-                    ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
-                    : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-50 md:hover:bg-gray-50 border border-transparent'
-                }`}
-              >
-                <tab.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
-                {tab.label}
-              </button>
-            )
-          })}
+        <div className="relative mt-2">
+          <div
+            ref={tabsRef}
+            onScroll={handleTabScroll}
+            className="flex items-center gap-0.5 md:gap-1 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+          >
+            {SETTINGS_TABS.map((tab) => {
+              const active = activeTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-2.5 md:px-4 py-1.5 md:py-2 text-[11px] md:text-sm font-medium rounded-lg transition-colors flex items-center gap-1 md:gap-2 whitespace-nowrap shrink-0 ${
+                    active
+                      ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
+                      : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-50 md:hover:bg-gray-50 border border-transparent'
+                  }`}
+                >
+                  <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className="md:hidden">{tab.mobileLabel}</span>
+                  <span className="hidden md:inline">{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+          {/* Scroll indicator — visible on mobile when more tabs overflow right */}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent flex items-center justify-end pointer-events-none md:hidden">
+              <ChevronRight className="w-4 h-4 text-textSecondary animate-pulse" />
+            </div>
+          )}
         </div>
       </PageToolbar>
 
       {/* Content Area */}
-      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+      <div className="flex-1 px-3 md:px-8 py-3 md:py-6 overflow-y-auto">
+        <div className="max-w-4xl mx-auto space-y-3 md:space-y-6">
 
           {/* Business Information Tab */}
           {activeTab === 'business' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-primary" />
+              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Building2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-textPrimary">Business Information</h3>
-                  <p className="text-xs text-textSecondary">Your company details shown on invoices</p>
+                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Business Information</h3>
+                  <p className="text-[11px] md:text-xs text-textSecondary">Your company details shown on invoices</p>
                 </div>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
                   <FieldInput label="Business Name" value={formData.name} onChange={(v) => handleChange('name', v)} placeholder="Your business name" />
                   <FieldInput label="Phone" type="tel" value={formData.phone} onChange={(v) => handleChange('phone', v)} placeholder="Business phone number" />
                   <FieldInput label="Email" type="email" value={formData.email} onChange={(v) => handleChange('email', v)} placeholder="Business email" />
@@ -652,16 +696,16 @@ export default function SettingsPage() {
           {/* GST Settings Tab */}
           {activeTab === 'gst' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                  <Receipt className="w-4 h-4 text-green-600" />
+              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                  <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-textPrimary">GST Configuration</h3>
-                  <p className="text-xs text-textSecondary">Tax registration and default rates</p>
+                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">GST Configuration</h3>
+                  <p className="text-[11px] md:text-xs text-textSecondary">Tax registration and default rates</p>
                 </div>
               </div>
-              <div className="p-6 space-y-5">
+              <div className="p-4 md:p-6 space-y-4 md:space-y-5">
                 <FieldToggle
                   label="Enable GST"
                   description="Show GST fields on invoices and calculate tax automatically"
@@ -669,7 +713,7 @@ export default function SettingsPage() {
                   onChange={(v) => handleChange('gstEnabled', v)}
                 />
                 {formData.gstEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5 pt-2">
                     <FieldInput label="GSTIN" value={formData.gstin} onChange={(v) => handleChange('gstin', v?.toUpperCase())} placeholder="15-digit GSTIN" maxLength={15} description="Your 15-digit GST Identification Number" />
                     <FieldInput label="State Code" value={formData.stateCode} onChange={(v) => handleChange('stateCode', v)} placeholder="e.g., 36" maxLength={2} description="2-digit state code for GST" />
                   </div>
@@ -681,27 +725,27 @@ export default function SettingsPage() {
           {/* Tax Rates Management — visible in GST tab */}
           {activeTab === 'gst' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                    <Percent className="w-4 h-4 text-orange-600" />
+              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2.5 md:gap-3">
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                    <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-textPrimary">Tax Rates</h3>
-                    <p className="text-xs text-textSecondary">Configure reusable tax rates for products and invoices</p>
+                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates</h3>
+                    <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Configure reusable tax rates</p>
                   </div>
                 </div>
                 {!showAddTaxRate && (
                   <button
                     onClick={() => setShowAddTaxRate(true)}
-                    className="px-3.5 py-2 text-xs font-semibold text-primary bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1.5 border border-blue-100"
+                    className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Tax Rate
+                    <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                    Add
                   </button>
                 )}
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-4 md:p-6 space-y-3 md:space-y-4">
                 {/* Add new tax rate form */}
                 {showAddTaxRate && (
                   <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-lg space-y-3">
@@ -789,7 +833,7 @@ export default function SettingsPage() {
                             <div className="text-xs text-textSecondary">{Number(tr.rate)}% tax rate</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           {!tr.isDefault && (
                             <button
                               onClick={() => handleSetDefault(tr)}
@@ -818,17 +862,17 @@ export default function SettingsPage() {
           {/* Bank & Payment Tab */}
           {activeTab === 'bank' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 text-orange-600" />
+              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                  <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-textPrimary">Bank & Payment Details</h3>
-                  <p className="text-xs text-textSecondary">Payment information displayed on invoices</p>
+                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Bank & Payment Details</h3>
+                  <p className="text-[11px] md:text-xs text-textSecondary">Payment information displayed on invoices</p>
                 </div>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
                   <FieldInput label="Bank Name" value={formData.bankName} onChange={(v) => handleChange('bankName', v)} placeholder="Bank name" />
                   <FieldInput label="Account Number" value={formData.accountNumber} onChange={(v) => handleChange('accountNumber', v)} placeholder="Account number" />
                   <FieldInput label="IFSC Code" value={formData.ifscCode} onChange={(v) => handleChange('ifscCode', v?.toUpperCase())} placeholder="IFSC code" maxLength={11} />
@@ -849,17 +893,17 @@ export default function SettingsPage() {
               />
 
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-indigo-600" />
+                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                    <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-textPrimary">Invoice Defaults</h3>
-                    <p className="text-xs text-textSecondary">Default values applied to new invoices</p>
+                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Defaults</h3>
+                    <p className="text-[11px] md:text-xs text-textSecondary">Default values applied to new invoices</p>
                   </div>
                 </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="p-4 md:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
                     <FieldInput label="Invoice Prefix" value={formData.invoicePrefix} onChange={(v) => handleChange('invoicePrefix', v)} placeholder="e.g., INV-" maxLength={10} description="Prefix added before invoice numbers" />
                     <FieldInput label="Next Invoice Number" type="number" value={formData.nextInvoiceNumber} onChange={(v) => handleChange('nextInvoiceNumber', parseInt(v) || null)} placeholder="e.g., 1" description="Auto-incremented for each new invoice" />
                     <div className="md:col-span-2">
@@ -883,10 +927,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Footer — hidden on mobile */}
-      <div className="hidden md:block text-center py-4 bg-bgPrimary">
-        <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
-      </div>
 
     </div>
   )

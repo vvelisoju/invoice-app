@@ -7,13 +7,19 @@ let bucket = null
 
 function getStorage() {
   if (!storage) {
-    storage = new Storage({
-      credentials: {
-        client_id: config.gcs.clientId,
-        client_secret: config.gcs.clientSecret,
-      },
-      projectId: config.gcs.projectId,
-    })
+    const opts = { projectId: config.gcs.projectId }
+
+    // Service-account credentials via env vars (recommended)
+    if (config.gcs.clientEmail && config.gcs.privateKey) {
+      opts.credentials = {
+        client_email: config.gcs.clientEmail,
+        private_key: config.gcs.privateKey.replace(/\\n/g, '\n'),
+      }
+    }
+    // Otherwise falls back to GOOGLE_APPLICATION_CREDENTIALS (key-file path)
+    // or Application Default Credentials (ADC) on GCP-hosted environments
+
+    storage = new Storage(opts)
     bucket = storage.bucket(config.gcs.bucket)
   }
   return { storage, bucket }
