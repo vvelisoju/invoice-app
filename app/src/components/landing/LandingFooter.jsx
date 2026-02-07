@@ -1,69 +1,100 @@
 import { useHistory } from 'react-router-dom'
+import { FileText, ArrowRight } from 'lucide-react'
 import { BRANDING } from '../../config/branding'
-import './LandingFooter.css'
 
 function LandingFooter() {
   const history = useHistory()
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="landing-footer">
-      <div className="footer-cta-section">
-        <div className="footer-cta-content">
-          <h2 className="footer-cta-title">Create your first invoice in under 2 minutes</h2>
-          <p className="footer-cta-subtitle">
-            Join thousands of businesses using Simple Invoice for fast, reliable invoicing
+    <footer>
+      {/* CTA Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djJIMjR2LTJoMTJ6TTM2IDI0djJIMjR2LTJoMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mb-4">
+            Ready to create your first invoice?
+          </h2>
+          <p className="text-base sm:text-lg text-blue-100 mb-8 max-w-xl mx-auto">
+            Join thousands of Indian businesses using Simple Invoice for fast, GST-compliant invoicing
           </p>
-          <button 
-            className="footer-cta-btn"
-            onClick={() => history.push('/demo')}
+          <button
+            onClick={() => history.push('/auth/phone')}
+            className="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl hover:bg-blue-50 transition-all shadow-lg shadow-black/10"
           >
             Get Started Free
+            <ArrowRight className="w-4 h-4" />
           </button>
+          <p className="text-blue-200 text-xs sm:text-sm mt-4">No credit card required</p>
         </div>
       </div>
-      
-      <div className="footer-main">
-        <div className="footer-container">
-          <div className="footer-column footer-brand">
-            <div className="footer-logo">{BRANDING.name}</div>
-            <p className="footer-tagline">{BRANDING.tagline}</p>
-          </div>
-          
-          <div className="footer-column">
-            <h4 className="footer-heading">Product</h4>
-            <ul className="footer-links">
-              <li><a href="#how-it-works">How it works</a></li>
-              <li><a href="#templates">Templates</a></li>
-              <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#faq">FAQ</a></li>
-            </ul>
-          </div>
-          
-          <div className="footer-column">
-            <h4 className="footer-heading">Company</h4>
-            <ul className="footer-links">
-              <li><a href="/about">About</a></li>
-              <li><a href="/contact">Contact</a></li>
-              <li><a href="/blog">Blog</a></li>
-            </ul>
-          </div>
-          
-          <div className="footer-column">
-            <h4 className="footer-heading">Legal</h4>
-            <ul className="footer-links">
-              <li><a href="/privacy">Privacy Policy</a></li>
-              <li><a href="/terms">Terms of Service</a></li>
-            </ul>
+
+      {/* Footer */}
+      <div className="bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 lg:gap-12">
+            {/* Brand */}
+            <div className="col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="text-base font-bold text-white">{BRANDING.name}</span>
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed">{BRANDING.tagline}</p>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Product</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'Features', href: '#features' },
+                  { label: 'How it works', href: '#how-it-works' },
+                  { label: 'Templates', href: '#templates' },
+                  { label: 'Pricing', href: '#pricing' },
+                ].map((link) => (
+                  <li key={link.href}>
+                    <a href={link.href} className="text-sm text-gray-400 hover:text-white transition-colors">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Company</h4>
+              <ul className="space-y-2.5">
+                {['About', 'Contact', 'Blog'].map((label) => (
+                  <li key={label}>
+                    <a href={`/${label.toLowerCase()}`} className="text-sm text-gray-400 hover:text-white transition-colors">
+                      {label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Legal</h4>
+              <ul className="space-y-2.5">
+                <li><a href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="footer-bottom">
-        <div className="footer-container">
-          <p className="footer-copyright">
-            © {currentYear} {BRANDING.name}. All rights reserved.
-          </p>
+
+        {/* Bottom bar */}
+        <div className="border-t border-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <p className="text-center text-xs sm:text-sm text-gray-500">
+              © {currentYear} {BRANDING.name}. All rights reserved.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

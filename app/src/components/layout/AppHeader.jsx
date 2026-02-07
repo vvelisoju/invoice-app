@@ -184,7 +184,7 @@ export default function AppHeader({ onMenuToggle }) {
             onClick={() => setSettingsOpen(false)}
           />
           {/* Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-slide-up safe-bottom">
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-slide-up" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' }}>
             {/* Handle bar */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-gray-300" />
@@ -206,8 +206,6 @@ export default function AppHeader({ onMenuToggle }) {
             <div className="border-t border-border py-2">
               <SettingsMenuItem icon={LogOut} label="Logout" onClick={handleLogout} danger />
             </div>
-            {/* Bottom safe area padding */}
-            <div className="h-2" />
           </div>
         </div>
       )}
