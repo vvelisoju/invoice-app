@@ -84,6 +84,20 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
   background: #9ca3af;
 }
 
+/* Bottom sheet slide-up animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
 /* Mobile: hide scrollbars entirely for cleaner native feel */
 @media (max-width: 767px) {
   ::-webkit-scrollbar {

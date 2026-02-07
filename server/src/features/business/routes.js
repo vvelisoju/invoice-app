@@ -41,6 +41,28 @@ export default async function businessRoutes(fastify) {
     }
   }, handlers.updateProfile)
 
+  // Upload business logo
+  fastify.post('/logo', {
+    schema: {
+      description: 'Upload business logo image',
+      tags: ['business'],
+      consumes: ['multipart/form-data'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                logoUrl: { type: 'string' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, handlers.uploadLogo)
+
   // Get business stats (dashboard)
   fastify.get('/stats', {
     schema: {

@@ -1,8 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { FileText, Bell, LogOut, Settings, Palette, ChevronDown, User, HelpCircle, Menu } from 'lucide-react'
+import { FileText, Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
+
+function SettingsMenuItem({ icon: Icon, label, onClick, danger = false }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full px-5 py-3.5 md:px-4 md:py-3 text-sm flex items-center gap-3 transition-colors ${
+        danger
+          ? 'text-red-600 active:bg-red-50 md:hover:bg-red-50'
+          : 'text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary'
+      }`}
+    >
+      <Icon className={`w-5 h-5 md:w-4 md:h-4 ${danger ? '' : 'text-gray-400'}`} />
+      {label}
+    </button>
+  )
+}
 
 export default function AppHeader({ onMenuToggle }) {
   const history = useHistory()
@@ -20,7 +36,12 @@ export default function AppHeader({ onMenuToggle }) {
     history.replace('/auth/phone')
   }
 
-  // Close dropdown on outside click
+  const handleNavigate = (path) => {
+    history.push(path)
+    setSettingsOpen(false)
+  }
+
+  // Close dropdown on outside click (desktop only)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) {
@@ -28,17 +49,33 @@ export default function AppHeader({ onMenuToggle }) {
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('touchstart', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [])
 
-  // Close dropdown on route change
+  // Close on route change
   useEffect(() => {
     setSettingsOpen(false)
   }, [location.pathname])
+
+  // Prevent body scroll when bottom sheet is open on mobile
+  useEffect(() => {
+    if (settingsOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [settingsOpen])
+
+  const settingsMenuItems = (
+    <>
+      <SettingsMenuItem icon={Settings} label="Business Settings" onClick={() => handleNavigate('/settings')} />
+      <SettingsMenuItem icon={User} label="Account Profile" onClick={() => {}} />
+      <SettingsMenuItem icon={HelpCircle} label="Help & Support" onClick={() => {}} />
+    </>
+  )
 
   return (
     <nav className="bg-bgSecondary border-b border-border h-14 flex items-center px-3 md:px-6 shrink-0 z-20 justify-between">
@@ -107,7 +144,7 @@ export default function AppHeader({ onMenuToggle }) {
           <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
 
-        {/* Settings Dropdown */}
+        {/* Settings Button */}
         <div className="relative" ref={settingsRef}>
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
@@ -121,54 +158,59 @@ export default function AppHeader({ onMenuToggle }) {
             <ChevronDown className={`w-3 h-3 transition-transform hidden md:block ${settingsOpen ? 'rotate-180' : ''}`} />
           </button>
 
+          {/* Desktop Dropdown */}
           {settingsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-border rounded-xl shadow-lg py-2 z-50">
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-56 bg-white border border-border rounded-xl shadow-lg py-2 z-50">
               <div className="px-4 py-2.5 border-b border-border">
                 <p className="text-xs font-semibold text-textSecondary uppercase tracking-wider">Settings</p>
               </div>
               <div className="py-1">
-                <button
-                  onClick={() => history.push('/settings')}
-                  className="w-full px-4 py-3 text-sm text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary flex items-center gap-3 transition-colors"
-                >
-                  <Settings className="w-4 h-4 text-gray-400" />
-                  Business Settings
-                </button>
-                <button
-                  onClick={() => history.push('/templates')}
-                  className="w-full px-4 py-3 text-sm text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary flex items-center gap-3 transition-colors"
-                >
-                  <Palette className="w-4 h-4 text-gray-400" />
-                  Invoice Templates
-                </button>
-                <button
-                  onClick={() => {}}
-                  className="w-full px-4 py-3 text-sm text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary flex items-center gap-3 transition-colors"
-                >
-                  <User className="w-4 h-4 text-gray-400" />
-                  Account Profile
-                </button>
-                <button
-                  onClick={() => {}}
-                  className="w-full px-4 py-3 text-sm text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 active:text-primary md:hover:text-primary flex items-center gap-3 transition-colors"
-                >
-                  <HelpCircle className="w-4 h-4 text-gray-400" />
-                  Help & Support
-                </button>
+                {settingsMenuItems}
               </div>
               <div className="border-t border-border pt-1">
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-3 text-sm text-red-600 active:bg-red-50 md:hover:bg-red-50 flex items-center gap-3 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
+                <SettingsMenuItem icon={LogOut} label="Logout" onClick={handleLogout} danger />
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Mobile Bottom Sheet */}
+      {settingsOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 transition-opacity"
+            onClick={() => setSettingsOpen(false)}
+          />
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-slide-up safe-bottom">
+            {/* Handle bar */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h3 className="text-base font-bold text-textPrimary">Settings</h3>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-textSecondary active:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Menu Items */}
+            <div className="py-2">
+              {settingsMenuItems}
+            </div>
+            <div className="border-t border-border py-2">
+              <SettingsMenuItem icon={LogOut} label="Logout" onClick={handleLogout} danger />
+            </div>
+            {/* Bottom safe area padding */}
+            <div className="h-2" />
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

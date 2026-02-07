@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_BASE_URL = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -89,7 +90,14 @@ export const productApi = {
 export const businessApi = {
   getProfile: () => api.get('/business'),
   updateProfile: (data) => api.patch('/business', data),
-  getStats: () => api.get('/business/stats')
+  getStats: () => api.get('/business/stats'),
+  uploadLogo: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/business/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  }
 }
 
 // Reports API

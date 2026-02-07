@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
+import multipart from '@fastify/multipart'
 import { config } from './common/config.js'
 import { logger } from './common/logger.js'
 import { prisma } from './common/prisma.js'
@@ -33,6 +34,13 @@ await fastify.register(cors, {
 await fastify.register(rateLimit, {
   max: 100,
   timeWindow: '1 minute'
+})
+
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+    files: 1
+  }
 })
 
 fastify.decorate('prisma', prisma)

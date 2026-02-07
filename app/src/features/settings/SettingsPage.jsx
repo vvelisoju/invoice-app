@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import {
   Building2,
@@ -16,7 +16,10 @@ import {
   Trash2,
   Star,
   Percent,
-  Check
+  Check,
+  Upload,
+  ImageIcon,
+  X
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi } from '../../lib/api'
@@ -30,7 +33,6 @@ const SETTINGS_TABS = [
   { key: 'gst', label: 'GST Settings', icon: Receipt },
   { key: 'bank', label: 'Bank & Payment', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', icon: FileText },
-  { key: 'template', label: 'Template', icon: Palette },
 ]
 
 function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLength, description }) {
@@ -351,6 +353,107 @@ function TemplateSection() {
             Template updated successfully
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState(null)
+  const fileInputRef = useRef(null)
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate client-side
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a JPEG, PNG, GIF, WebP, or SVG image')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be under 5MB')
+      return
+    }
+
+    setError(null)
+    setUploading(true)
+    try {
+      const response = await businessApi.uploadLogo(file)
+      const url = response.data?.data?.logoUrl || response.data?.logoUrl
+      if (url) onUploaded(url)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload logo')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center">
+          <ImageIcon className="w-4 h-4 text-cyan-600" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-textPrimary">Business Logo</h3>
+          <p className="text-xs text-textSecondary">Your logo will appear on invoices and documents</p>
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Logo Preview */}
+          <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Business logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <ImageIcon className="w-8 h-8 text-gray-300" />
+            )}
+          </div>
+
+          {/* Upload Controls */}
+          <div className="flex-1 min-w-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2 border border-blue-100 disabled:opacity-60"
+              >
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {logoUrl ? 'Change Logo' : 'Upload Logo'}
+              </button>
+              {logoUrl && (
+                <button
+                  onClick={onRemove}
+                  className="px-4 py-2 text-sm font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-textSecondary mt-2">
+              Recommended: Square image, at least 200×200px. Max 5MB. JPEG, PNG, WebP, or SVG.
+            </p>
+            {error && (
+              <p className="text-xs text-red-600 mt-1.5">{error}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -735,9 +838,16 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Invoice Settings Tab — combines Defaults + Types */}
+          {/* Invoice Settings Tab — combines Logo, Defaults, Types, Template */}
           {activeTab === 'invoice' && (
             <>
+              {/* Business Logo */}
+              <LogoUploadSection
+                logoUrl={formData.logoUrl}
+                onUploaded={(url) => handleChange('logoUrl', url)}
+                onRemove={() => handleChange('logoUrl', null)}
+              />
+
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-border flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -766,12 +876,9 @@ export default function SettingsPage() {
                 enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
                 onChange={(types) => handleChange('enabledInvoiceTypes', types)}
               />
-            </>
-          )}
 
-          {/* Template Tab */}
-          {activeTab === 'template' && (
-            <TemplateSection />
+              <TemplateSection />
+            </>
           )}
         </div>
       </div>

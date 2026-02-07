@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut } from 'lucide-react'
+import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown } from 'lucide-react'
 import { plansApi, businessApi } from '../../lib/api'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES, headerTabs, getActiveTabKey } from './navigationConfig'
 import { useAuthStore } from '../../store/authStore'
@@ -9,7 +10,15 @@ export default function AppSidebar({ mobile = false, onClose }) {
   const history = useHistory()
   const location = useLocation()
   const logout = useAuthStore((state) => state.logout)
+  const business = useAuthStore((state) => state.business)
   const activeTabKey = getActiveTabKey(location.pathname)
+
+  // Collapsible section state — Navigation & Create New open by default, Settings collapsed
+  const [openSections, setOpenSections] = useState({ navigation: true, createNew: true, settings: false })
+
+  const toggleSection = (key) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   const navigate = (path) => {
     history.push(path)
@@ -116,103 +125,150 @@ export default function AppSidebar({ mobile = false, onClose }) {
     )
   }
 
+  // Determine active nav item — only one item should be active at a time
+  const isHome = location.pathname === '/home' || location.pathname === '/'
+  const isDocuments = !isHome && (location.pathname.startsWith('/invoices') || activeTabKey === 'documents')
+  const isCustomers = location.pathname.startsWith('/customers')
+  const isProducts = location.pathname.startsWith('/products')
+  const isReports = location.pathname.startsWith('/reports')
+
   // Mobile drawer sidebar
   return (
     <aside className="h-full bg-bgSecondary flex flex-col shadow-xl">
-      {/* Drawer Header */}
+      {/* Drawer Header — Logo + Business Name */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
-        <span className="font-bold text-lg text-textPrimary">Menu</span>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+            <FileText className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-bold text-base text-textPrimary truncate">
+            {business?.name || 'InvoiceApp'}
+          </span>
+        </div>
         <button
           onClick={onClose}
-          className="w-11 h-11 flex items-center justify-center rounded-lg text-textSecondary active:bg-bgPrimary"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-textSecondary active:bg-bgPrimary shrink-0"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Main Navigation */}
-        <div className="px-3 pt-4 pb-2">
-          <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest px-3 mb-2">Navigation</h3>
+        {/* Navigation Section — collapsible, open by default */}
+        <div className="px-3 pt-3 pb-1">
           <button
-            onClick={() => navigate('/home')}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-              location.pathname === '/home' ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
-            }`}
+            onClick={() => toggleSection('navigation')}
+            className="w-full flex items-center justify-between px-3 py-2 mb-1"
           >
-            <Home className="w-5 h-5 shrink-0" />
-            <span>Dashboard</span>
+            <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Navigation</h3>
+            <ChevronDown className={`w-3.5 h-3.5 text-textSecondary transition-transform ${openSections.navigation ? 'rotate-180' : ''}`} />
           </button>
-          {headerTabs.map((tab) => {
-            const active = activeTabKey === tab.key
-            return (
+          {openSections.navigation && (
+            <nav className="space-y-0.5">
               <button
-                key={tab.key}
-                onClick={() => navigate(tab.basePath)}
+                onClick={() => navigate('/home')}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-                  active ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
+                  isHome ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
                 }`}
               >
-                <tab.icon className="w-5 h-5 shrink-0" />
-                <span>{tab.label}</span>
+                <Home className="w-5 h-5 shrink-0" />
+                <span>Dashboard</span>
               </button>
-            )
-          })}
-          <button
-            onClick={() => navigate('/reports')}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTabKey === 'reports' ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
-            }`}
-          >
-            <PieChart className="w-5 h-5 shrink-0" />
-            <span>Reports</span>
-          </button>
+              <button
+                onClick={() => navigate('/invoices')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                  isDocuments ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
+                }`}
+              >
+                <FileText className="w-5 h-5 shrink-0" />
+                <span>My Documents</span>
+              </button>
+              <button
+                onClick={() => navigate('/customers')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                  isCustomers ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
+                }`}
+              >
+                <Users className="w-5 h-5 shrink-0" />
+                <span>My Customers</span>
+              </button>
+              <button
+                onClick={() => navigate('/products')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                  isProducts ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
+                }`}
+              >
+                <Package className="w-5 h-5 shrink-0" />
+                <span>My Products</span>
+              </button>
+              <button
+                onClick={() => navigate('/reports')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                  isReports ? 'text-primary bg-primary/5' : 'text-textSecondary active:bg-primary/5'
+                }`}
+              >
+                <PieChart className="w-5 h-5 shrink-0" />
+                <span>Reports</span>
+              </button>
+            </nav>
+          )}
         </div>
 
-        {/* Create New Section */}
-        <div className="px-3 pt-2 pb-2">
-          <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest px-3 mb-2">Create New</h3>
-          <nav className="space-y-0.5">
-            {enabledTypes.map((type) => {
-              const Icon = type.icon
-              return (
-                <button
-                  key={type.key}
-                  onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:text-primary active:bg-primary/5 transition-all"
-                >
-                  <Icon className="w-5 h-5 text-gray-400 shrink-0" />
-                  <span>{type.label}</span>
-                </button>
-              )
-            })}
-          </nav>
+        {/* Create New Section — collapsible, open by default */}
+        <div className="px-3 pt-1 pb-1">
+          <button
+            onClick={() => toggleSection('createNew')}
+            className="w-full flex items-center justify-between px-3 py-2 mb-1"
+          >
+            <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Create New</h3>
+            <ChevronDown className={`w-3.5 h-3.5 text-textSecondary transition-transform ${openSections.createNew ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.createNew && (
+            <nav className="space-y-0.5">
+              {enabledTypes.map((type) => {
+                const Icon = type.icon
+                return (
+                  <button
+                    key={type.key}
+                    onClick={() => navigate(`/invoices/new?type=${type.key}`)}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:text-primary active:bg-primary/5 transition-all"
+                  >
+                    <Icon className="w-5 h-5 text-gray-400 shrink-0" />
+                    <span>{type.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          )}
         </div>
 
-        {/* Settings Section */}
-        <div className="px-3 pt-2 pb-2 border-t border-border mt-2">
-          <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest px-3 mb-2 mt-3">Settings</h3>
+        {/* Settings Section — collapsible, collapsed by default */}
+        <div className="px-3 pt-1 pb-2 border-t border-border mt-1">
           <button
-            onClick={() => navigate('/settings')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:bg-primary/5 transition-all"
+            onClick={() => toggleSection('settings')}
+            className="w-full flex items-center justify-between px-3 py-2 mb-1 mt-2"
           >
-            <Settings className="w-5 h-5 shrink-0" />
-            <span>Business Settings</span>
+            <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Settings</h3>
+            <ChevronDown className={`w-3.5 h-3.5 text-textSecondary transition-transform ${openSections.settings ? 'rotate-180' : ''}`} />
           </button>
-          <button
-            onClick={() => navigate('/templates')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:bg-primary/5 transition-all"
-          >
-            <Palette className="w-5 h-5 shrink-0" />
-            <span>Invoice Templates</span>
-          </button>
-          <button
-            onClick={() => { logout(); history.replace('/auth/phone'); if (onClose) onClose() }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-red-600 active:bg-red-50 transition-all"
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            <span>Logout</span>
-          </button>
+          {openSections.settings && (
+            <nav className="space-y-0.5">
+              <button
+                onClick={() => navigate('/settings')}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:bg-primary/5 transition-all"
+              >
+                <Settings className="w-5 h-5 shrink-0" />
+                <span>Business Settings</span>
+              </button>
+              <button
+                onClick={() => { logout(); history.replace('/auth/phone'); if (onClose) onClose() }}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-red-600 active:bg-red-50 transition-all"
+              >
+                <LogOut className="w-5 h-5 shrink-0" />
+                <span>Logout</span>
+              </button>
+            </nav>
+          )}
         </div>
       </div>
 

@@ -33,6 +33,12 @@ export const config = {
     keyId: process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_KEY_SECRET
   },
+  gcs: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    projectId: process.env.GOOGLE_PROJECT_ID || 'invoice-app',
+    bucket: process.env.GCS_BUCKET || 'invoice-app-uploads'
+  },
   logLevel: process.env.LOG_LEVEL || 'info'
 }
 
