@@ -132,7 +132,7 @@ export default function PlansPage() {
       rzp.open()
     },
     onError: (err) => {
-      alert(err?.response?.data?.message || 'Failed to create order. Please try again.')
+      alert(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to create order. Please try again.')
       setProcessingPlan(null)
     }
   })

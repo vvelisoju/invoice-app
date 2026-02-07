@@ -137,7 +137,7 @@ export async function createSubscriptionOrder(businessId, planId, billingPeriod 
     order = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
-      receipt: `sub_${businessId}_${Date.now()}`,
+      receipt: `sub_${businessId.slice(0, 8)}_${Date.now()}`,
       notes: {
         businessId,
         planId,
@@ -146,7 +146,8 @@ export async function createSubscriptionOrder(businessId, planId, billingPeriod 
       }
     })
   } catch (err) {
-    throw new ValidationError(`Payment gateway error: ${err.message || 'Unable to create order'}`)
+    console.error('[Razorpay] Order creation failed:', err.message, err.statusCode, JSON.stringify(err.error || {}))
+    throw new ValidationError(`Payment gateway error: ${err.error?.description || err.message || 'Unable to create order'}`)
   }
 
   // Create a pending subscription record

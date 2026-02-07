@@ -1,12 +1,13 @@
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
 import { config } from './config.js'
+import { ValidationError } from './errors.js'
 
 let razorpayInstance = null
 
 export function getRazorpay() {
   if (!config.razorpay.keyId || !config.razorpay.keySecret) {
-    throw new Error('Razorpay credentials not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env')
+    throw new ValidationError('Razorpay credentials not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env')
   }
 
   if (!razorpayInstance) {
