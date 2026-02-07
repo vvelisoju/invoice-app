@@ -3,14 +3,16 @@
 @theme {
   --color-primary: #2563EB;
   --color-primaryHover: #1D4ED8;
-  --color-bgPrimary: #F3F4F6;
+  --color-bgPrimary: #F9FAFB;
   --color-bgSecondary: #FFFFFF;
-  --color-textPrimary: #1F2937;
+  --color-textPrimary: #111827;
   --color-textSecondary: #6B7280;
   --color-border: #E5E7EB;
-  --color-borderLight: #F9FAFB;
+  --color-borderLight: #F3F4F6;
   --color-accentYellow: #FEF3C7;
   --color-accentYellowText: #92400E;
+  --color-accentOrange: #FB923C;
+  --color-accentOrangeLight: #FED7AA;
   --font-sans: 'Inter', sans-serif;
   --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
   --shadow-card: 0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04);

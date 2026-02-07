@@ -104,7 +104,7 @@ export default function InvoicePDFPage() {
 
   if (error || !invoice) {
     return (
-      <div className="max-w-4xl mx-auto text-center py-20">
+      <div className="max-w-4xl mx-auto p-4 md:p-8 text-center py-20">
         <h2 className="text-xl font-semibold text-textPrimary mb-4">Failed to load invoice</h2>
         <button onClick={() => history.push('/invoices/new')} className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium">
           Create New Invoice
@@ -114,7 +114,7 @@ export default function InvoicePDFPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto p-4 md:p-8">
       <PageHeader title={`Invoice #${invoice.invoiceNumber}`} backTo="/invoices/new" />
 
       {/* Success Banner */}

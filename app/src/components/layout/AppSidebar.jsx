@@ -1,93 +1,109 @@
 import { useHistory, useLocation } from 'react-router-dom'
-import {
-  Home,
-  FileText,
-  FilePlus,
-  BarChart3,
-  Settings,
-  Palette,
-  CreditCard
-} from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
+import { sidebarConfig, getActiveTabKey } from './navigationConfig'
 
-const sidebarSections = [
-  {
-    title: 'Main',
-    items: [
-      { path: '/home', label: 'Dashboard', icon: Home },
-      { path: '/invoices', label: 'Invoices', icon: FileText, exact: true },
-      { path: '/invoices/new', label: 'New Invoice', icon: FilePlus },
-      { path: '/reports', label: 'Reports', icon: BarChart3 }
-    ]
-  },
-  {
-    title: 'Settings',
-    items: [
-      { path: '/settings', label: 'Business Settings', icon: Settings },
-      { path: '/templates', label: 'Invoice Templates', icon: Palette }
-    ]
+function CreateNewGrid({ items, history }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div className="mb-8">
+      <h3 className="px-3 text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2">Create New</h3>
+      <div className="grid grid-cols-3 gap-2 px-1">
+        {items.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => history.push(item.path)}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all border ${
+              item.active
+                ? 'bg-blue-50 hover:bg-blue-100 text-primary border-blue-100'
+                : 'bg-bgPrimary hover:bg-gray-200 text-textSecondary hover:text-textPrimary border-transparent'
+            }`}
+          >
+            <item.icon className="w-4 h-4 mb-1" />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SidebarSection({ section, location, history }) {
+  const isActive = (path, exact) => {
+    if (exact) return location.pathname === path
+    return location.pathname + location.search === path || location.pathname.startsWith(path.split('?')[0]) && path === location.pathname + location.search
   }
-]
+
+  return (
+    <div>
+      <h3 className="px-3 text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2">
+        {section.title}
+      </h3>
+      <nav className="space-y-0.5">
+        {section.items.map((item) => {
+          const active = item.exact
+            ? location.pathname === item.path.split('?')[0]
+            : location.pathname + location.search === item.path
+          const isFirstItem = section.items.indexOf(item) === 0
+          const highlighted = isFirstItem && !location.search
+
+          return (
+            <button
+              key={item.path}
+              onClick={() => history.push(item.path)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all border-l-2 group ${
+                active || highlighted
+                  ? 'bg-primary/5 text-primary font-medium border-primary'
+                  : 'text-textSecondary hover:bg-bgPrimary border-transparent'
+              }`}
+            >
+              <item.icon className={`w-4 h-4 text-center ${active || highlighted ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}
 
 export default function AppSidebar() {
   const history = useHistory()
   const location = useLocation()
-  const user = useAuthStore((state) => state.user)
   const business = useAuthStore((state) => state.business)
 
-  const isActive = (path, exact = false) => {
-    if (exact) return location.pathname === path
-    return location.pathname.startsWith(path)
-  }
+  const activeTabKey = getActiveTabKey(location.pathname)
+  const config = sidebarConfig[activeTabKey] || sidebarConfig.documents
 
   return (
-    <aside className="w-64 bg-bgSecondary border-r border-border flex flex-col shrink-0 hidden lg:flex">
-      <div className="flex-1 overflow-y-auto p-4">
-        {sidebarSections.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h3 className="px-3 text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2">
-              {section.title}
-            </h3>
-            <nav className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = isActive(item.path, item.exact)
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => history.push(item.path)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all border-l-2 ${
-                      active
-                        ? 'bg-primary/5 text-primary font-medium border-primary'
-                        : 'text-textSecondary hover:bg-bgPrimary border-transparent'
-                    }`}
-                  >
-                    <item.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
-                    <span>{item.label}</span>
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
-        ))}
+    <aside className="w-64 bg-bgSecondary border-r border-border flex flex-col shrink-0 hidden md:flex">
+      <div className="p-6 flex-1 overflow-y-auto">
+        {/* Create New Grid */}
+        <CreateNewGrid items={config.createNew} history={history} />
+
+        {/* Navigation Sections */}
+        <div className="space-y-6">
+          {config.sections?.map((section) => (
+            <SidebarSection
+              key={section.title}
+              section={section}
+              location={location}
+              history={history}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* User Profile Footer */}
-      <div className="p-4 border-t border-border">
-        <div
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-bgPrimary transition-colors cursor-pointer"
-          onClick={() => history.push('/settings')}
-        >
-          <div className="w-8 h-8 rounded-full border border-border bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
-            {(business?.name || user?.phone || 'U').charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-textPrimary truncate">
-              {business?.name || 'My Business'}
-            </div>
-            <div className="text-xs text-textSecondary truncate">
-              {user?.phone || 'Settings'}
-            </div>
-          </div>
+      {/* Bottom Pro Plan Card */}
+      <div className="mt-auto p-4 border-t border-border">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
+          <p className="text-xs font-medium text-primary mb-1">Pro Plan</p>
+          <p className="text-[10px] text-textSecondary mb-2">You have unlimited invoices.</p>
+          <button
+            onClick={() => history.push('/settings')}
+            className="text-[10px] font-bold text-primary hover:underline"
+          >
+            Manage Subscription
+          </button>
         </div>
       </div>
     </aside>

@@ -1,46 +1,59 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
-import { Search, FileText, Plus, Loader2 } from 'lucide-react'
+import { Plus, Download, FileText } from 'lucide-react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { invoiceApi } from '../../lib/api'
-import { PageHeader } from '../../components/layout'
+import {
+  DataTable,
+  StatusFilterPills,
+  CheckboxFilter,
+  PageToolbar,
+  TableSummary
+} from '../../components/data-table'
 
-const STATUS_COLORS = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  ISSUED: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
-  VOID: 'bg-gray-200 text-gray-700'
+const DOC_TYPE_BADGE = {
+  INVOICE: { label: 'Invoice', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  QUOTE: { label: 'Quote', className: 'bg-gray-50 text-gray-700 border-gray-200' },
+  RECEIPT: { label: 'Cash Receipt', className: 'bg-green-50 text-green-700 border-green-200' },
+  CREDIT_NOTE: { label: 'Credit Note', className: 'bg-purple-50 text-purple-700 border-purple-200' },
+  DELIVERY_NOTE: { label: 'Delivery Note', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  PURCHASE_ORDER: { label: 'Purchase Order', className: 'bg-orange-50 text-orange-700 border-orange-200' },
 }
 
-const STATUS_LABELS = {
-  DRAFT: 'Draft',
-  ISSUED: 'Issued',
-  PAID: 'Paid',
-  CANCELLED: 'Cancelled',
-  VOID: 'Void'
-}
+const STATUS_FILTERS = [
+  { key: 'all', label: 'All Documents' },
+  { key: 'ISSUED', label: 'Unpaid', badgeColor: 'bg-accentOrange' },
+  { key: 'OVERDUE', label: 'Overdue', badgeColor: 'bg-red-500' },
+  { key: 'PARTIAL', label: 'Partially Paid', badgeColor: 'bg-blue-500' },
+  { key: 'PAID', label: 'Paid', badgeColor: 'bg-green-600' },
+]
 
-const statusTabs = [
-  { key: 'all', label: 'All' },
-  { key: 'DRAFT', label: 'Draft' },
-  { key: 'ISSUED', label: 'Issued' },
-  { key: 'PAID', label: 'Paid' }
+const STATUS_EXTRAS = [
+  { key: 'SENT', label: 'Sent by Email' },
+  { key: 'TRASH', label: 'Trash', badgeColor: 'bg-gray-400' },
+]
+
+const DOC_TYPE_OPTIONS = [
+  { key: 'INVOICE', label: 'Invoice' },
+  { key: 'QUOTE', label: 'Quote' },
+  { key: 'RECEIPT', label: 'Cash Receipt' },
+]
+
+const TABLE_COLUMNS = [
+  { key: 'customer', label: 'Customer', colSpan: 3 },
+  { key: 'docType', label: 'Document', colSpan: 2, headerAlign: 'center', align: 'center' },
+  { key: 'number', label: 'Number', colSpan: 1, headerAlign: 'center', align: 'center' },
+  { key: 'date', label: 'Date', colSpan: 2, headerAlign: 'center', align: 'center' },
+  { key: 'paid', label: 'Paid', colSpan: 1, headerAlign: 'right', align: 'right' },
+  { key: 'total', label: 'Total', colSpan: 2, headerAlign: 'right', align: 'right' },
 ]
 
 export default function InvoiceListPage() {
   const history = useHistory()
-  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [docTypeFilters, setDocTypeFilters] = useState({ INVOICE: true, QUOTE: true, RECEIPT: true })
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
-
-  const handleSearchChange = useCallback((e) => {
-    const value = e.target.value
-    setSearchQuery(value)
-    clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(() => setDebouncedSearch(value), 300)
-  }, [])
 
   useEffect(() => () => clearTimeout(searchTimeout.current), [])
 
@@ -63,21 +76,21 @@ export default function InvoiceListPage() {
       return response.data
     },
     getNextPageParam: (lastPage, allPages) => {
-      const totalFetched = allPages.reduce((sum, page) => sum + (page.data?.length || 0), 0)
-      if (lastPage.data?.length < 20) return undefined
+      const totalFetched = allPages.reduce((sum, page) => sum + (page.invoices?.length || 0), 0)
+      if (lastPage.invoices?.length < 20) return undefined
       return totalFetched
     },
     initialPageParam: 0
   })
 
-  const invoices = data?.pages.flatMap(page => page.data || []) || []
+  const invoices = data?.pages.flatMap(page => page.invoices || []) || []
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount || 0)
   }
 
@@ -85,119 +98,160 @@ export default function InvoiceListPage() {
     if (!dateString) return ''
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: '2-digit',
-      month: 'short'
+      month: '2-digit',
+      year: 'numeric'
     })
   }
 
+  // Compute counts for filter pills
+  const counts = useMemo(() => {
+    const c = { all: invoices.length, ISSUED: 0, PAID: 0, OVERDUE: 0, PARTIAL: 0, SENT: 0, TRASH: 0 }
+    invoices.forEach((inv) => {
+      if (inv.status === 'ISSUED') c.ISSUED++
+      if (inv.status === 'PAID') c.PAID++
+    })
+    return c
+  }, [invoices])
+
+  const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
+  const extrasWithCounts = STATUS_EXTRAS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
+
+  // Compute summary totals
+  const summary = useMemo(() => {
+    let total = 0, paid = 0
+    invoices.forEach((inv) => {
+      total += inv.total || 0
+      paid += inv.paidAmount || 0
+    })
+    return { total, paid, balance: total - paid }
+  }, [invoices])
+
+  const handleDocTypeChange = (key, checked) => {
+    setDocTypeFilters((prev) => ({ ...prev, [key]: checked }))
+  }
+
+  const getDocBadge = (invoice) => {
+    const type = invoice.documentType || 'INVOICE'
+    return DOC_TYPE_BADGE[type] || DOC_TYPE_BADGE.INVOICE
+  }
+
+  const isPaid = (invoice) => invoice.status === 'PAID'
+
+  const getRowClassName = (invoice) => {
+    if (isPaid(invoice)) return 'opacity-50 hover:opacity-80 border-l-2 border-transparent'
+    return 'border-l-2 border-accentOrange'
+  }
+
+  const renderRow = (invoice) => {
+    const badge = getDocBadge(invoice)
+    const paidAmount = invoice.paidAmount || 0
+    const paidColor = isPaid(invoice) ? 'text-green-600' : 'text-accentOrange'
+
+    return [
+      // Customer
+      <div key="customer">
+        <div className={`font-semibold ${invoice.customer?.name ? 'text-textPrimary' : 'text-textSecondary italic'}`}>
+          {invoice.customer?.name || '<No Name>'}
+        </div>
+        {invoice.customer?.gst && (
+          <div className="text-xs text-textSecondary">GST: {invoice.customer.gst}</div>
+        )}
+      </div>,
+      // Document type badge
+      <span key="type" className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${badge.className}`}>
+        {badge.label}
+      </span>,
+      // Number
+      <span key="number" className="text-textSecondary font-mono text-xs">{invoice.invoiceNumber}</span>,
+      // Date
+      <span key="date" className="text-textSecondary text-sm">{formatDate(invoice.date)}</span>,
+      // Paid
+      <span key="paid" className={`${paidColor} font-semibold`}>{formatCurrency(paidAmount)}</span>,
+      // Total
+      <span key="total" className="font-bold text-textPrimary text-base">{formatCurrency(invoice.total)}</span>,
+    ]
+  }
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <PageHeader
-        title="Invoices"
+    <div className="h-full flex flex-col">
+      {/* Primary Filter Section */}
+      <PageToolbar
+        title="Documents"
+        subtitle="Track and manage all your business documents"
         actions={
-          <button
-            onClick={() => history.push('/invoices/new')}
-            className="px-5 py-2.5 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Invoice
-          </button>
+          <>
+            <button className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button
+              onClick={() => history.push('/invoices/new')}
+              className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              New Document
+            </button>
+          </>
         }
+      >
+        <StatusFilterPills
+          filters={filtersWithCounts}
+          activeKey={statusFilter}
+          onChange={setStatusFilter}
+          extras={extrasWithCounts}
+        />
+      </PageToolbar>
+
+      {/* Secondary Filters */}
+      <CheckboxFilter
+        label="Document Type:"
+        options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+        onChange={handleDocTypeChange}
       />
 
-      {/* Search + Filters */}
-      <div className="bg-bgSecondary rounded-xl border border-border shadow-card mb-6">
-        <div className="p-4 border-b border-border">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search invoices..."
-              className="w-full pl-10 pr-4 py-2.5 bg-bgPrimary border border-transparent focus:border-primary focus:bg-white rounded-lg text-sm text-textPrimary placeholder-textSecondary/50 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-            />
-          </div>
-        </div>
-        <div className="px-4 py-2 flex gap-1">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                statusFilter === tab.key
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-textSecondary hover:bg-bgPrimary'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Table Section */}
+      <div className="flex-1 px-8 py-6 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
+          <DataTable
+            columns={TABLE_COLUMNS}
+            rows={invoices}
+            rowKey={(inv) => inv.id}
+            renderRow={renderRow}
+            onRowClick={(inv) => history.push(`/invoices/${inv.id}`)}
+            getRowClassName={getRowClassName}
+            selectable={true}
+            isLoading={isLoading}
+            emptyIcon={<FileText className="w-16 h-16 text-gray-300 mb-4" />}
+            emptyTitle="No documents yet"
+            emptyMessage="Create your first invoice to get started"
+            loadMore={{
+              hasMore: hasNextPage,
+              isLoading: isFetchingNextPage,
+              onLoadMore: fetchNextPage
+            }}
+            footer={
+              invoices.length > 0 && (
+                <TableSummary
+                  rows={[
+                    { label: 'Total', value: `${formatCurrency(summary.total).replace('₹', '').trim()} INR` },
+                    { label: 'Paid Amount', value: `${formatCurrency(summary.paid).replace('₹', '').trim()} INR`, valueClassName: 'text-green-600' },
+                  ]}
+                  totalRow={{
+                    label: 'Balance Due',
+                    value: `${formatCurrency(summary.balance).replace('₹', '').trim()} INR`,
+                    valueClassName: 'text-accentOrange'
+                  }}
+                />
+              )
+            }
+          />
         </div>
       </div>
 
-      {/* Invoice List */}
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        </div>
-      ) : invoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText className="w-16 h-16 text-gray-300 mb-4" />
-          <h2 className="text-lg font-semibold text-textSecondary mb-1">No invoices yet</h2>
-          <p className="text-sm text-textSecondary">Create your first invoice to get started</p>
-        </div>
-      ) : (
-        <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border bg-bgPrimary/50">
-            <div className="col-span-4 text-[11px] font-bold text-textSecondary uppercase tracking-wider">Invoice</div>
-            <div className="col-span-3 text-[11px] font-bold text-textSecondary uppercase tracking-wider">Customer</div>
-            <div className="col-span-2 text-[11px] font-bold text-textSecondary uppercase tracking-wider">Date</div>
-            <div className="col-span-2 text-[11px] font-bold text-textSecondary uppercase tracking-wider text-right">Amount</div>
-            <div className="col-span-1 text-[11px] font-bold text-textSecondary uppercase tracking-wider text-right">Status</div>
-          </div>
-
-          {/* Rows */}
-          {invoices.map((invoice) => (
-            <div
-              key={invoice.id}
-              onClick={() => history.push(`/invoices/${invoice.id}`)}
-              className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-border last:border-b-0 hover:bg-bgPrimary/30 cursor-pointer transition-colors"
-            >
-              <div className="col-span-4">
-                <span className="text-sm font-semibold text-textPrimary">#{invoice.invoiceNumber}</span>
-              </div>
-              <div className="col-span-3">
-                <span className="text-sm text-textSecondary truncate">{invoice.customer?.name || 'No customer'}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-sm text-textSecondary">{formatDate(invoice.date)}</span>
-              </div>
-              <div className="col-span-2 text-right">
-                <span className="text-sm font-semibold text-textPrimary">{formatCurrency(invoice.total)}</span>
-              </div>
-              <div className="col-span-1 text-right">
-                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[invoice.status]}`}>
-                  {STATUS_LABELS[invoice.status]}
-                </span>
-              </div>
-            </div>
-          ))}
-
-          {/* Load More */}
-          {hasNextPage && (
-            <div className="px-6 py-4 text-center border-t border-border">
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="text-sm text-primary hover:underline font-medium"
-              >
-                {isFetchingNextPage ? 'Loading...' : 'Load more'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Footer */}
+      <div className="text-center py-4 bg-bgPrimary">
+        <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
+      </div>
     </div>
   )
 }

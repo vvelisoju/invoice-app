@@ -93,7 +93,7 @@ export default function InvoiceDetailPage() {
 
   if (error || !invoice) {
     return (
-      <div className="max-w-4xl mx-auto text-center py-20">
+      <div className="max-w-4xl mx-auto p-4 md:p-8 text-center py-20">
         <h2 className="text-xl font-semibold text-textPrimary mb-4">Invoice not found</h2>
         <button
           onClick={() => history.push('/invoices')}
@@ -106,7 +106,7 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto p-4 md:p-8">
       <PageHeader
         title={`Invoice #${invoice.invoiceNumber}`}
         backTo="/invoices"

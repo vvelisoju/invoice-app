@@ -16,6 +16,43 @@ export const searchCustomers = async (prisma, businessId, query) => {
   return customers
 }
 
+export const listCustomers = async (prisma, businessId, filters = {}) => {
+  const { search, limit = 20, offset = 0 } = filters
+
+  const where = {
+    businessId,
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
+    })
+  }
+
+  const [customers, total] = await Promise.all([
+    prisma.customer.findMany({
+      where,
+      include: {
+        invoices: {
+          select: { id: true, total: true, status: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: parseInt(limit),
+      skip: parseInt(offset)
+    }),
+    prisma.customer.count({ where })
+  ])
+
+  return {
+    customers,
+    total,
+    limit: parseInt(limit),
+    offset: parseInt(offset)
+  }
+}
+
 export const createCustomer = async (prisma, businessId, data) => {
   const customer = await prisma.customer.create({
     data: {

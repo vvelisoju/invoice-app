@@ -42,7 +42,7 @@ export default function TemplateSelectPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto p-4 md:p-8">
       <PageHeader
         title="Choose Template"
         subtitle="Select a template for your invoices. You can customize colors and visibility in the editor."

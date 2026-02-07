@@ -1,10 +1,16 @@
-import { searchCustomers, createCustomer, getCustomer, updateCustomer } from './service.js'
+import { searchCustomers, listCustomers, createCustomer, getCustomer, updateCustomer } from './service.js'
 
 export const handleSearchCustomers = async (request, reply) => {
   const businessId = request.user.businessId
   const { search } = request.query
   const customers = await searchCustomers(request.server.prisma, businessId, search)
   return reply.status(200).send(customers)
+}
+
+export const handleListCustomers = async (request, reply) => {
+  const businessId = request.user.businessId
+  const result = await listCustomers(request.server.prisma, businessId, request.query)
+  return reply.status(200).send(result)
 }
 
 export const handleCreateCustomer = async (request, reply) => {
