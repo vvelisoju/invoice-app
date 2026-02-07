@@ -27,7 +27,20 @@ await fastify.register(helmet, {
 })
 
 await fastify.register(cors, {
-  origin: config.corsOrigin || '*',
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return cb(null, true)
+    
+    const allowedOrigins = config.corsOrigin
+      ? config.corsOrigin.split(',').map(o => o.trim())
+      : ['http://localhost:5173']
+    
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return cb(null, true)
+    }
+    
+    cb(new Error('Not allowed by CORS'), false)
+  },
   credentials: true
 })
 
