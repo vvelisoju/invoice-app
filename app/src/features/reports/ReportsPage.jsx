@@ -1,7 +1,13 @@
-import { useState, useMemo } from 'react'
-import { Search, Calendar, ChevronDown, FileText, FileSpreadsheet, Printer, Loader2 } from 'lucide-react'
+import { useState, useCallback, useRef } from 'react'
+import {
+  Search, Calendar, ChevronDown, FileText, FileSpreadsheet, Printer,
+  Loader2, FolderArchive, Download, ChevronRight, X
+} from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { reportsApi } from '../../lib/api'
+import { reportsApi, invoiceApi } from '../../lib/api'
+import { generatePDF } from '../invoices/utils/pdfGenerator'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
 
 const DOC_TYPE_LABELS = {
   INVOICE: 'Invoice',
@@ -34,12 +40,6 @@ const QUICK_FILTERS = [
   { key: 'lastQuarter', label: 'Last Quarter' },
 ]
 
-function getFirstDayOfMonth() {
-  const date = new Date()
-  date.setDate(1)
-  return date.toISOString().split('T')[0]
-}
-
 function getLastMonthRange() {
   const now = new Date()
   const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -54,6 +54,206 @@ function getLastQuarterRange() {
   return { from: from.toISOString().split('T')[0], to: to.toISOString().split('T')[0] }
 }
 
+// ── Helpers ──────────────────────────────────────────────
+
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0)
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const getExportFilename = (prefix, ext) => {
+  const d = new Date()
+  const ts = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`
+  return `${prefix}_${ts}.${ext}`
+}
+
+// ── Export: CSV / Excel ──────────────────────────────────
+
+function exportToCSV(documents, totals) {
+  const headers = ['Customer', 'GSTIN', 'Document', 'Number', 'Date', 'Subtotal', 'Tax', 'Paid Amount', 'Total']
+  const rows = documents.map(doc => [
+    `"${(doc.customerName || '').replace(/"/g, '""')}"`,
+    `"${doc.customerGstin || ''}"`,
+    DOC_TYPE_LABELS[doc.documentType] || doc.documentType,
+    doc.invoiceNumber || '',
+    formatDate(doc.date),
+    (doc.subtotal || 0).toFixed(2),
+    (doc.tax || 0).toFixed(2),
+    (doc.paidAmount || 0).toFixed(2),
+    (doc.total || 0).toFixed(2),
+  ])
+  // Totals row
+  rows.push(['', '', '', '', 'TOTAL', (totals.subtotal||0).toFixed(2), (totals.tax||0).toFixed(2), (totals.paidAmount||0).toFixed(2), (totals.total||0).toFixed(2)])
+
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  saveAs(blob, getExportFilename('report', 'csv'))
+}
+
+// ── Export: Print ────────────────────────────────────────
+
+function printReport(documents, totals) {
+  const tableRows = documents.map(doc => `
+    <tr>
+      <td>${doc.customerName || '-'}${doc.customerGstin ? '<br/><small>' + doc.customerGstin + '</small>' : ''}</td>
+      <td>${DOC_TYPE_LABELS[doc.documentType] || doc.documentType}</td>
+      <td>${doc.invoiceNumber || ''}</td>
+      <td style="text-align:center">${formatDate(doc.date)}</td>
+      <td style="text-align:right">${formatCurrency(doc.subtotal)}</td>
+      <td style="text-align:right">${formatCurrency(doc.tax)}</td>
+      <td style="text-align:right">${formatCurrency(doc.paidAmount)}</td>
+      <td style="text-align:right;font-weight:600">${formatCurrency(doc.total)}</td>
+    </tr>
+  `).join('')
+
+  const html = `<!DOCTYPE html><html><head><title>Report</title>
+    <style>
+      body{font-family:system-ui,-apple-system,sans-serif;padding:24px;color:#1f2937;font-size:13px}
+      h2{margin:0 0 4px;font-size:18px} p.sub{color:#6b7280;font-size:12px;margin:0 0 16px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f9fafb;text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:2px solid #e5e7eb}
+      td{padding:8px 12px;border-bottom:1px solid #f3f4f6}
+      tfoot td{font-weight:700;border-top:2px solid #e5e7eb;background:#f9fafb}
+      @media print{body{padding:0}}
+    </style></head><body>
+    <h2>Document Report</h2>
+    <p class="sub">Generated on ${new Date().toLocaleDateString('en-IN', { day:'2-digit',month:'long',year:'numeric' })} &bull; ${documents.length} documents</p>
+    <table>
+      <thead><tr><th>Customer</th><th>Document</th><th>Number</th><th style="text-align:center">Date</th><th style="text-align:right">Subtotal</th><th style="text-align:right">Tax</th><th style="text-align:right">Paid</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
+    </table></body></html>`
+
+  const w = window.open('', '_blank', 'width=900,height=700')
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  setTimeout(() => { w.print(); w.close() }, 400)
+}
+
+// ── Export: Summary PDF (HTML → print‑to‑PDF) ────────────
+
+function exportSummaryPDF(documents, totals) {
+  const tableRows = documents.map(doc => `
+    <tr>
+      <td>${doc.customerName || '-'}${doc.customerGstin ? '<br/><small style="color:#6b7280">' + doc.customerGstin + '</small>' : ''}</td>
+      <td>${DOC_TYPE_LABELS[doc.documentType] || doc.documentType}</td>
+      <td>${doc.invoiceNumber || ''}</td>
+      <td style="text-align:center">${formatDate(doc.date)}</td>
+      <td style="text-align:right">${formatCurrency(doc.subtotal)}</td>
+      <td style="text-align:right">${formatCurrency(doc.tax)}</td>
+      <td style="text-align:right">${formatCurrency(doc.paidAmount)}</td>
+      <td style="text-align:right;font-weight:600">${formatCurrency(doc.total)}</td>
+    </tr>
+  `).join('')
+
+  const html = `<!DOCTYPE html><html><head><title>Report PDF</title>
+    <style>
+      body{font-family:system-ui,-apple-system,sans-serif;padding:32px;color:#1f2937;font-size:12px}
+      h2{margin:0 0 4px;font-size:18px} p.sub{color:#6b7280;font-size:11px;margin:0 0 20px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f0f4ff;text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#4b5563;border-bottom:2px solid #d1d5db}
+      td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:11px}
+      tfoot td{font-weight:700;border-top:2px solid #d1d5db;background:#f9fafb;font-size:12px}
+      @page{size:A4 landscape;margin:15mm}
+    </style></head><body>
+    <h2>Document Report</h2>
+    <p class="sub">Generated on ${new Date().toLocaleDateString('en-IN', { day:'2-digit',month:'long',year:'numeric' })} &bull; ${documents.length} documents</p>
+    <table>
+      <thead><tr><th>Customer</th><th>Document</th><th>Number</th><th style="text-align:center">Date</th><th style="text-align:right">Subtotal</th><th style="text-align:right">Tax</th><th style="text-align:right">Paid</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
+    </table></body></html>`
+
+  const w = window.open('', '_blank', 'width=1100,height=700')
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  setTimeout(() => { w.print() }, 400)
+}
+
+// ── Progress Modal ───────────────────────────────────────
+
+function ExportProgressModal({ isOpen, onClose, title, progress, total, status }) {
+  if (!isOpen) return null
+  const pct = total > 0 ? Math.round((progress / total) * 100) : 0
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h3 className="text-sm font-semibold text-textPrimary mb-1">{title}</h3>
+        <p className="text-xs text-textSecondary mb-4">{status}</p>
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+          <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-xs text-textSecondary text-right">{progress} / {total} ({pct}%)</p>
+        {pct >= 100 && (
+          <button onClick={onClose} className="mt-4 w-full py-2 text-sm font-medium text-primary bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            Done
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Export Menu Dropdown ─────────────────────────────────
+
+function ExportMenu({ documents, totals, onExportZip }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  const items = [
+    { label: 'Export to CSV (Excel)', icon: FileSpreadsheet, iconColor: 'text-green-600', action: () => exportToCSV(documents, totals) },
+    { label: 'Export Summary PDF', icon: FileText, iconColor: 'text-red-600', action: () => exportSummaryPDF(documents, totals) },
+    { label: 'Print Report', icon: Printer, iconColor: 'text-gray-600', action: () => printReport(documents, totals) },
+    { type: 'divider' },
+    { label: 'Download All as ZIP', desc: 'Individual PDFs for CA / GST filing', icon: FolderArchive, iconColor: 'text-purple-600', action: onExportZip },
+  ]
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="bg-primary hover:bg-primaryHover text-white font-medium text-xs px-4 py-2 rounded-lg shadow-sm flex items-center gap-2 transition-colors"
+      >
+        <Download className="w-3.5 h-3.5" />
+        Export
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[260px]">
+            {items.map((item, i) => {
+              if (item.type === 'divider') return <div key={i} className="h-px bg-border" />
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => { setOpen(false); item.action() }}
+                  disabled={documents.length === 0}
+                  className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <item.icon className={`w-4 h-4 ${item.iconColor} shrink-0`} />
+                  <div>
+                    <div className="text-sm font-medium text-textPrimary">{item.label}</div>
+                    {item.desc && <div className="text-[10px] text-textSecondary">{item.desc}</div>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Main Component ───────────────────────────────────────
+
 export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -61,6 +261,12 @@ export default function ReportsPage() {
   const [docTypeFilter, setDocTypeFilter] = useState('all')
   const [quickFilter, setQuickFilter] = useState('all')
   const [searchParams, setSearchParams] = useState({})
+
+  // ZIP export progress
+  const [zipExporting, setZipExporting] = useState(false)
+  const [zipProgress, setZipProgress] = useState(0)
+  const [zipTotal, setZipTotal] = useState(0)
+  const [zipStatus, setZipStatus] = useState('')
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['reports', 'documents', searchParams],
@@ -70,24 +276,18 @@ export default function ReportsPage() {
     }
   })
 
+  // GST summary query
+  const { data: gstData } = useQuery({
+    queryKey: ['reports', 'gst', searchParams],
+    queryFn: async () => {
+      const response = await reportsApi.getGSTSummary(searchParams)
+      return response.data.data || response.data
+    }
+  })
+
   const documents = reportData?.documents || []
   const totals = reportData?.totals || {}
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount || 0)
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return ''
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
+  const gstSummary = gstData?.summary || null
 
   const handleSearch = () => {
     const params = {}
@@ -118,6 +318,38 @@ export default function ReportsPage() {
       setSearchParams({})
     }
   }
+
+  // ── ZIP export: fetch each invoice, generate PDF, bundle ──
+  const handleExportZip = useCallback(async () => {
+    if (documents.length === 0) return
+    setZipExporting(true)
+    setZipProgress(0)
+    setZipTotal(documents.length)
+    setZipStatus('Preparing...')
+
+    const zip = new JSZip()
+    let done = 0
+
+    for (const doc of documents) {
+      try {
+        setZipStatus(`Generating ${doc.invoiceNumber || 'document'}...`)
+        const response = await invoiceApi.get(doc.id)
+        const invoice = response.data?.data || response.data
+        const blob = await generatePDF(invoice)
+        const filename = `${(doc.invoiceNumber || doc.id).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+        zip.file(filename, blob)
+      } catch (err) {
+        console.error(`Failed to generate PDF for ${doc.invoiceNumber}:`, err)
+      }
+      done++
+      setZipProgress(done)
+    }
+
+    setZipStatus('Creating ZIP file...')
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    saveAs(zipBlob, getExportFilename('invoices', 'zip'))
+    setZipStatus('Done!')
+  }, [documents])
 
   return (
     <div className="flex-1 overflow-y-auto bg-bgPrimary p-6">
@@ -230,21 +462,38 @@ export default function ReportsPage() {
             </button>
           ))}
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <div className="flex-1" />
 
-          <button className="bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 font-medium text-xs px-4 py-2 rounded shadow-sm flex items-center gap-2 transition-colors">
-            <FileText className="w-3.5 h-3.5 text-red-600" />
-            Export to PDF
-          </button>
-          <button className="bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 font-medium text-xs px-4 py-2 rounded shadow-sm flex items-center gap-2 transition-colors">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-green-600" />
-            Export to Excel
-          </button>
-          <button className="bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 font-medium text-xs px-4 py-2 rounded shadow-sm flex items-center gap-2 transition-colors">
-            <Printer className="w-3.5 h-3.5 text-gray-600" />
-            Print
-          </button>
+          <ExportMenu documents={documents} totals={totals} onExportZip={handleExportZip} />
         </div>
+
+        {/* GST Summary Card */}
+        {gstSummary && gstSummary.invoiceCount > 0 && (
+          <div className="bg-white border-x border-b border-border px-6 py-4">
+            <div className="grid grid-cols-5 gap-4">
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Taxable Value</p>
+                <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.totalTaxableValue)}</p>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider">Total GST</p>
+                <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.totalGST)}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+                <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">CGST</p>
+                <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.breakdown?.cgst)}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+                <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">SGST</p>
+                <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.breakdown?.sgst)}</p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                <p className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider">IGST</p>
+                <p className="text-lg font-bold text-textPrimary mt-1">₹{formatCurrency(gstSummary.breakdown?.igst)}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Data Table */}
         <div className="bg-white border-x border-b border-border rounded-b-xl flex-1 flex flex-col shadow-sm overflow-hidden">
@@ -323,6 +572,16 @@ export default function ReportsPage() {
           <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
         </div>
       </div>
+
+      {/* ZIP Export Progress Modal */}
+      <ExportProgressModal
+        isOpen={zipExporting}
+        onClose={() => setZipExporting(false)}
+        title="Exporting Individual PDFs"
+        progress={zipProgress}
+        total={zipTotal}
+        status={zipStatus}
+      />
     </div>
   )
 }
