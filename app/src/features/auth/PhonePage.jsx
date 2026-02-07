@@ -1,158 +1,92 @@
 import { useState, useRef } from 'react'
 import { useHistory } from 'react-router-dom'
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonInput,
-  IonButton,
-  IonText,
-  IonSpinner,
-  useIonToast
-} from '@ionic/react'
+import { FileText, Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../../lib/api'
 
 export default function PhonePage() {
   const [phone, setPhone] = useState('')
+  const [error, setError] = useState('')
   const inputRef = useRef(null)
-  const [present] = useIonToast()
   const history = useHistory()
 
   const requestOTPMutation = useMutation({
     mutationFn: authApi.requestOTP,
     onSuccess: () => {
-      present({
-        message: 'OTP sent successfully! Check your phone.',
-        duration: 3000,
-        color: 'success'
-      })
       history.push('/auth/verify', { phone })
     },
-    onError: (error) => {
-      present({
-        message: error.response?.data?.error?.message || 'Failed to send OTP',
-        duration: 3000,
-        color: 'danger'
-      })
+    onError: (err) => {
+      setError(err.response?.data?.error?.message || 'Failed to send OTP')
     }
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('Form submitted with phone:', phone)
-    
-    // Validate phone
+    setError('')
+
     const phoneRegex = /^[6-9]\d{9}$/
     if (!phoneRegex.test(phone)) {
-      console.log('Phone validation failed')
-      present({
-        message: 'Please enter a valid 10-digit phone number',
-        duration: 3000,
-        color: 'warning'
-      })
+      setError('Please enter a valid 10-digit phone number')
       return
     }
 
-    console.log('Calling API with phone:', phone)
     requestOTPMutation.mutate(phone)
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Welcome</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="ion-padding">
-        <div style={{ 
-          maxWidth: '400px', 
-          margin: '0 auto', 
-          paddingTop: '60px',
-          textAlign: 'center'
-        }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-            Invoice App 
-          </h1>
-          <IonText color="medium">
-            <p style={{ marginBottom: '40px' }}>
-              Enter your phone number to get started
-            </p>
-          </IonText>
+    <div className="min-h-screen bg-bgPrimary flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <div className="w-14 h-14 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-4">
+            <FileText className="w-7 h-7 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-textPrimary mb-2">Invoice App</h1>
+          <p className="text-textSecondary text-sm">
+            Enter your phone number to get started
+          </p>
+        </div>
 
+        {/* Card */}
+        <div className="bg-bgSecondary rounded-2xl shadow-card border border-border p-8">
           <form onSubmit={handleSubmit}>
+            <label className="text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2 block">
+              Phone Number
+            </label>
             <input
               ref={inputRef}
               type="tel"
               placeholder="10-digit phone number"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setError('') }}
               maxLength={10}
               inputMode="numeric"
               disabled={requestOTPMutation.isPending}
-              style={{
-                width: '100%',
-                height: '56px',
-                padding: '0 16px',
-                fontSize: '18px',
-                backgroundColor: '#f5f5f5',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3880ff'}
-              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              className="w-full h-14 px-4 text-lg bg-bgPrimary border border-border rounded-xl text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all mb-2 disabled:opacity-50"
             />
+
+            {error && (
+              <p className="text-red-500 text-sm mb-3">{error}</p>
+            )}
 
             <button
               type="submit"
               disabled={requestOTPMutation.isPending || phone.length !== 10}
-              style={{
-                width: '100%',
-                height: '56px',
-                fontSize: '16px',
-                fontWeight: '600',
-                backgroundColor: (requestOTPMutation.isPending || phone.length !== 10) ? '#ccc' : '#3880ff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: (requestOTPMutation.isPending || phone.length !== 10) ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!requestOTPMutation.isPending && phone.length === 10) {
-                  e.target.style.backgroundColor = '#3171e0'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!requestOTPMutation.isPending && phone.length === 10) {
-                  e.target.style.backgroundColor = '#3880ff'
-                }
-              }}
+              className="w-full h-14 mt-4 bg-primary hover:bg-primaryHover text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-base"
             >
               {requestOTPMutation.isPending ? (
-                <IonSpinner name="crescent" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 'SEND OTP'
               )}
             </button>
           </form>
 
-          <IonText color="medium">
-            <p style={{ marginTop: '24px', fontSize: '14px' }}>
-              We'll send you a 6-digit verification code
-            </p>
-          </IonText>
+          <p className="text-textSecondary text-sm text-center mt-6">
+            We'll send you a 6-digit verification code
+          </p>
         </div>
-      </IonContent>
-    </IonPage>
+      </div>
+    </div>
   )
 }

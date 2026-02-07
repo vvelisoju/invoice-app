@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react'
-import {
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonList,
-  IonText
-} from '@ionic/react'
 import { useQuery } from '@tanstack/react-query'
 import { customerApi } from '../../../lib/api'
 import { db } from '../../../db'
@@ -16,13 +9,11 @@ export default function CustomerTypeahead({ value, onChange, onSelect }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const business = useAuthStore((state) => state.business)
 
-  // Search customers (local first, then API)
   const { data: suggestions = [] } = useQuery({
     queryKey: ['customers', 'search', query],
     queryFn: async () => {
       if (!query || query.length < 2) return []
       
-      // Try local first
       const localCustomers = await db.customers
         .where('businessId')
         .equals(business?.id)
@@ -35,7 +26,6 @@ export default function CustomerTypeahead({ value, onChange, onSelect }) {
 
       if (filtered.length > 0) return filtered
 
-      // Fall back to API
       try {
         const response = await customerApi.search(query)
         return response.data || []
@@ -51,7 +41,7 @@ export default function CustomerTypeahead({ value, onChange, onSelect }) {
   }, [value])
 
   const handleInputChange = (e) => {
-    const newValue = e.detail.value
+    const newValue = e.target.value
     setQuery(newValue)
     onChange?.(newValue)
     setShowSuggestions(true)
@@ -64,54 +54,37 @@ export default function CustomerTypeahead({ value, onChange, onSelect }) {
   }
 
   const handleBlur = () => {
-    // Delay to allow click on suggestion
     setTimeout(() => setShowSuggestions(false), 200)
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <IonItem>
-        <IonLabel position="stacked">Customer</IonLabel>
-        <IonInput
-          value={query}
-          placeholder="Search by name or phone"
-          onIonInput={handleInputChange}
-          onIonFocus={() => setShowSuggestions(true)}
-          onIonBlur={handleBlur}
-        />
-      </IonItem>
+    <div className="relative">
+      <label className="text-xs font-semibold text-textSecondary uppercase tracking-wider mb-1.5 block">Customer</label>
+      <input
+        type="text"
+        value={query}
+        placeholder="Search by name or phone"
+        onChange={handleInputChange}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={handleBlur}
+        className="w-full px-3 py-2.5 bg-bgPrimary border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+      />
 
       {showSuggestions && suggestions.length > 0 && (
-        <IonList style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          background: 'white',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          borderRadius: '0 0 8px 8px',
-          maxHeight: '200px',
-          overflow: 'auto'
-        }}>
+        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-border rounded-b-lg shadow-lg max-h-48 overflow-auto">
           {suggestions.map((customer) => (
-            <IonItem
+            <button
               key={customer.id}
-              button
               onClick={() => handleSelect(customer)}
-              style={{ '--min-height': '48px' }}
+              className="w-full px-4 py-3 text-left hover:bg-bgPrimary transition-colors border-b border-border last:border-b-0"
             >
-              <IonLabel>
-                <h3>{customer.name}</h3>
-                {customer.phone && (
-                  <IonText color="medium">
-                    <p style={{ fontSize: '12px' }}>{customer.phone}</p>
-                  </IonText>
-                )}
-              </IonLabel>
-            </IonItem>
+              <div className="text-sm font-medium text-textPrimary">{customer.name}</div>
+              {customer.phone && (
+                <div className="text-xs text-textSecondary">{customer.phone}</div>
+              )}
+            </button>
           ))}
-        </IonList>
+        </div>
       )}
     </div>
   )

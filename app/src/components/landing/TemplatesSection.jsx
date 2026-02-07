@@ -1,4 +1,3 @@
-import { IonButton } from '@ionic/react'
 import { useHistory } from 'react-router-dom'
 import './TemplatesSection.css'
 
@@ -46,13 +45,12 @@ function TemplatesSection() {
       </div>
       
       <div className="templates-cta">
-        <IonButton 
-          size="large" 
-          fill="outline"
+        <button 
+          className="templates-cta-btn"
           onClick={() => history.push('/demo')}
         >
           Try Templates Now
-        </IonButton>
+        </button>
       </div>
     </section>
   )

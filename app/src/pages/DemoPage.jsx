@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButton } from '@ionic/react'
 import { useHistory } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import BasicInvoiceForm from '../components/invoice/BasicInvoiceForm'
 import AdvancedInvoiceForm from '../components/invoice/AdvancedInvoiceForm'
 import RegistrationModal from '../components/demo/RegistrationModal'
@@ -52,14 +52,14 @@ function DemoPage() {
   ]
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Live Invoice Demo</IonTitle>
-          <IonButton slot="end" fill="clear" onClick={() => history.push('/')}>Back to Home</IonButton>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="demo-content">
+    <div className="min-h-screen bg-bgPrimary flex flex-col">
+      <header className="bg-bgSecondary border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
+        <h1 className="text-lg font-semibold text-textPrimary">Live Invoice Demo</h1>
+        <button onClick={() => history.push('/')} className="flex items-center gap-1 text-sm text-primary hover:underline font-medium">
+          <ArrowLeft className="w-4 h-4" /> Back to Home
+        </button>
+      </header>
+      <main className="flex-1 overflow-y-auto demo-content">
         <div className="demo-container">
           <div className="demo-document-types">
             <button className="doc-type-btn">+ New:</button>
@@ -125,8 +125,8 @@ function DemoPage() {
         </div>
 
         <RegistrationModal isOpen={showModal} onClose={() => setShowModal(false)} />
-      </IonContent>
-    </IonPage>
+      </main>
+    </div>
   )
 }
 

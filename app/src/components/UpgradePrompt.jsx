@@ -1,145 +1,85 @@
-import {
-  IonModal,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonButton,
-  IonIcon,
-  IonText,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonButtons
-} from '@ionic/react'
-import { closeOutline, rocketOutline, checkmarkCircle } from 'ionicons/icons'
+import { X, Rocket, CheckCircle } from 'lucide-react'
 
 export default function UpgradePrompt({ isOpen, onClose, usage }) {
+  if (!isOpen) return null
+
   const formatNumber = (num) => {
     return new Intl.NumberFormat('en-IN').format(num || 0)
   }
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Upgrade Your Plan</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={onClose}>
-              <IonIcon icon={closeOutline} />
-            </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-bgSecondary rounded-2xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-textPrimary">Upgrade Your Plan</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-textSecondary hover:bg-bgPrimary rounded-lg transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-      <IonContent className="ion-padding">
-        {/* Limit Reached Message */}
-        <div style={{
-          textAlign: 'center',
-          padding: '24px',
-          background: '#fff3cd',
-          borderRadius: '12px',
-          marginBottom: '24px'
-        }}>
-          <IonIcon
-            icon={rocketOutline}
-            style={{ fontSize: '48px', color: '#856404', marginBottom: '12px' }}
-          />
-          <h2 style={{ margin: '0 0 8px 0', color: '#856404' }}>
-            Monthly Limit Reached
-          </h2>
-          <IonText color="medium">
-            <p style={{ margin: 0 }}>
+        <div className="p-6 space-y-6">
+          {/* Limit Reached */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+            <Rocket className="w-10 h-10 text-yellow-600 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-yellow-800 mb-1">Monthly Limit Reached</h3>
+            <p className="text-sm text-yellow-700">
               You've issued {formatNumber(usage?.invoicesIssued)} of {formatNumber(usage?.plan?.monthlyInvoiceLimit)} invoices this month.
             </p>
-          </IonText>
-        </div>
+          </div>
 
-        {/* Current Plan */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-            Current Plan
-          </h3>
-          <div style={{
-            padding: '16px',
-            background: '#f5f5f5',
-            borderRadius: '8px'
-          }}>
-            <div style={{ fontWeight: '600', fontSize: '18px' }}>
-              {usage?.plan?.name || 'Free'}
+          {/* Current Plan */}
+          <div>
+            <h4 className="text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">Current Plan</h4>
+            <div className="bg-bgPrimary rounded-lg p-4">
+              <div className="text-lg font-semibold text-textPrimary">{usage?.plan?.name || 'Free'}</div>
+              <p className="text-sm text-textSecondary">{formatNumber(usage?.plan?.monthlyInvoiceLimit)} invoices/month</p>
             </div>
-            <IonText color="medium">
-              <p style={{ margin: '4px 0 0 0' }}>
-                {formatNumber(usage?.plan?.monthlyInvoiceLimit)} invoices/month
-              </p>
-            </IonText>
           </div>
-        </div>
 
-        {/* Upgrade Options */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-            Upgrade Options
-          </h3>
-          
-          <IonList style={{ borderRadius: '8px', overflow: 'hidden' }}>
-            {/* Pro Plan */}
-            <IonItem button detail>
-              <IonLabel>
-                <h2 style={{ fontWeight: '600' }}>Pro Plan</h2>
-                <p>100 invoices/month</p>
-              </IonLabel>
-              <div slot="end" style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: '600', color: 'var(--ion-color-primary)' }}>
-                  ₹299/mo
+          {/* Upgrade Options */}
+          <div>
+            <h4 className="text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">Upgrade Options</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-4 bg-bgPrimary rounded-lg hover:bg-bgPrimary/80 cursor-pointer transition-colors border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-textPrimary">Pro Plan</div>
+                  <div className="text-xs text-textSecondary">100 invoices/month</div>
                 </div>
+                <span className="text-sm font-semibold text-primary">₹299/mo</span>
               </div>
-            </IonItem>
-
-            {/* Business Plan */}
-            <IonItem button detail>
-              <IonLabel>
-                <h2 style={{ fontWeight: '600' }}>Business Plan</h2>
-                <p>Unlimited invoices</p>
-              </IonLabel>
-              <div slot="end" style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: '600', color: 'var(--ion-color-primary)' }}>
-                  ₹599/mo
+              <div className="flex justify-between items-center p-4 bg-bgPrimary rounded-lg hover:bg-bgPrimary/80 cursor-pointer transition-colors border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-textPrimary">Business Plan</div>
+                  <div className="text-xs text-textSecondary">Unlimited invoices</div>
                 </div>
+                <span className="text-sm font-semibold text-primary">₹599/mo</span>
               </div>
-            </IonItem>
-          </IonList>
-        </div>
-
-        {/* Benefits */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-            Pro Benefits
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[
-              'More invoices per month',
-              'Priority support',
-              'Custom branding',
-              'Advanced reports'
-            ].map((benefit, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <IonIcon icon={checkmarkCircle} color="success" />
-                <span>{benefit}</span>
-              </div>
-            ))}
+            </div>
           </div>
+
+          {/* Benefits */}
+          <div>
+            <h4 className="text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">Pro Benefits</h4>
+            <div className="space-y-2">
+              {['More invoices per month', 'Priority support', 'Custom branding', 'Advanced reports'].map((benefit, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-textPrimary">
+                  <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                  {benefit}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button className="w-full py-3 bg-primary hover:bg-primaryHover text-white rounded-xl font-semibold text-sm shadow-sm transition-colors">
+            Upgrade Now
+          </button>
+          <button onClick={onClose} className="w-full py-2 text-sm text-textSecondary hover:text-textPrimary transition-colors">
+            Maybe Later
+          </button>
         </div>
-
-        {/* CTA */}
-        <IonButton expand="block" size="large">
-          Upgrade Now
-        </IonButton>
-
-        <IonButton expand="block" fill="clear" onClick={onClose}>
-          Maybe Later
-        </IonButton>
-      </IonContent>
-    </IonModal>
+      </div>
+    </div>
   )
 }

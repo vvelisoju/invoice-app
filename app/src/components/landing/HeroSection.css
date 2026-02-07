@@ -1,6 +1,6 @@
 .hero-section {
   background: #ffffff;
-  padding: 80px 0 60px;
+  padding: 60px 0 50px;
   color: #1a1a1a;
 }
 
@@ -10,29 +10,31 @@
   padding: 0 24px;
 }
 
+.hero-header-full {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
 .hero-main-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 80px;
-  align-items: start;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+  margin-bottom: 50px;
 }
 
-.hero-left {
+.hero-left-content {
   display: flex;
   flex-direction: column;
-  gap: 40px;
-}
-
-.hero-header {
-  text-align: center;
-  margin-bottom: 0;
+  align-items: center;
+  gap: 24px;
 }
 
 .hero-title {
   font-size: 2.75rem;
   font-weight: 700;
-  line-height: 1.2;
-  margin: 0 0 32px;
+  line-height: 1.1;
+  margin: 0 0 24px;
   color: #1a1a1a;
 }
 
@@ -47,13 +49,14 @@
   letter-spacing: 0;
   font-size: 1.125rem;
   --box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  height: 48px;
 }
 
 .hero-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
+  gap: 24px;
   perspective: 1200px;
 }
 
@@ -68,38 +71,59 @@
 }
 
 .template-card {
-  width: 60px;
-  height: 80px;
+  width: 70px;
+  height: 90px;
   background: #ffffff;
   border: 2px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 8px 4px;
 }
 
 .template-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 .template-card.active {
   border-color: #2563eb;
   background: #eff6ff;
-  transform: scale(1.08);
+  transform: scale(1.05);
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
 }
 
-.template-icon {
-  font-size: 1.8rem;
-  opacity: 0.7;
+.template-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.template-card.active .template-icon {
+.template-header {
+  font-size: 1.5rem;
+  opacity: 0.8;
+}
+
+.template-title {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.template-card.active .template-header {
   opacity: 1;
+}
+
+.template-card.active .template-title {
+  color: #2563eb;
 }
 
 .hero-device {
@@ -132,63 +156,224 @@
   overflow: hidden;
 }
 
-.device-app-icon {
-  font-size: 4rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+.hero-invoice-preview {
+  perspective: 1200px;
 }
 
-.hero-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 100%;
-  margin: 0;
-}
-
-.step-card {
-  text-align: center;
-  padding: 32px 24px;
+.invoice-mockup {
+  width: 320px;
   background: #ffffff;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  transform: rotateY(-5deg) rotateX(2deg);
+  transition: transform 0.3s ease;
+  font-size: 0.75rem;
 }
 
-.step-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+.invoice-mockup:hover {
+  transform: rotateY(0deg) rotateX(0deg);
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.invoice-logo {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.invoice-details-header {
+  text-align: right;
+}
+
+.invoice-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.invoice-date {
+  font-size: 0.625rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.invoice-addresses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.invoice-from,
+.invoice-to {
+  display: flex;
+  flex-direction: column;
+}
+
+.address-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.address-text {
+  font-size: 0.625rem;
+  color: #374151;
+  line-height: 1.3;
+}
+
+.invoice-table {
+  margin-bottom: 16px;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 0.5fr 1fr 1fr;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 0.5fr 1fr 1fr;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.625rem;
+  color: #374151;
+}
+
+.row-desc {
+  font-weight: 500;
+}
+
+.row-qty,
+.row-price,
+.row-total {
+  text-align: right;
+}
+
+.invoice-summary {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  margin-bottom: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 0.625rem;
+}
+
+.summary-row.total {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 6px;
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.summary-label {
+  color: #6b7280;
+}
+
+.summary-value {
+  color: #374151;
+  font-weight: 500;
+}
+
+.summary-row.total .summary-label,
+.summary-row.total .summary-value {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.invoice-footer {
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.payment-terms {
+  font-size: 0.625rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.thank-you {
+  font-size: 0.625rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.hero-steps-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 60px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  max-width: 300px;
 }
 
 .step-icon {
-  margin-bottom: 24px;
-}
-
-.icon-circle {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto;
+  width: 70px;
+  height: 70px;
   background: #fef3c7;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(254, 243, 199, 0.5);
 }
 
 .icon-emoji {
-  font-size: 3rem;
+  font-size: 2.2rem;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .step-title {
-  font-size: 1.375rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  margin: 0 0 12px;
+  margin: 0 0 6px;
   color: #1a1a1a;
 }
 
 .step-desc {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #6b7280;
-  line-height: 1.6;
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -197,68 +382,138 @@
     font-size: 2.25rem;
   }
   
+  .hero-header-full {
+    margin-bottom: 32px;
+  }
+  
   .hero-main-content {
     grid-template-columns: 1fr;
-    gap: 60px;
+    gap: 32px;
+    margin-bottom: 40px;
+  }
+  
+  .hero-left-content {
+    align-items: center;
+    gap: 20px;
   }
   
   .hero-visual {
     flex-direction: row;
     justify-content: center;
+    gap: 32px;
   }
   
-  .device-frame {
+  .invoice-mockup {
     transform: none;
   }
   
-  .hero-steps {
-    grid-template-columns: repeat(3, 1fr);
+  .hero-steps-row {
     gap: 32px;
   }
 }
 
 @media (max-width: 640px) {
   .hero-section {
-    padding: 60px 16px 40px;
+    padding: 40px 16px 30px;
+  }
+  
+  .hero-header-full {
+    margin-bottom: 24px;
   }
   
   .hero-main-content {
-    gap: 40px;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
   }
   
-  .hero-left {
-    gap: 32px;
+  .hero-left-content {
+    gap: 20px;
   }
   
   .hero-title {
     font-size: 1.75rem;
+    margin-bottom: 20px;
+  }
+  
+  .hero-btn-primary {
+    height: 44px;
+    --padding-start: 40px;
+    --padding-end: 40px;
   }
   
   .hero-visual {
     flex-direction: column;
-    gap: 32px;
+    gap: 20px;
   }
   
-  .hero-steps {
-    grid-template-columns: 1fr;
+  .hero-steps-row {
+    flex-direction: column;
     gap: 24px;
+    align-items: center;
+  }
+  
+  .step-item {
+    max-width: 100%;
+  }
+  
+  .step-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+  }
+  
+  .icon-emoji {
+    font-size: 1.8rem;
   }
   
   .template-card {
-    width: 50px;
-    height: 70px;
+    width: 60px;
+    height: 80px;
   }
   
-  .template-icon {
-    font-size: 1.5rem;
+  .template-header {
+    font-size: 1.2rem;
   }
   
-  .device-frame {
-    width: 160px;
-    height: 320px;
+  .template-title {
+    font-size: 0.5625rem;
   }
   
-  .device-app-icon {
-    font-size: 3rem;
+  .invoice-mockup {
+    width: 280px;
+    padding: 16px;
+    font-size: 0.6875rem;
+  }
+  
+  .invoice-header {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+  
+  .invoice-addresses {
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  
+  .invoice-table {
+    margin-bottom: 12px;
+  }
+  
+  .table-header,
+  .table-row {
+    font-size: 0.5625rem;
+  }
+  
+  .invoice-summary {
+    margin-bottom: 10px;
+  }
+  
+  .summary-row {
+    font-size: 0.5625rem;
+  }
+  
+  .summary-row.total {
+    font-size: 0.6875rem;
   }
 }

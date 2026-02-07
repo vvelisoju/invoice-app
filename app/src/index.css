@@ -1,25 +1,50 @@
-/* Core Ionic CSS required for Ionic components to work properly */
-@import '@ionic/react/css/core.css';
+@import "tailwindcss";
 
-/* Basic Ionic CSS for apps built with Ionic */
-@import '@ionic/react/css/normalize.css';
-@import '@ionic/react/css/structure.css';
-@import '@ionic/react/css/typography.css';
-
-/* Optional Ionic CSS utils that can be commented out */
-@import '@ionic/react/css/padding.css';
-@import '@ionic/react/css/float-elements.css';
-@import '@ionic/react/css/text-alignment.css';
-@import '@ionic/react/css/text-transformation.css';
-@import '@ionic/react/css/flex-utils.css';
-@import '@ionic/react/css/display.css';
+@theme {
+  --color-primary: #2563EB;
+  --color-primaryHover: #1D4ED8;
+  --color-bgPrimary: #F3F4F6;
+  --color-bgSecondary: #FFFFFF;
+  --color-textPrimary: #1F2937;
+  --color-textSecondary: #6B7280;
+  --color-border: #E5E7EB;
+  --color-borderLight: #F9FAFB;
+  --color-accentYellow: #FEF3C7;
+  --color-accentYellowText: #92400E;
+  --font-sans: 'Inter', sans-serif;
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04);
+}
 
 /* Custom global styles */
-:root {
-  --ion-color-primary: #3B82F6;
-  --ion-color-primary-rgb: 59, 130, 246;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #3470d8;
-  --ion-color-primary-tint: #4f8ff7;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbar but keep functionality */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { IonIcon } from '@ionic/react'
-import { chevronDownOutline } from 'ionicons/icons'
+import { ChevronDown } from 'lucide-react'
 import './FAQSection.css'
 
 function FAQSection() {
@@ -61,10 +60,7 @@ function FAQSection() {
           >
             <div className="faq-question">
               <span>{faq.question}</span>
-              <IonIcon 
-                icon={chevronDownOutline} 
-                className="faq-icon"
-              />
+              <ChevronDown className="faq-icon" />
             </div>
             {openIndex === index && (
               <div className="faq-answer">

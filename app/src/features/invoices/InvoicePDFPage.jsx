@@ -1,39 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams, useHistory } from 'react-router-dom'
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonButton,
-  IonIcon,
-  IonButtons,
-  IonBackButton,
-  IonSpinner,
-  IonActionSheet,
-  useIonToast
-} from '@ionic/react'
-import {
-  shareOutline,
-  downloadOutline,
-  printOutline,
-  logoWhatsapp,
-  closeOutline
-} from 'ionicons/icons'
+import { Download, Printer, Share2, MessageCircle, Plus, CheckCircle, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { invoiceApi, templateApi } from '../../lib/api'
 import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
+import { PageHeader } from '../../components/layout'
 
 export default function InvoicePDFPage() {
   const { id } = useParams()
   const history = useHistory()
-  const [present] = useIonToast()
-  const [showActions, setShowActions] = useState(false)
   const [pdfBlob, setPdfBlob] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
-  // Fetch invoice data
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ['invoice', id],
     queryFn: async () => {
@@ -42,7 +20,6 @@ export default function InvoicePDFPage() {
     }
   })
 
-  // Fetch template config
   const { data: templateConfig } = useQuery({
     queryKey: ['templates', 'config'],
     queryFn: async () => {
@@ -51,60 +28,38 @@ export default function InvoicePDFPage() {
     }
   })
 
-  // Generate PDF when invoice and template loads
   useEffect(() => {
     const generate = async () => {
       if (invoice && !pdfBlob) {
         setIsGenerating(true)
         try {
-          // Use template snapshot from invoice if available, otherwise use current config
           const config = invoice.templateConfigSnapshot?.customConfig || templateConfig
           const blob = await generatePDF(invoice, config)
           setPdfBlob(blob)
         } catch (err) {
           console.error('PDF generation failed:', err)
-          present({
-            message: 'Failed to generate PDF',
-            duration: 3000,
-            color: 'danger'
-          })
         } finally {
           setIsGenerating(false)
         }
       }
     }
     generate()
-  }, [invoice, templateConfig, pdfBlob, present])
+  }, [invoice, templateConfig, pdfBlob])
 
   const handleDownload = async () => {
     if (!pdfBlob || !invoice) return
-
     try {
       await downloadPDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`)
-      present({
-        message: 'Invoice downloaded successfully',
-        duration: 2000,
-        color: 'success'
-      })
     } catch (err) {
-      present({
-        message: 'Failed to download invoice',
-        duration: 3000,
-        color: 'danger'
-      })
+      console.error('Download failed:', err)
     }
   }
 
   const handleShare = async () => {
     if (!pdfBlob || !invoice) return
-
     try {
-      // Check if Web Share API is available
       if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, {
-          type: 'application/pdf'
-        })
-
+        const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: `Invoice ${invoice.invoiceNumber}`,
@@ -114,247 +69,127 @@ export default function InvoicePDFPage() {
           return
         }
       }
-
-      // Fallback: download and show message
       await handleDownload()
-      present({
-        message: 'PDF downloaded. You can share it via WhatsApp manually.',
-        duration: 3000,
-        color: 'primary'
-      })
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        present({
-          message: 'Failed to share invoice',
-          duration: 3000,
-          color: 'danger'
-        })
-      }
+      if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
   }
 
   const handleWhatsAppShare = async () => {
     if (!invoice) return
-
-    // Generate WhatsApp message
     const message = encodeURIComponent(
-      `Invoice #${invoice.invoiceNumber}\n` +
-      `Amount: ₹${invoice.total.toLocaleString('en-IN')}\n` +
-      `Date: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
+      `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
     )
-
-    // Open WhatsApp with pre-filled message
     window.open(`https://wa.me/?text=${message}`, '_blank')
-
-    // Also trigger download so user can attach
     await handleDownload()
   }
 
   const handlePrint = () => {
     if (!pdfBlob) return
-
     const url = URL.createObjectURL(pdfBlob)
     const printWindow = window.open(url, '_blank')
     if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print()
-      }
+      printWindow.onload = () => printWindow.print()
     }
-  }
-
-  const handleNewInvoice = () => {
-    history.push('/invoices/new')
   }
 
   if (isLoading || isGenerating) {
     return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/invoices/new" />
-            </IonButtons>
-            <IonTitle>Invoice</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="ion-padding">
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            gap: '16px'
-          }}>
-            <IonSpinner name="crescent" />
-            <p>{isGenerating ? 'Generating PDF...' : 'Loading invoice...'}</p>
-          </div>
-        </IonContent>
-      </IonPage>
+      <div className="flex flex-col items-center justify-center py-32 gap-4">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-textSecondary">{isGenerating ? 'Generating PDF...' : 'Loading invoice...'}</p>
+      </div>
     )
   }
 
   if (error || !invoice) {
     return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/invoices/new" />
-            </IonButtons>
-            <IonTitle>Error</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="ion-padding">
-          <div style={{ textAlign: 'center', paddingTop: '40px' }}>
-            <h2>Failed to load invoice</h2>
-            <IonButton onClick={() => history.push('/invoices/new')}>
-              Create New Invoice
-            </IonButton>
-          </div>
-        </IonContent>
-      </IonPage>
+      <div className="max-w-4xl mx-auto text-center py-20">
+        <h2 className="text-xl font-semibold text-textPrimary mb-4">Failed to load invoice</h2>
+        <button onClick={() => history.push('/invoices/new')} className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium">
+          Create New Invoice
+        </button>
+      </div>
     )
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/invoices/new" />
-          </IonButtons>
-          <IonTitle>Invoice #{invoice.invoiceNumber}</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+    <div className="max-w-2xl mx-auto">
+      <PageHeader title={`Invoice #${invoice.invoiceNumber}`} backTo="/invoices/new" />
 
-      <IonContent className="ion-padding">
-        {/* Success Message */}
-        <div style={{
-          background: '#e8f5e9',
-          borderRadius: '12px',
-          padding: '20px',
-          textAlign: 'center',
-          marginBottom: '24px'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '8px' }}>✓</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Invoice Issued!</h2>
-          <p style={{ margin: 0, color: '#666' }}>
-            Invoice #{invoice.invoiceNumber} is ready to share
-          </p>
-        </div>
+      {/* Success Banner */}
+      <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center mb-6">
+        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+        <h2 className="text-xl font-bold text-green-800 mb-1">Invoice Issued!</h2>
+        <p className="text-sm text-green-700">Invoice #{invoice.invoiceNumber} is ready to share</p>
+      </div>
 
-        {/* Invoice Summary */}
-        <div style={{
-          background: '#f5f5f5',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#666' }}>Customer</span>
-            <strong>{invoice.customer?.name || 'N/A'}</strong>
+      {/* Invoice Summary */}
+      <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-6 mb-6">
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-textSecondary">Customer</span>
+            <strong className="text-textPrimary">{invoice.customer?.name || 'N/A'}</strong>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#666' }}>Date</span>
-            <span>{new Date(invoice.date).toLocaleDateString('en-IN')}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-textSecondary">Date</span>
+            <span className="text-textPrimary">{new Date(invoice.date).toLocaleDateString('en-IN')}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#666' }}>Items</span>
-            <span>{invoice.lineItems?.length || 0} items</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-textSecondary">Items</span>
+            <span className="text-textPrimary">{invoice.lineItems?.length || 0} items</span>
           </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            paddingTop: '12px',
-            borderTop: '1px solid #ddd'
-          }}>
-            <strong style={{ fontSize: '18px' }}>Total</strong>
-            <strong style={{ fontSize: '20px', color: 'var(--ion-color-primary)' }}>
-              ₹{invoice.total?.toLocaleString('en-IN')}
-            </strong>
+          <div className="flex justify-between pt-3 border-t border-border">
+            <strong className="text-lg text-textPrimary">Total</strong>
+            <strong className="text-xl text-primary">₹{invoice.total?.toLocaleString('en-IN')}</strong>
           </div>
         </div>
+      </div>
 
-        {/* Primary Action - WhatsApp Share */}
-        <IonButton
-          expand="block"
-          size="large"
-          onClick={handleWhatsAppShare}
-          style={{ marginBottom: '12px', '--background': '#25D366' }}
+      {/* WhatsApp Share */}
+      <button
+        onClick={handleWhatsAppShare}
+        className="w-full py-3.5 bg-[#25D366] hover:bg-[#20BD5A] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm mb-4 transition-colors"
+      >
+        <MessageCircle className="w-5 h-5" />
+        Share on WhatsApp
+      </button>
+
+      {/* Secondary Actions */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <button
+          onClick={handleDownload}
+          className="py-3 border border-border bg-bgSecondary hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary flex items-center justify-center gap-2 transition-colors"
         >
-          <IonIcon icon={logoWhatsapp} slot="start" />
-          Share on WhatsApp
-        </IonButton>
-
-        {/* Secondary Actions */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={handleDownload}
-            style={{ flex: 1 }}
-          >
-            <IonIcon icon={downloadOutline} slot="start" />
-            Download
-          </IonButton>
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={handlePrint}
-            style={{ flex: 1 }}
-          >
-            <IonIcon icon={printOutline} slot="start" />
-            Print
-          </IonButton>
-        </div>
-
-        {/* More Options */}
-        <IonButton
-          expand="block"
-          fill="clear"
-          onClick={() => setShowActions(true)}
+          <Download className="w-4 h-4" />
+          Download
+        </button>
+        <button
+          onClick={handlePrint}
+          className="py-3 border border-border bg-bgSecondary hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary flex items-center justify-center gap-2 transition-colors"
         >
-          <IonIcon icon={shareOutline} slot="start" />
-          More Share Options
-        </IonButton>
+          <Printer className="w-4 h-4" />
+          Print
+        </button>
+        <button
+          onClick={handleShare}
+          className="py-3 border border-border bg-bgSecondary hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary flex items-center justify-center gap-2 transition-colors"
+        >
+          <Share2 className="w-4 h-4" />
+          Share
+        </button>
+      </div>
 
-        {/* Create Another */}
-        <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <IonButton fill="clear" onClick={handleNewInvoice}>
-            Create Another Invoice
-          </IonButton>
-        </div>
-      </IonContent>
-
-      {/* Action Sheet for more options */}
-      <IonActionSheet
-        isOpen={showActions}
-        onDidDismiss={() => setShowActions(false)}
-        header="Share Invoice"
-        buttons={[
-          {
-            text: 'Share via Apps',
-            icon: shareOutline,
-            handler: handleShare
-          },
-          {
-            text: 'Download PDF',
-            icon: downloadOutline,
-            handler: handleDownload
-          },
-          {
-            text: 'Print',
-            icon: printOutline,
-            handler: handlePrint
-          },
-          {
-            text: 'Cancel',
-            icon: closeOutline,
-            role: 'cancel'
-          }
-        ]}
-      />
-    </IonPage>
+      {/* Create Another */}
+      <div className="text-center">
+        <button
+          onClick={() => history.push('/invoices/new')}
+          className="text-sm text-primary hover:underline font-medium flex items-center gap-1 mx-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Create Another Invoice
+        </button>
+      </div>
+    </div>
   )
 }

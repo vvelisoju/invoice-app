@@ -1,61 +1,41 @@
 import { useState } from 'react'
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonSegment,
-  IonSegmentButton,
-  IonLabel,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardTitle,
-  IonList,
-  IonItem,
-  IonText,
-  IonSpinner,
-  IonRefresher,
-  IonRefresherContent,
-  IonIcon
-} from '@ionic/react'
-import { cashOutline, receiptOutline, trendingUpOutline } from 'ionicons/icons'
+import { Receipt, IndianRupee, TrendingUp, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { reportsApi } from '../../lib/api'
+import { PageHeader } from '../../components/layout'
+
+const tabs = [
+  { key: 'summary', label: 'Summary' },
+  { key: 'gst', label: 'GST' },
+  { key: 'trend', label: 'Trend' }
+]
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('summary')
-  const [dateRange, setDateRange] = useState({
+  const [dateRange] = useState({
     from: getFirstDayOfMonth(),
     to: new Date().toISOString().split('T')[0]
   })
 
-  const { data: summary, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['reports', 'summary', dateRange],
     queryFn: async () => {
-      const response = await reportsApi.getSummary({
-        dateFrom: dateRange.from,
-        dateTo: dateRange.to
-      })
+      const response = await reportsApi.getSummary({ dateFrom: dateRange.from, dateTo: dateRange.to })
       return response.data.data || response.data
     },
     enabled: activeTab === 'summary'
   })
 
-  const { data: gstSummary, isLoading: gstLoading, refetch: refetchGST } = useQuery({
+  const { data: gstSummary, isLoading: gstLoading } = useQuery({
     queryKey: ['reports', 'gst', dateRange],
     queryFn: async () => {
-      const response = await reportsApi.getGSTSummary({
-        dateFrom: dateRange.from,
-        dateTo: dateRange.to
-      })
+      const response = await reportsApi.getGSTSummary({ dateFrom: dateRange.from, dateTo: dateRange.to })
       return response.data.data || response.data
     },
     enabled: activeTab === 'gst'
   })
 
-  const { data: trend, isLoading: trendLoading, refetch: refetchTrend } = useQuery({
+  const { data: trend, isLoading: trendLoading } = useQuery({
     queryKey: ['reports', 'trend'],
     queryFn: async () => {
       const response = await reportsApi.getMonthlyTrend(6)
@@ -64,255 +44,142 @@ export default function ReportsPage() {
     enabled: activeTab === 'trend'
   })
 
-  const handleRefresh = async (event) => {
-    if (activeTab === 'summary') await refetchSummary()
-    else if (activeTab === 'gst') await refetchGST()
-    else await refetchTrend()
-    event.detail.complete()
-  }
-
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount || 0)
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount || 0)
   }
 
   const formatMonth = (monthStr) => {
     const [year, month] = monthStr.split('-')
-    const date = new Date(year, parseInt(month) - 1)
-    return date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+    return new Date(year, parseInt(month) - 1).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Reports</IonTitle>
-        </IonToolbar>
-        <IonToolbar>
-          <IonSegment value={activeTab} onIonChange={(e) => setActiveTab(e.detail.value)}>
-            <IonSegmentButton value="summary">
-              <IonLabel>Summary</IonLabel>
-            </IonSegmentButton>
-            <IonSegmentButton value="gst">
-              <IonLabel>GST</IonLabel>
-            </IonSegmentButton>
-            <IonSegmentButton value="trend">
-              <IonLabel>Trend</IonLabel>
-            </IonSegmentButton>
-          </IonSegment>
-        </IonToolbar>
-      </IonHeader>
+    <div className="max-w-5xl mx-auto">
+      <PageHeader title="Reports" />
 
-      <IonContent>
-        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
-          <IonRefresherContent />
-        </IonRefresher>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-bgSecondary p-1 rounded-lg border border-border shadow-card mb-6 w-fit">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-5 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === tab.key ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary hover:text-textPrimary'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Summary Tab */}
-        {activeTab === 'summary' && (
-          <div className="ion-padding">
-            {summaryLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                <IonSpinner />
+      {/* Summary Tab */}
+      {activeTab === 'summary' && (
+        summaryLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-6 text-center">
+                <Receipt className="w-6 h-6 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold text-textPrimary">{summary?.totals?.invoiceCount || 0}</div>
+                <p className="text-xs text-textSecondary mt-1">Invoices</p>
               </div>
-            ) : (
-              <>
-                {/* Total Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                  <IonCard style={{ margin: 0 }}>
-                    <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                      <IonIcon icon={receiptOutline} style={{ fontSize: '24px', color: 'var(--ion-color-primary)' }} />
-                      <div style={{ fontSize: '24px', fontWeight: '700', marginTop: '8px' }}>
-                        {summary?.totals?.invoiceCount || 0}
-                      </div>
-                      <IonText color="medium"><p style={{ margin: 0, fontSize: '12px' }}>Invoices</p></IonText>
-                    </IonCardContent>
-                  </IonCard>
+              <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-6 text-center">
+                <IndianRupee className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                <div className="text-xl font-bold text-green-600">{formatCurrency(summary?.totals?.total)}</div>
+                <p className="text-xs text-textSecondary mt-1">Total Revenue</p>
+              </div>
+            </div>
 
-                  <IonCard style={{ margin: 0 }}>
-                    <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                      <IonIcon icon={cashOutline} style={{ fontSize: '24px', color: 'var(--ion-color-success)' }} />
-                      <div style={{ fontSize: '20px', fontWeight: '700', marginTop: '8px', color: 'var(--ion-color-success)' }}>
-                        {formatCurrency(summary?.totals?.total)}
-                      </div>
-                      <IonText color="medium"><p style={{ margin: 0, fontSize: '12px' }}>Total Revenue</p></IonText>
-                    </IonCardContent>
-                  </IonCard>
+            <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+              <div className="px-6 py-3 border-b border-border"><h3 className="text-sm font-semibold text-textPrimary">Breakdown</h3></div>
+              <div className="divide-y divide-border">
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">Subtotal</span><span className="text-textPrimary">{formatCurrency(summary?.totals?.subtotal)}</span></div>
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">Discounts</span><span className="text-red-500">-{formatCurrency(summary?.totals?.discountTotal)}</span></div>
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">Tax Collected</span><span className="text-textPrimary">{formatCurrency(summary?.totals?.taxTotal)}</span></div>
+              </div>
+            </div>
+
+            <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+              <div className="px-6 py-3 border-b border-border"><h3 className="text-sm font-semibold text-textPrimary">By Status</h3></div>
+              <div className="divide-y divide-border">
+                {summary?.byStatus?.map((item) => (
+                  <div key={item.status} className="px-6 py-3 flex justify-between items-center">
+                    <div><div className="text-sm font-medium text-textPrimary">{item.status}</div><div className="text-xs text-textSecondary">{item.count} invoices</div></div>
+                    <span className="text-sm font-semibold text-textPrimary">{formatCurrency(item.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* GST Tab */}
+      {activeTab === 'gst' && (
+        gstLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-6 text-center">
+                <p className="text-xs text-textSecondary mb-1">Taxable Value</p>
+                <div className="text-xl font-bold text-textPrimary">{formatCurrency(gstSummary?.summary?.totalTaxableValue)}</div>
+              </div>
+              <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-6 text-center">
+                <p className="text-xs text-textSecondary mb-1">Total GST</p>
+                <div className="text-xl font-bold text-primary">{formatCurrency(gstSummary?.summary?.totalGST)}</div>
+              </div>
+            </div>
+
+            <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+              <div className="px-6 py-3 border-b border-border"><h3 className="text-sm font-semibold text-textPrimary">GST Breakup</h3></div>
+              <div className="divide-y divide-border">
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">CGST</span><span className="text-textPrimary">{formatCurrency(gstSummary?.summary?.breakdown?.cgst)}</span></div>
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">SGST</span><span className="text-textPrimary">{formatCurrency(gstSummary?.summary?.breakdown?.sgst)}</span></div>
+                <div className="px-6 py-3 flex justify-between text-sm"><span className="text-textSecondary">IGST</span><span className="text-textPrimary">{formatCurrency(gstSummary?.summary?.breakdown?.igst)}</span></div>
+              </div>
+            </div>
+
+            {gstSummary?.byTaxRate?.length > 0 && (
+              <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+                <div className="px-6 py-3 border-b border-border"><h3 className="text-sm font-semibold text-textPrimary">By Tax Rate</h3></div>
+                <div className="divide-y divide-border">
+                  {gstSummary.byTaxRate.map((item) => (
+                    <div key={item.taxRate} className="px-6 py-3 flex justify-between items-center">
+                      <div><div className="text-sm font-medium text-textPrimary">{item.taxRate}% GST</div><div className="text-xs text-textSecondary">{item.count} invoices · Taxable: {formatCurrency(item.taxableValue)}</div></div>
+                      <span className="text-sm font-semibold text-textPrimary">{formatCurrency(item.taxAmount)}</span>
+                    </div>
+                  ))}
                 </div>
-
-                {/* Breakdown */}
-                <IonCard>
-                  <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '16px' }}>Breakdown</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent>
-                    <IonList>
-                      <IonItem>
-                        <IonLabel>Subtotal</IonLabel>
-                        <IonText slot="end">{formatCurrency(summary?.totals?.subtotal)}</IonText>
-                      </IonItem>
-                      <IonItem>
-                        <IonLabel>Discounts</IonLabel>
-                        <IonText slot="end" color="danger">-{formatCurrency(summary?.totals?.discountTotal)}</IonText>
-                      </IonItem>
-                      <IonItem>
-                        <IonLabel>Tax Collected</IonLabel>
-                        <IonText slot="end">{formatCurrency(summary?.totals?.taxTotal)}</IonText>
-                      </IonItem>
-                    </IonList>
-                  </IonCardContent>
-                </IonCard>
-
-                {/* By Status */}
-                <IonCard>
-                  <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '16px' }}>By Status</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent>
-                    <IonList>
-                      {summary?.byStatus?.map((item) => (
-                        <IonItem key={item.status}>
-                          <IonLabel>
-                            <h3>{item.status}</h3>
-                            <p>{item.count} invoices</p>
-                          </IonLabel>
-                          <IonText slot="end" style={{ fontWeight: '600' }}>
-                            {formatCurrency(item.total)}
-                          </IonText>
-                        </IonItem>
-                      ))}
-                    </IonList>
-                  </IonCardContent>
-                </IonCard>
-              </>
+              </div>
             )}
           </div>
-        )}
+        )
+      )}
 
-        {/* GST Tab */}
-        {activeTab === 'gst' && (
-          <div className="ion-padding">
-            {gstLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                <IonSpinner />
-              </div>
-            ) : (
-              <>
-                {/* GST Summary Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                  <IonCard style={{ margin: 0 }}>
-                    <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Taxable Value</div>
-                      <div style={{ fontSize: '18px', fontWeight: '700' }}>
-                        {formatCurrency(gstSummary?.summary?.totalTaxableValue)}
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
-
-                  <IonCard style={{ margin: 0 }}>
-                    <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Total GST</div>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--ion-color-primary)' }}>
-                        {formatCurrency(gstSummary?.summary?.totalGST)}
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
+      {/* Trend Tab */}
+      {activeTab === 'trend' && (
+        trendLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+        ) : (
+          <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+            <div className="px-6 py-3 border-b border-border flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-textSecondary" />
+              <h3 className="text-sm font-semibold text-textPrimary">Last 6 Months</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {trend?.map((item) => (
+                <div key={item.month} className="px-6 py-4 flex justify-between items-center">
+                  <div><div className="text-sm font-medium text-textPrimary">{formatMonth(item.month)}</div><div className="text-xs text-textSecondary">{item.invoiceCount} invoices</div></div>
+                  <div className="text-right"><div className="text-sm font-semibold text-textPrimary">{formatCurrency(item.totalAmount)}</div><div className="text-xs text-green-600">Paid: {formatCurrency(item.paidAmount)}</div></div>
                 </div>
-
-                {/* GST Breakup */}
-                <IonCard>
-                  <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '16px' }}>GST Breakup</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent>
-                    <IonList>
-                      <IonItem>
-                        <IonLabel>CGST</IonLabel>
-                        <IonText slot="end">{formatCurrency(gstSummary?.summary?.breakdown?.cgst)}</IonText>
-                      </IonItem>
-                      <IonItem>
-                        <IonLabel>SGST</IonLabel>
-                        <IonText slot="end">{formatCurrency(gstSummary?.summary?.breakdown?.sgst)}</IonText>
-                      </IonItem>
-                      <IonItem>
-                        <IonLabel>IGST</IonLabel>
-                        <IonText slot="end">{formatCurrency(gstSummary?.summary?.breakdown?.igst)}</IonText>
-                      </IonItem>
-                    </IonList>
-                  </IonCardContent>
-                </IonCard>
-
-                {/* By Tax Rate */}
-                {gstSummary?.byTaxRate?.length > 0 && (
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle style={{ fontSize: '16px' }}>By Tax Rate</IonCardTitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <IonList>
-                        {gstSummary.byTaxRate.map((item) => (
-                          <IonItem key={item.taxRate}>
-                            <IonLabel>
-                              <h3>{item.taxRate}% GST</h3>
-                              <p>{item.count} invoices • Taxable: {formatCurrency(item.taxableValue)}</p>
-                            </IonLabel>
-                            <IonText slot="end" style={{ fontWeight: '600' }}>
-                              {formatCurrency(item.taxAmount)}
-                            </IonText>
-                          </IonItem>
-                        ))}
-                      </IonList>
-                    </IonCardContent>
-                  </IonCard>
-                )}
-              </>
-            )}
+              ))}
+            </div>
           </div>
-        )}
-
-        {/* Trend Tab */}
-        {activeTab === 'trend' && (
-          <div className="ion-padding">
-            {trendLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                <IonSpinner />
-              </div>
-            ) : (
-              <IonCard>
-                <IonCardHeader>
-                  <IonCardTitle style={{ fontSize: '16px' }}>
-                    <IonIcon icon={trendingUpOutline} style={{ marginRight: '8px' }} />
-                    Last 6 Months
-                  </IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonList>
-                    {trend?.map((item) => (
-                      <IonItem key={item.month}>
-                        <IonLabel>
-                          <h3>{formatMonth(item.month)}</h3>
-                          <p>{item.invoiceCount} invoices</p>
-                        </IonLabel>
-                        <div slot="end" style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: '600' }}>{formatCurrency(item.totalAmount)}</div>
-                          <IonText color="success" style={{ fontSize: '12px' }}>
-                            Paid: {formatCurrency(item.paidAmount)}
-                          </IonText>
-                        </div>
-                      </IonItem>
-                    ))}
-                  </IonList>
-                </IonCardContent>
-              </IonCard>
-            )}
-          </div>
-        )}
-      </IonContent>
-    </IonPage>
+        )
+      )}
+    </div>
   )
 }
 

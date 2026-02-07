@@ -97,7 +97,7 @@ function BasicInvoiceForm({ initialData = {}, onSave, showSaveButton = true }) {
             <textarea
               value={formData.from}
               onChange={(e) => updateField('from', e.target.value)}
-              rows={3}
+              rows={5}
               className="invoice-form-textarea"
               placeholder="Your business name and address"
             />
@@ -119,7 +119,7 @@ function BasicInvoiceForm({ initialData = {}, onSave, showSaveButton = true }) {
             <textarea
               value={formData.billTo}
               onChange={(e) => updateField('billTo', e.target.value)}
-              rows={3}
+              rows={6}
               className="invoice-form-textarea"
               placeholder="Customer name and address"
             />

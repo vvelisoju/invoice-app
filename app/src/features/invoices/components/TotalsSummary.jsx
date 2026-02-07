@@ -1,5 +1,3 @@
-import { IonText } from '@ionic/react'
-
 export default function TotalsSummary({ subtotal, discountTotal, taxRate, taxTotal, total }) {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-IN', {
@@ -11,42 +9,29 @@ export default function TotalsSummary({ subtotal, discountTotal, taxRate, taxTot
   }
 
   return (
-    <div style={{
-      background: '#f5f5f5',
-      borderRadius: '8px',
-      padding: '16px',
-      marginTop: '16px'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <IonText color="medium">Subtotal</IonText>
-        <span>{formatCurrency(subtotal)}</span>
+    <div className="bg-bgPrimary rounded-lg p-4 mt-4 space-y-2">
+      <div className="flex justify-between text-sm">
+        <span className="text-textSecondary">Subtotal</span>
+        <span className="text-textPrimary">{formatCurrency(subtotal)}</span>
       </div>
 
       {discountTotal > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <IonText color="medium">Discount</IonText>
-          <IonText color="danger">-{formatCurrency(discountTotal)}</IonText>
+        <div className="flex justify-between text-sm">
+          <span className="text-textSecondary">Discount</span>
+          <span className="text-red-500">-{formatCurrency(discountTotal)}</span>
         </div>
       )}
 
       {taxRate > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <IonText color="medium">Tax ({taxRate}%)</IonText>
-          <span>{formatCurrency(taxTotal)}</span>
+        <div className="flex justify-between text-sm">
+          <span className="text-textSecondary">Tax ({taxRate}%)</span>
+          <span className="text-textPrimary">{formatCurrency(taxTotal)}</span>
         </div>
       )}
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        paddingTop: '12px',
-        borderTop: '1px solid #ddd',
-        marginTop: '8px'
-      }}>
-        <strong style={{ fontSize: '18px' }}>Total</strong>
-        <strong style={{ fontSize: '20px', color: 'var(--ion-color-primary)' }}>
-          {formatCurrency(total)}
-        </strong>
+      <div className="flex justify-between pt-3 border-t border-dashed border-border mt-2">
+        <strong className="text-lg text-textPrimary">Total</strong>
+        <strong className="text-xl text-primary">{formatCurrency(total)}</strong>
       </div>
     </div>
   )

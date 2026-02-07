@@ -1,0 +1,454 @@
+<html>
+
+  <head>
+    <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Invoice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      window.FontAwesomeConfig = {
+        autoReplaceSvg: 'nest'
+      };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"
+      crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet">
+    <style>
+      ::-webkit-scrollbar
+      {
+        display: none;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme:
+        {
+          extend:
+          {
+            colors:
+            {
+              primary: '#2563EB', // A slightly brighter blue for better visibility
+              primaryHover: '#1D4ED8',
+              bgPrimary: '#F3F4F6', // Softer gray background
+              bgSecondary: '#FFFFFF',
+              textPrimary: '#1F2937',
+              textSecondary: '#6B7280',
+              border: '#E5E7EB',
+              borderLight: '#F9FAFB',
+              accentYellow: '#FEF3C7', // Subtle yellow nod to the reference image
+              accentYellowText: '#92400E'
+            },
+            fontFamily:
+            {
+              sans: ['Inter', 'sans-serif']
+            },
+            boxShadow:
+            {
+              'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+              'card': '0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)'
+            }
+          }
+        }
+      }
+    </script>
+    <style data-grapesjs-styles="true">
+      *
+      {
+        box-sizing: border-box;
+      }
+
+      body
+      {
+        margin: 0;
+      }
+
+      ::-webkit-scrollbar
+      {
+        display: none;
+      }
+
+      @keyframes fade-in
+      {
+        0%
+        {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+
+        100%
+        {
+          opacity: 1;
+          transform: translateY(0px);
+        }
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-bgPrimary font-sans text-textPrimary antialiased h-screen overflow-hidden flex flex-col">
+    <!-- Top Navigation Bar (Mimicking the tabs in reference) -->
+    <nav class="bg-bgSecondary border-b border-border h-14 flex items-center px-6 shrink-0 z-20">
+      <!-- Logo and Brand Name -->
+      <div class="flex items-center gap-3 mr-8">
+        <div class="w-9 h-9 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+          <i class="fa-solid fa-file-invoice text-white text-base"></i>
+        </div>
+        <span class="font-bold text-xl text-textPrimary tracking-tight">InvoiceApp</span>
+      </div>
+      
+      <!-- Navigation Items -->
+      <div class="flex items-center space-x-1">
+        <button class="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-file-lines text-gray-400"></i> My Documents
+        </button>
+        <button class="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-users text-gray-400"></i> My Customers
+        </button>
+        <button class="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-gray-400"></i> My Reports
+        </button>
+        <div class="h-6 w-px bg-border mx-2"></div>
+        <button class="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-gray-400"></i> New Customer
+        </button>
+        <button class="px-4 py-2 text-sm font-medium text-primary bg-blue-50 border border-blue-100 rounded-md transition-colors flex items-center gap-2 shadow-sm">
+          <i class="fa-solid fa-plus"></i> New Invoice
+          <i class="fa-solid fa-xmark ml-1 text-xs opacity-50 hover:opacity-100"></i>
+        </button>
+      </div>
+    </nav><!-- Main Workspace -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sidebar -->
+      <aside id="sidebar"
+        class="w-64 bg-bgSecondary border-r border-border flex flex-col hidden md:flex">
+        <div class="p-6">
+          <div class="space-y-6">
+            <div>
+              <h3
+                class="px-3 text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2">
+                Create</h3>
+              <nav class="space-y-0.5"><a href="#"
+                  class="flex items-center gap-3 px-3 py-2 bg-primary/5 text-primary rounded-md font-medium text-sm transition-all border-l-2 border-primary"><span>Invoice</span></a><a
+                  href="#"
+                  class="flex items-center gap-3 px-3 py-2 text-textSecondary hover:bg-bgPrimary rounded-md transition-all text-sm border-l-2 border-transparent"><span>Estimate</span></a><a
+                  href="#"
+                  class="flex items-center gap-3 px-3 py-2 text-textSecondary hover:bg-bgPrimary rounded-md transition-all text-sm border-l-2 border-transparent"><span>Credit
+                    Note</span></a></nav>
+            </div>
+          </div>
+        </div>
+        <div class="mt-auto p-4 border-t border-border">
+          <div
+            class="flex items-center gap-3 p-2 rounded-lg hover:bg-bgPrimary transition-colors cursor-pointer">
+            <img
+              src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+              alt="User" class="w-8 h-8 rounded-full border border-border">
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-textPrimary truncate">John
+                Doe</div>
+              <div class="text-xs text-textSecondary truncate">john@business.com
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside><!-- Content Area -->
+      <main id="main-content"
+        class="flex-1 overflow-y-auto bg-bgPrimary p-4 md:p-8 relative">
+        <!-- Document Container -->
+        <div
+          class="max-w-4xl mx-auto bg-bgSecondary rounded-xl shadow-card min-h-[800px] flex flex-col relative">
+          <!-- Toolbar inside the document -->
+          <div
+            class="px-8 py-4 border-b border-border flex justify-between items-center bg-white rounded-t-xl sticky top-0 z-10">
+            <div class="flex gap-1 bg-bgPrimary p-1 rounded-lg"><button
+                class="px-4 py-1.5 text-sm font-medium bg-white text-textPrimary shadow-sm rounded-md">Basic
+                Form</button><button
+                class="px-4 py-1.5 text-sm font-medium text-textSecondary hover:text-textPrimary rounded-md transition-colors">Advanced
+                Form</button></div>
+            <div class="flex gap-3"><button
+                class="px-4 py-2 text-sm text-textSecondary hover:bg-bgPrimary rounded-lg transition-all font-medium border border-transparent hover:border-border">
+                Preview
+              </button><button id="save-invoice-btn"
+                class="px-5 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2"><i
+                  class="fa-solid fa-floppy-disk"></i>
+                Save Invoice
+              </button></div>
+          </div><!-- Invoice Form Content -->
+          <div class="p-8 md:p-12 flex-1">
+            <!-- Top Section: Header Info -->
+            <div class="flex flex-col md:flex-row gap-12 mb-12">
+              <!-- Left Column: From & Bill To -->
+              <div class="flex-1 space-y-8">
+                <!-- From Section -->
+                <div class="group relative transition-all"><label
+                    class="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide mb-2"><i
+                      class="fa-solid fa-building text-primary/70"></i> From
+                  </label>
+                  <div class="relative">
+                    <textarea placeholder="Your Business Name &amp; Address" rows="3" class="w-full p-4 bg-bgPrimary/30 hover:bg-bgPrimary/50 focus:bg-white border border-transparent hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed">Secure Studio</textarea>
+                    <!-- Validation/Status Indicator (Invisible UI hint) -->
+                    <div
+                      class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span
+                        class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-600 text-[10px]"><i
+                          class="fa-solid fa-check"></i></span></div>
+                  </div>
+                </div><!-- Bill To Section -->
+                <div class="group relative transition-all"><label
+                    class="flex items-center gap-2 text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2"><i
+                      class="fa-solid fa-user text-orange-500/70"></i> Bill To
+                  </label><textarea placeholder="Customer's billing address" rows="3" class="w-full p-4 bg-bgPrimary/30 hover:bg-bgPrimary/50 focus:bg-white border border-transparent hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"></textarea>
+                </div>
+              </div><!-- Right Column: Logo & Metadata -->
+              <div class="w-full md:w-72 flex flex-col gap-6">
+                <!-- Logo Upload -->
+                <div
+                  class="h-32 bg-yellow-50/50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex flex-col items-center justify-center cursor-pointer group transition-all relative overflow-hidden">
+                  <div class="text-center z-10">
+                    <div
+                      class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                      <i
+                        class="fa-brands fa-microsoft text-lg text-textPrimary"></i>
+                    </div><span
+                      class="text-xs font-medium text-textSecondary group-hover:text-textPrimary transition-colors">Select
+                      Logo</span>
+                  </div>
+                  <div
+                    class="absolute inset-0 bg-yellow-100/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                  </div>
+                </div><!-- Invoice Meta -->
+                <div
+                  class="bg-bgPrimary/30 rounded-xl p-5 border border-transparent hover:border-border transition-all">
+                  <div class="mb-4"><label
+                      class="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Invoice
+                      #</label>
+                    <div class="relative"><input type="text" value="103"
+                        class="w-full px-3 py-2 bg-white border border-border rounded-md text-sm font-semibold text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"><i
+                        class="fa-solid fa-hashtag absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary/30 text-xs"></i>
+                    </div>
+                  </div>
+                  <div><label
+                      class="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Date</label>
+                    <div class="relative"><input type="date" value="2026-02-07"
+                        class="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div><!-- Line Items Section -->
+            <div class="mb-8">
+              <!-- Header Row -->
+              <div
+                class="grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
+                <div class="col-span-6 md:col-span-7"><span
+                    class="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Description</span>
+                </div>
+                <div class="col-span-3 md:col-span-2"><span
+                    class="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Amount</span>
+                </div>
+                <div class="col-span-3 md:col-span-3"><span
+                    class="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Tax</span>
+                </div>
+              </div><!-- Items Container -->
+              <div id="line-items-container" class="space-y-3">
+                <!-- Item 1 -->
+                <div
+                  class="group relative bg-white border border-transparent hover:border-border hover:shadow-soft rounded-lg transition-all p-1 -mx-1">
+                  <div class="grid grid-cols-12 gap-4 items-start p-3">
+                    <div class="col-span-6 md:col-span-7">
+                      <textarea placeholder="Description" rows="1" class="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden h-6 leading-6"></textarea>
+                    </div>
+                    <div class="col-span-3 md:col-span-2"><input type="number"
+                        placeholder="0.00"
+                        class="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all">
+                    </div>
+                    <div
+                      class="col-span-3 md:col-span-3 flex items-center gap-2">
+                      <button
+                        class="flex-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-medium py-1.5 px-3 rounded border border-yellow-200/50 transition-colors">
+                        + Tax
+                      </button><button
+                        class="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"><i
+                          class="fa-solid fa-xmark"></i></button></div>
+                  </div>
+                </div><!-- Item 2 -->
+                <div
+                  class="group relative bg-white border border-transparent hover:border-border hover:shadow-soft rounded-lg transition-all p-1 -mx-1">
+                  <div class="grid grid-cols-12 gap-4 items-start p-3">
+                    <div class="col-span-6 md:col-span-7">
+                      <textarea placeholder="Description" rows="1" class="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden h-6 leading-6"></textarea>
+                    </div>
+                    <div class="col-span-3 md:col-span-2"><input type="number"
+                        placeholder="0.00"
+                        class="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all">
+                    </div>
+                    <div
+                      class="col-span-3 md:col-span-3 flex items-center gap-2">
+                      <button
+                        class="flex-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-medium py-1.5 px-3 rounded border border-yellow-200/50 transition-colors">
+                        + Tax
+                      </button><button
+                        class="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"><i
+                          class="fa-solid fa-xmark"></i></button></div>
+                  </div>
+                </div>
+              </div><!-- Action Buttons -->
+              <div class="flex gap-4 mt-6"><button
+                  class="flex-1 py-3 border border-dashed border-yellow-300 bg-yellow-50/30 text-yellow-800 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"><i
+                    class="fa-solid fa-list-ul"></i> Add Saved Items
+                </button><button id="add-new-item-btn"
+                  class="flex-1 py-3 border border-dashed border-yellow-300 bg-yellow-50/50 text-yellow-800 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"><i
+                    class="fa-solid fa-plus"></i> Add New Item
+                </button></div>
+            </div><!-- Footer / Totals -->
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 border-t border-border">
+              <!-- Terms & Signature -->
+              <div class="space-y-8">
+                <div>
+                  <div class="flex justify-between items-center mb-2"><label
+                      class="flex items-center gap-2 text-xs font-semibold text-textSecondary uppercase tracking-wide"><i
+                        class="fa-solid fa-pen-nib text-textSecondary/70"></i>
+                      Terms &amp; Conditions
+                    </label><button
+                      class="text-[10px] text-primary hover:underline">Edit
+                      Default</button></div>
+                  <textarea placeholder="Payment is due within 15 days..." rows="4" class="w-full p-4 bg-bgPrimary/30 hover:bg-bgPrimary/50 focus:bg-white border border-transparent hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none">Payment is due within 15 days</textarea>
+                </div>
+              </div><!-- Totals Calculation -->
+              <div class="flex flex-col justify-between">
+                <div class="space-y-4">
+                  <div class="flex justify-between items-center px-2"><span
+                      class="text-sm font-medium text-textSecondary">Subtotal</span><span
+                      class="text-sm font-semibold text-textPrimary">0.00</span>
+                  </div><!-- Placeholder for tax rows if added -->
+                </div>
+                <div class="mt-8 pt-6 border-t border-border border-dashed">
+                  <div class="flex justify-between items-end px-2">
+                    <div class="flex flex-col"><span
+                        class="text-2xl font-bold text-textPrimary">TOTAL</span>
+                      <div
+                        class="flex items-center gap-1 mt-1 cursor-pointer group">
+                        <span
+                          class="text-xs font-bold text-primary bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 group-hover:bg-blue-100 transition-colors">INR</span><i
+                          class="fa-solid fa-pencil text-[10px] text-textSecondary opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                      </div>
+                    </div><span
+                      class="text-3xl font-bold text-primary tracking-tight">₹
+                      0.00</span>
+                  </div>
+                </div>
+                <div
+                  class="mt-8 bg-yellow-50/50 border border-yellow-100 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-yellow-50 transition-colors group h-32">
+                  <span
+                    class="text-sm font-medium text-yellow-800 mb-1 group-hover:scale-105 transition-transform">Add
+                    Your Signature</span><i
+                    class="fa-solid fa-signature text-2xl text-yellow-600/50 group-hover:text-yellow-600 transition-colors"></i>
+                </div>
+              </div>
+            </div>
+          </div><!-- Bottom Action Bar (Floating for long invoices) -->
+          <div
+            class="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg hover:bg-primaryHover transition-colors cursor-pointer mt-auto">
+            <button class="font-semibold text-sm flex items-center gap-2"><i
+                class="fa-solid fa-floppy-disk"></i> Save Invoice
+            </button></div>
+        </div>
+        <div class="text-center mt-8 mb-4">
+          <p class="text-xs text-textSecondary">© 2026 InvoiceApp. All rights
+            reserved.</p>
+        </div>
+      </main>
+    </div>
+    <script>
+      window.addEventListener('load', function()
+      {
+        const addItemBtn = document.getElementById('add-new-item-btn');
+        const lineItemsContainer = document.getElementById(
+          'line-items-container');
+
+        // Auto-resize textarea function
+        function autoResizeTextarea(element)
+        {
+          element.style.height = 'auto';
+          element.style.height = element.scrollHeight + 'px';
+        }
+
+        // Add listener to existing textareas
+        document.querySelectorAll('textarea').forEach(textarea =>
+        {
+          textarea.addEventListener('input', function()
+          {
+            if (this.rows === 1) autoResizeTextarea(this);
+          });
+        });
+
+        addItemBtn.addEventListener('click', function()
+        {
+          const newItemHTML = `
+            <div class="group relative bg-white border border-transparent hover:border-border hover:shadow-soft rounded-lg transition-all p-1 -mx-1 animate-fade-in">
+                <div class="grid grid-cols-12 gap-4 items-start p-3">
+                    <div class="col-span-6 md:col-span-7">
+                        <textarea placeholder="Description" rows="1" class="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden h-6 leading-6"></textarea>
+                    </div>
+                    <div class="col-span-3 md:col-span-2">
+                        <input type="number" placeholder="0.00" class="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all">
+                    </div>
+                    <div class="col-span-3 md:col-span-3 flex items-center gap-2">
+                        <button class="flex-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-medium py-1.5 px-3 rounded border border-yellow-200/50 transition-colors">
+                            + Tax
+                        </button>
+                        <button class="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 delete-item-btn">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+          lineItemsContainer.insertAdjacentHTML('beforeend',
+            newItemHTML);
+
+          // Re-attach auto-resize to new textareas
+          const newTextarea = lineItemsContainer.lastElementChild
+            .querySelector('textarea');
+          newTextarea.addEventListener('input', function()
+          {
+            autoResizeTextarea(this);
+          });
+        });
+
+        lineItemsContainer.addEventListener('click', function(e)
+        {
+          const deleteBtn = e.target.closest('.delete-item-btn');
+          if (deleteBtn)
+          {
+            const lineItem = deleteBtn.closest('.group');
+            lineItem.remove();
+          }
+        });
+
+        document.getElementById('save-invoice-btn').addEventListener(
+          'click',
+          function()
+          {
+            // Simple visual feedback
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
+            setTimeout(() =>
+            {
+              btn.innerHTML = originalText;
+            }, 2000);
+          });
+      });
+    </script>
+  </body>
+
+</html>

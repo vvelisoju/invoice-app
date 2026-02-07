@@ -1,4 +1,3 @@
-import { IonButton } from '@ionic/react'
 import { useHistory } from 'react-router-dom'
 import './PricingSection.css'
 
@@ -71,15 +70,12 @@ function PricingSection() {
                 </li>
               ))}
             </ul>
-            <IonButton 
-              expand="block" 
-              size="large"
-              fill={plan.primary ? 'solid' : 'outline'}
+            <button 
               className={plan.primary ? 'pricing-btn-primary' : 'pricing-btn-secondary'}
               onClick={() => history.push('/demo')}
             >
               {plan.cta}
-            </IonButton>
+            </button>
           </div>
         ))}
       </div>

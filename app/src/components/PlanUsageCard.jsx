@@ -1,5 +1,4 @@
-import { IonCard, IonCardContent, IonIcon, IonText, IonProgressBar } from '@ionic/react'
-import { documentTextOutline, warningOutline } from 'ionicons/icons'
+import { FileText, AlertTriangle } from 'lucide-react'
 
 export default function PlanUsageCard({ usage, onUpgradeClick }) {
   if (!usage) return null
@@ -15,72 +14,43 @@ export default function PlanUsageCard({ usage, onUpgradeClick }) {
     return new Intl.NumberFormat('en-IN').format(num || 0)
   }
 
+  const barColor = isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-primary'
+
   return (
-    <IonCard style={{ margin: '0 0 16px 0' }}>
-      <IonCardContent>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <IonIcon icon={documentTextOutline} color="primary" />
-              <span style={{ fontWeight: '600' }}>{plan?.name || 'Free'} Plan</span>
-            </div>
-            <IonText color="medium" style={{ fontSize: '13px' }}>
-              {formatNumber(usageData?.invoicesIssued)} of {formatNumber(plan?.monthlyInvoiceLimit)} invoices used
-            </IonText>
+    <div className="bg-bgSecondary rounded-xl border border-border shadow-card p-5">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold text-textPrimary">{plan?.name || 'Free'} Plan</span>
           </div>
-          
-          {isNearLimit && (
-            <IonIcon 
-              icon={warningOutline} 
-              color={isAtLimit ? 'danger' : 'warning'} 
-              style={{ fontSize: '24px' }}
-            />
-          )}
+          <p className="text-xs text-textSecondary">
+            {formatNumber(usageData?.invoicesIssued)} of {formatNumber(plan?.monthlyInvoiceLimit)} invoices used
+          </p>
         </div>
-
-        <IonProgressBar 
-          value={Math.min(percentage, 1)} 
-          color={isAtLimit ? 'danger' : isNearLimit ? 'warning' : 'primary'}
-          style={{ height: '8px', borderRadius: '4px' }}
-        />
-
-        {isAtLimit && (
-          <div 
-            style={{ 
-              marginTop: '12px', 
-              padding: '8px 12px', 
-              background: '#ffebee', 
-              borderRadius: '6px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <IonText color="danger" style={{ fontSize: '13px' }}>
-              Limit reached. Upgrade to continue.
-            </IonText>
-            <a 
-              onClick={onUpgradeClick}
-              style={{ 
-                color: 'var(--ion-color-primary)', 
-                fontWeight: '600', 
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-            >
-              Upgrade
-            </a>
-          </div>
+        {isNearLimit && (
+          <AlertTriangle className={`w-5 h-5 ${isAtLimit ? 'text-red-500' : 'text-yellow-500'}`} />
         )}
+      </div>
 
-        {isNearLimit && !isAtLimit && (
-          <div style={{ marginTop: '8px' }}>
-            <IonText color="warning" style={{ fontSize: '12px' }}>
-              {formatNumber(usageData?.invoicesRemaining)} invoices remaining this month
-            </IonText>
-          </div>
-        )}
-      </IonCardContent>
-    </IonCard>
+      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
+      </div>
+
+      {isAtLimit && (
+        <div className="mt-3 p-2.5 bg-red-50 rounded-lg flex justify-between items-center">
+          <span className="text-xs text-red-600">Limit reached. Upgrade to continue.</span>
+          <button onClick={onUpgradeClick} className="text-xs font-semibold text-primary cursor-pointer hover:underline">
+            Upgrade
+          </button>
+        </div>
+      )}
+
+      {isNearLimit && !isAtLimit && (
+        <p className="mt-2 text-xs text-yellow-600">
+          {formatNumber(usageData?.invoicesRemaining)} invoices remaining this month
+        </p>
+      )}
+    </div>
   )
 }

@@ -1,42 +1,87 @@
 import { useState } from 'react'
 import { useHistory } from 'react-router-dom'
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonTextarea,
-  IonToggle,
-  IonButton,
-  IonIcon,
-  IonSpinner,
-  IonAccordion,
-  IonAccordionGroup,
-  useIonToast
-} from '@ionic/react'
-import {
-  businessOutline,
-  receiptOutline,
-  cardOutline,
-  documentTextOutline,
-  colorPaletteOutline,
-  chevronForwardOutline,
-  logOutOutline
-} from 'ionicons/icons'
+  Building2,
+  Receipt,
+  CreditCard,
+  FileText,
+  Palette,
+  LogOut,
+  ChevronDown,
+  Save,
+  Loader2
+} from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, plansApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
+import { PageHeader } from '../../components/layout'
 import PlanUsageCard from '../../components/PlanUsageCard'
 import UpgradePrompt from '../../components/UpgradePrompt'
 
+function SettingsSection({ icon: Icon, title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="bg-bgSecondary rounded-xl border border-border shadow-card overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-6 py-4 flex items-center gap-3 hover:bg-bgPrimary/30 transition-colors"
+      >
+        <Icon className="w-5 h-5 text-textSecondary" />
+        <span className="text-sm font-semibold text-textPrimary flex-1 text-left">{title}</span>
+        <ChevronDown className={`w-4 h-4 text-textSecondary transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-6 pb-6 pt-2">{children}</div>}
+    </div>
+  )
+}
+
+function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLength }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-textSecondary uppercase tracking-wider mb-1.5 block">{label}</label>
+      <input
+        type={type}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="w-full px-3 py-2 bg-bgPrimary border border-border rounded-lg text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+      />
+    </div>
+  )
+}
+
+function FieldTextarea({ label, value, onChange, placeholder, rows = 3 }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-textSecondary uppercase tracking-wider mb-1.5 block">{label}</label>
+      <textarea
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full px-3 py-2 bg-bgPrimary border border-border rounded-lg text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+      />
+    </div>
+  )
+}
+
+function FieldToggle({ label, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm text-textPrimary">{label}</span>
+      <button
+        onClick={() => onChange(!checked)}
+        className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-gray-300'}`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+      </button>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const history = useHistory()
-  const [present] = useIonToast()
   const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
   const [formData, setFormData] = useState({})
@@ -65,18 +110,6 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['business'])
       setIsDirty(false)
-      present({
-        message: 'Settings saved',
-        duration: 2000,
-        color: 'success'
-      })
-    },
-    onError: (error) => {
-      present({
-        message: error.response?.data?.error?.message || 'Failed to save settings',
-        duration: 3000,
-        color: 'danger'
-      })
     }
   })
 
@@ -85,9 +118,7 @@ export default function SettingsPage() {
     setIsDirty(true)
   }
 
-  const handleSave = () => {
-    updateMutation.mutate(formData)
-  }
+  const handleSave = () => updateMutation.mutate(formData)
 
   const handleLogout = () => {
     logout()
@@ -96,271 +127,113 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Settings</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="ion-padding">
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <IonSpinner />
-          </div>
-        </IonContent>
-      </IonPage>
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
     )
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Settings</IonTitle>
-          {isDirty && (
-            <IonButton
-              slot="end"
-              fill="clear"
+    <div className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Settings"
+        actions={
+          isDirty ? (
+            <button
               onClick={handleSave}
               disabled={updateMutation.isPending}
+              className="px-5 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
             >
-              {updateMutation.isPending ? <IonSpinner name="dots" /> : 'Save'}
-            </IonButton>
-          )}
-        </IonToolbar>
-      </IonHeader>
+              {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Changes
+            </button>
+          ) : null
+        }
+      />
 
-      <IonContent>
-        {/* Plan Usage Card */}
-        <div style={{ padding: '16px 16px 0 16px' }}>
-          <PlanUsageCard 
-            usage={planUsage} 
-            onUpgradeClick={() => setShowUpgrade(true)} 
-          />
-        </div>
+      <div className="space-y-4">
+        {/* Plan Usage */}
+        <PlanUsageCard usage={planUsage} onUpgradeClick={() => setShowUpgrade(true)} />
 
-        {/* Template Customization Link */}
-        <IonList style={{ marginBottom: '16px' }}>
-          <IonItem button onClick={() => history.push('/templates')} detail>
-            <IonIcon icon={colorPaletteOutline} slot="start" color="primary" />
-            <IonLabel>
-              <h2>Invoice Template</h2>
-              <p>Customize colors, layout, and labels</p>
-            </IonLabel>
-          </IonItem>
-        </IonList>
+        {/* Template Link */}
+        <button
+          onClick={() => history.push('/templates')}
+          className="w-full bg-bgSecondary rounded-xl border border-border shadow-card px-6 py-4 flex items-center gap-3 hover:bg-bgPrimary/30 transition-colors text-left"
+        >
+          <Palette className="w-5 h-5 text-primary" />
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-textPrimary">Invoice Template</div>
+            <div className="text-xs text-textSecondary">Customize colors, layout, and labels</div>
+          </div>
+          <ChevronDown className="w-4 h-4 text-textSecondary -rotate-90" />
+        </button>
 
-        <IonAccordionGroup multiple={true} value={['business']}>
-          {/* Business Info */}
-          <IonAccordion value="business">
-            <IonItem slot="header" color="light">
-              <IonIcon icon={businessOutline} slot="start" />
-              <IonLabel>Business Information</IonLabel>
-            </IonItem>
-            <div slot="content">
-              <IonList>
-                <IonItem>
-                  <IonLabel position="stacked">Business Name</IonLabel>
-                  <IonInput
-                    value={formData.name || ''}
-                    onIonInput={(e) => handleChange('name', e.detail.value)}
-                    placeholder="Your business name"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Phone</IonLabel>
-                  <IonInput
-                    value={formData.phone || ''}
-                    onIonInput={(e) => handleChange('phone', e.detail.value)}
-                    placeholder="Business phone number"
-                    type="tel"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Email</IonLabel>
-                  <IonInput
-                    value={formData.email || ''}
-                    onIonInput={(e) => handleChange('email', e.detail.value)}
-                    placeholder="Business email"
-                    type="email"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Address</IonLabel>
-                  <IonTextarea
-                    value={formData.address || ''}
-                    onIonInput={(e) => handleChange('address', e.detail.value)}
-                    placeholder="Business address"
-                    rows={3}
-                  />
-                </IonItem>
-              </IonList>
+        {/* Business Info */}
+        <SettingsSection icon={Building2} title="Business Information" defaultOpen={true}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldInput label="Business Name" value={formData.name} onChange={(v) => handleChange('name', v)} placeholder="Your business name" />
+            <FieldInput label="Phone" type="tel" value={formData.phone} onChange={(v) => handleChange('phone', v)} placeholder="Business phone number" />
+            <FieldInput label="Email" type="email" value={formData.email} onChange={(v) => handleChange('email', v)} placeholder="Business email" />
+            <div className="md:col-span-2">
+              <FieldTextarea label="Address" value={formData.address} onChange={(v) => handleChange('address', v)} placeholder="Business address" />
             </div>
-          </IonAccordion>
+          </div>
+        </SettingsSection>
 
-          {/* GST Settings */}
-          <IonAccordion value="gst">
-            <IonItem slot="header" color="light">
-              <IonIcon icon={receiptOutline} slot="start" />
-              <IonLabel>GST Settings</IonLabel>
-            </IonItem>
-            <div slot="content">
-              <IonList>
-                <IonItem>
-                  <IonLabel>Enable GST</IonLabel>
-                  <IonToggle
-                    checked={formData.gstEnabled || false}
-                    onIonChange={(e) => handleChange('gstEnabled', e.detail.checked)}
-                  />
-                </IonItem>
-                {formData.gstEnabled && (
-                  <>
-                    <IonItem>
-                      <IonLabel position="stacked">GSTIN</IonLabel>
-                      <IonInput
-                        value={formData.gstin || ''}
-                        onIonInput={(e) => handleChange('gstin', e.detail.value?.toUpperCase())}
-                        placeholder="15-digit GSTIN"
-                        maxlength={15}
-                      />
-                    </IonItem>
-                    <IonItem>
-                      <IonLabel position="stacked">State Code</IonLabel>
-                      <IonInput
-                        value={formData.stateCode || ''}
-                        onIonInput={(e) => handleChange('stateCode', e.detail.value)}
-                        placeholder="e.g., MH, KA, DL"
-                        maxlength={2}
-                      />
-                    </IonItem>
-                    <IonItem>
-                      <IonLabel position="stacked">Default Tax Rate (%)</IonLabel>
-                      <IonInput
-                        value={formData.defaultTaxRate || ''}
-                        onIonInput={(e) => handleChange('defaultTaxRate', parseFloat(e.detail.value) || null)}
-                        placeholder="e.g., 18"
-                        type="number"
-                      />
-                    </IonItem>
-                  </>
-                )}
-              </IonList>
-            </div>
-          </IonAccordion>
+        {/* GST Settings */}
+        <SettingsSection icon={Receipt} title="GST Settings">
+          <div className="space-y-4">
+            <FieldToggle label="Enable GST" checked={formData.gstEnabled || false} onChange={(v) => handleChange('gstEnabled', v)} />
+            {formData.gstEnabled && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FieldInput label="GSTIN" value={formData.gstin} onChange={(v) => handleChange('gstin', v?.toUpperCase())} placeholder="15-digit GSTIN" maxLength={15} />
+                <FieldInput label="State Code" value={formData.stateCode} onChange={(v) => handleChange('stateCode', v)} placeholder="e.g., MH, KA, DL" maxLength={2} />
+                <FieldInput label="Default Tax Rate (%)" type="number" value={formData.defaultTaxRate} onChange={(v) => handleChange('defaultTaxRate', parseFloat(v) || null)} placeholder="e.g., 18" />
+              </div>
+            )}
+          </div>
+        </SettingsSection>
 
-          {/* Bank Details */}
-          <IonAccordion value="bank">
-            <IonItem slot="header" color="light">
-              <IonIcon icon={cardOutline} slot="start" />
-              <IonLabel>Bank & Payment Details</IonLabel>
-            </IonItem>
-            <div slot="content">
-              <IonList>
-                <IonItem>
-                  <IonLabel position="stacked">Bank Name</IonLabel>
-                  <IonInput
-                    value={formData.bankName || ''}
-                    onIonInput={(e) => handleChange('bankName', e.detail.value)}
-                    placeholder="Bank name"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Account Number</IonLabel>
-                  <IonInput
-                    value={formData.accountNumber || ''}
-                    onIonInput={(e) => handleChange('accountNumber', e.detail.value)}
-                    placeholder="Account number"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">IFSC Code</IonLabel>
-                  <IonInput
-                    value={formData.ifscCode || ''}
-                    onIonInput={(e) => handleChange('ifscCode', e.detail.value?.toUpperCase())}
-                    placeholder="IFSC code"
-                    maxlength={11}
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">UPI ID</IonLabel>
-                  <IonInput
-                    value={formData.upiId || ''}
-                    onIonInput={(e) => handleChange('upiId', e.detail.value)}
-                    placeholder="yourname@upi"
-                  />
-                </IonItem>
-              </IonList>
-            </div>
-          </IonAccordion>
+        {/* Bank Details */}
+        <SettingsSection icon={CreditCard} title="Bank & Payment Details">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldInput label="Bank Name" value={formData.bankName} onChange={(v) => handleChange('bankName', v)} placeholder="Bank name" />
+            <FieldInput label="Account Number" value={formData.accountNumber} onChange={(v) => handleChange('accountNumber', v)} placeholder="Account number" />
+            <FieldInput label="IFSC Code" value={formData.ifscCode} onChange={(v) => handleChange('ifscCode', v?.toUpperCase())} placeholder="IFSC code" maxLength={11} />
+            <FieldInput label="UPI ID" value={formData.upiId} onChange={(v) => handleChange('upiId', v)} placeholder="yourname@upi" />
+          </div>
+        </SettingsSection>
 
-          {/* Invoice Defaults */}
-          <IonAccordion value="invoice">
-            <IonItem slot="header" color="light">
-              <IonIcon icon={documentTextOutline} slot="start" />
-              <IonLabel>Invoice Defaults</IonLabel>
-            </IonItem>
-            <div slot="content">
-              <IonList>
-                <IonItem>
-                  <IonLabel position="stacked">Invoice Prefix</IonLabel>
-                  <IonInput
-                    value={formData.invoicePrefix || ''}
-                    onIonInput={(e) => handleChange('invoicePrefix', e.detail.value)}
-                    placeholder="e.g., INV-"
-                    maxlength={10}
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Next Invoice Number</IonLabel>
-                  <IonInput
-                    value={formData.nextInvoiceNumber || ''}
-                    onIonInput={(e) => handleChange('nextInvoiceNumber', parseInt(e.detail.value) || null)}
-                    placeholder="e.g., 1"
-                    type="number"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Default Notes</IonLabel>
-                  <IonTextarea
-                    value={formData.defaultNotes || ''}
-                    onIonInput={(e) => handleChange('defaultNotes', e.detail.value)}
-                    placeholder="Notes to appear on every invoice"
-                    rows={3}
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Default Terms</IonLabel>
-                  <IonTextarea
-                    value={formData.defaultTerms || ''}
-                    onIonInput={(e) => handleChange('defaultTerms', e.detail.value)}
-                    placeholder="Terms & conditions"
-                    rows={3}
-                  />
-                </IonItem>
-              </IonList>
+        {/* Invoice Defaults */}
+        <SettingsSection icon={FileText} title="Invoice Defaults">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldInput label="Invoice Prefix" value={formData.invoicePrefix} onChange={(v) => handleChange('invoicePrefix', v)} placeholder="e.g., INV-" maxLength={10} />
+            <FieldInput label="Next Invoice Number" type="number" value={formData.nextInvoiceNumber} onChange={(v) => handleChange('nextInvoiceNumber', parseInt(v) || null)} placeholder="e.g., 1" />
+            <div className="md:col-span-2">
+              <FieldTextarea label="Default Notes" value={formData.defaultNotes} onChange={(v) => handleChange('defaultNotes', v)} placeholder="Notes to appear on every invoice" />
             </div>
-          </IonAccordion>
-        </IonAccordionGroup>
+            <div className="md:col-span-2">
+              <FieldTextarea label="Default Terms" value={formData.defaultTerms} onChange={(v) => handleChange('defaultTerms', v)} placeholder="Terms & conditions" />
+            </div>
+          </div>
+        </SettingsSection>
 
         {/* Logout */}
-        <div style={{ padding: '20px' }}>
-          <IonButton
-            expand="block"
-            fill="outline"
-            color="danger"
-            onClick={handleLogout}
-          >
-            <IonIcon icon={logOutOutline} slot="start" />
-            Logout
-          </IonButton>
-        </div>
-      </IonContent>
+        <button
+          onClick={handleLogout}
+          className="w-full py-3 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
 
       {/* Upgrade Prompt Modal */}
-      <UpgradePrompt 
-        isOpen={showUpgrade} 
+      <UpgradePrompt
+        isOpen={showUpgrade}
         onClose={() => setShowUpgrade(false)}
         usage={planUsage}
       />
-    </IonPage>
+    </div>
   )
 }

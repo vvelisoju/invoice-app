@@ -1,13 +1,4 @@
-import {
-  IonItem,
-  IonInput,
-  IonButton,
-  IonIcon,
-  IonGrid,
-  IonRow,
-  IonCol
-} from '@ionic/react'
-import { trashOutline } from 'ionicons/icons'
+import { Trash2 } from 'lucide-react'
 import ProductTypeahead from './ProductTypeahead'
 
 export default function LineItemRow({
@@ -28,80 +19,56 @@ export default function LineItemRow({
   }
 
   return (
-    <div style={{
-      background: '#f9f9f9',
-      borderRadius: '8px',
-      padding: '12px',
-      marginBottom: '12px'
-    }}>
-      <IonGrid style={{ padding: 0 }}>
-        <IonRow>
-          <IonCol size="12">
-            <ProductTypeahead
-              value={item.name}
-              onChange={(value) => onUpdate(index, 'name', value)}
-              onSelect={(product) => onProductSelect(index, product)}
-            />
-          </IonCol>
-        </IonRow>
-        
-        <IonRow style={{ marginTop: '8px' }}>
-          <IonCol size="4">
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Qty</div>
-            <IonInput
-              type="number"
-              inputmode="decimal"
-              value={item.quantity}
-              onIonInput={(e) => onUpdate(index, 'quantity', e.detail.value)}
-              style={{
-                '--background': 'white',
-                '--padding-start': '8px',
-                '--padding-end': '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            />
-          </IonCol>
-          
-          <IonCol size="4">
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Rate (₹)</div>
-            <IonInput
-              type="number"
-              inputmode="decimal"
-              value={item.rate}
-              onIonInput={(e) => onUpdate(index, 'rate', e.detail.value)}
-              style={{
-                '--background': 'white',
-                '--padding-start': '8px',
-                '--padding-end': '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            />
-          </IonCol>
-          
-          <IonCol size="4" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Total</div>
-              <div style={{ fontWeight: '600', fontSize: '16px' }}>
-                {formatCurrency(item.lineTotal)}
-              </div>
+    <div className="bg-bgPrimary/30 rounded-lg p-3 mb-3">
+      <div className="mb-2">
+        <ProductTypeahead
+          value={item.name}
+          onChange={(value) => onUpdate(index, 'name', value)}
+          onSelect={(product) => onProductSelect(index, product)}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-xs text-textSecondary mb-1">Qty</div>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={item.quantity}
+            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+            className="w-full px-2 py-1.5 bg-white border border-border rounded text-sm text-right focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+          />
+        </div>
+
+        <div>
+          <div className="text-xs text-textSecondary mb-1">Rate (₹)</div>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={item.rate}
+            onChange={(e) => onUpdate(index, 'rate', e.target.value)}
+            className="w-full px-2 py-1.5 bg-white border border-border rounded text-sm text-right focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+          />
+        </div>
+
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-xs text-textSecondary mb-1">Total</div>
+            <div className="text-base font-semibold text-textPrimary">
+              {formatCurrency(item.lineTotal)}
             </div>
-            
-            {canRemove && (
-              <IonButton
-                fill="clear"
-                color="danger"
-                size="small"
-                onClick={() => onRemove(index)}
-                style={{ '--padding-start': '4px', '--padding-end': '4px' }}
-              >
-                <IonIcon icon={trashOutline} />
-              </IonButton>
-            )}
-          </IonCol>
-        </IonRow>
-      </IonGrid>
+          </div>
+
+          {canRemove && (
+            <button
+              onClick={() => onRemove(index)}
+              className="w-7 h-7 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

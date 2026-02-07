@@ -130,7 +130,7 @@ function AdvancedInvoiceForm({ initialData = {}, onSave, showSaveButton = true }
             <textarea
               value={formData.billTo}
               onChange={(e) => updateField('billTo', e.target.value)}
-              rows={3}
+              rows={4}
               className="invoice-form-textarea"
               placeholder="Customer name and address"
             />

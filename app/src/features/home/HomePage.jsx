@@ -1,42 +1,29 @@
 import { useHistory } from 'react-router-dom'
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonButton,
-  IonIcon,
-  IonCard,
-  IonCardContent,
-  IonText,
-  IonSpinner,
-  IonRefresher,
-  IonRefresherContent,
-  IonButtons
-} from '@ionic/react'
-import { addOutline, documentTextOutline, cashOutline, timeOutline } from 'ionicons/icons'
+import { FileText, Clock, IndianRupee, Plus, ArrowRight, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { businessApi } from '../../lib/api'
-import { useAuthStore } from '../../store/authStore'
-import SyncStatusBar, { SyncStatusChip } from '../../components/SyncStatusBar'
+import { PageHeader } from '../../components/layout'
+
+function StatCard({ icon: Icon, value, label, iconColorClass = 'text-primary', valueColorClass = '' }) {
+  return (
+    <div className="bg-bgSecondary rounded-xl border border-border p-6 shadow-card text-center hover:shadow-soft transition-shadow">
+      <Icon className={`w-7 h-7 mx-auto mb-3 ${iconColorClass}`} />
+      <div className={`text-2xl font-bold ${valueColorClass || 'text-textPrimary'}`}>{value}</div>
+      <p className="text-xs text-textSecondary mt-1">{label}</p>
+    </div>
+  )
+}
 
 export default function HomePage() {
   const history = useHistory()
-  const business = useAuthStore((state) => state.business)
 
-  const { data: stats, isLoading, refetch } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ['business', 'stats'],
     queryFn: async () => {
       const response = await businessApi.getStats()
       return response.data.data || response.data
     }
   })
-
-  const handleRefresh = async (event) => {
-    await refetch()
-    event.detail.complete()
-  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -48,122 +35,64 @@ export default function HomePage() {
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>{business?.name || 'Invoice App'}</IonTitle>
-          <IonButtons slot="end">
-            <SyncStatusChip />
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
-
-      <SyncStatusBar />
-
-      <IonContent className="ion-padding">
-        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
-          <IonRefresherContent />
-        </IonRefresher>
-
-        {/* Quick Action */}
-        <IonButton
-          expand="block"
-          size="large"
-          onClick={() => history.push('/invoices/new')}
-          style={{ marginBottom: '24px' }}
-        >
-          <IonIcon icon={addOutline} slot="start" />
-          New Invoice
-        </IonButton>
-
-        {/* Stats Cards */}
-        {isLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-            <IonSpinner />
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* Total Invoices */}
-            <IonCard style={{ margin: 0 }}>
-              <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                <IonIcon
-                  icon={documentTextOutline}
-                  style={{ fontSize: '28px', color: 'var(--ion-color-primary)', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '24px', fontWeight: '700' }}>
-                  {stats?.totalInvoices || 0}
-                </div>
-                <IonText color="medium">
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>Total Invoices</p>
-                </IonText>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Drafts */}
-            <IonCard style={{ margin: 0 }}>
-              <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                <IonIcon
-                  icon={timeOutline}
-                  style={{ fontSize: '28px', color: 'var(--ion-color-medium)', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '24px', fontWeight: '700' }}>
-                  {stats?.draftCount || 0}
-                </div>
-                <IonText color="medium">
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>Drafts</p>
-                </IonText>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Paid */}
-            <IonCard style={{ margin: 0 }}>
-              <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                <IonIcon
-                  icon={cashOutline}
-                  style={{ fontSize: '28px', color: 'var(--ion-color-success)', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--ion-color-success)' }}>
-                  {formatCurrency(stats?.paidAmount)}
-                </div>
-                <IonText color="medium">
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                    Paid ({stats?.paidCount || 0})
-                  </p>
-                </IonText>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Unpaid */}
-            <IonCard style={{ margin: 0 }}>
-              <IonCardContent style={{ textAlign: 'center', padding: '16px' }}>
-                <IonIcon
-                  icon={cashOutline}
-                  style={{ fontSize: '28px', color: 'var(--ion-color-warning)', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--ion-color-warning)' }}>
-                  {formatCurrency(stats?.unpaidAmount)}
-                </div>
-                <IonText color="medium">
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                    Unpaid ({stats?.unpaidCount || 0})
-                  </p>
-                </IonText>
-              </IonCardContent>
-            </IonCard>
-          </div>
-        )}
-
-        {/* Quick Links */}
-        <div style={{ marginTop: '24px' }}>
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={() => history.push('/invoices')}
+    <div className="max-w-5xl mx-auto">
+      <PageHeader
+        title="Dashboard"
+        actions={
+          <button
+            onClick={() => history.push('/invoices/new')}
+            className="px-5 py-2.5 bg-primary hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2"
           >
-            View All Invoices
-          </IonButton>
+            <Plus className="w-4 h-4" />
+            New Invoice
+          </button>
+        }
+      />
+
+      {/* Stats Cards */}
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
-      </IonContent>
-    </IonPage>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard
+            icon={FileText}
+            value={stats?.totalInvoices || 0}
+            label="Total Invoices"
+            iconColorClass="text-primary"
+          />
+          <StatCard
+            icon={Clock}
+            value={stats?.draftCount || 0}
+            label="Drafts"
+            iconColorClass="text-textSecondary"
+          />
+          <StatCard
+            icon={IndianRupee}
+            value={formatCurrency(stats?.paidAmount)}
+            label={`Paid (${stats?.paidCount || 0})`}
+            iconColorClass="text-green-500"
+            valueColorClass="text-green-600"
+          />
+          <StatCard
+            icon={IndianRupee}
+            value={formatCurrency(stats?.unpaidAmount)}
+            label={`Unpaid (${stats?.unpaidCount || 0})`}
+            iconColorClass="text-yellow-500"
+            valueColorClass="text-yellow-600"
+          />
+        </div>
+      )}
+
+      {/* Quick Links */}
+      <button
+        onClick={() => history.push('/invoices')}
+        className="w-full py-3 border border-border bg-bgSecondary hover:bg-bgPrimary rounded-xl text-sm font-medium text-textSecondary hover:text-textPrimary transition-all flex items-center justify-center gap-2"
+      >
+        View All Invoices
+        <ArrowRight className="w-4 h-4" />
+      </button>
+    </div>
   )
 }

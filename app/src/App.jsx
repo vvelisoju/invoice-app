@@ -1,17 +1,7 @@
-import {
-  IonApp,
-  IonRouterOutlet,
-  IonTabs,
-  IonTabBar,
-  IonTabButton,
-  IonIcon,
-  IonLabel
-} from '@ionic/react'
-import { IonReactRouter } from '@ionic/react-router'
-import { Route, Redirect } from 'react-router-dom'
+import { BrowserRouter, Route, Switch, Redirect } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { homeOutline, documentTextOutline, statsChartOutline, settingsOutline } from 'ionicons/icons'
 import { useAuthStore } from './store/authStore'
+import { AppLayout } from './components/layout'
 
 import LandingPage from './pages/LandingPage'
 import DemoPage from './pages/DemoPage'
@@ -38,13 +28,13 @@ const queryClient = new QueryClient({
 
 function AuthenticatedApp() {
   return (
-    <IonTabs>
-      <IonRouterOutlet>
+    <AppLayout>
+      <Switch>
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/invoices" component={InvoiceListPage} />
         <Route exact path="/invoices/new" component={NewInvoicePage} />
-        <Route exact path="/invoices/:id" component={InvoiceDetailPage} />
         <Route exact path="/invoices/:id/pdf" component={InvoicePDFPage} />
+        <Route exact path="/invoices/:id" component={InvoiceDetailPage} />
         <Route exact path="/settings" component={SettingsPage} />
         <Route exact path="/reports" component={ReportsPage} />
         <Route exact path="/templates" component={TemplateSelectPage} />
@@ -52,27 +42,9 @@ function AuthenticatedApp() {
         <Route exact path="/">
           <Redirect to="/home" />
         </Route>
-      </IonRouterOutlet>
-
-      <IonTabBar slot="bottom">
-        <IonTabButton tab="home" href="/home">
-          <IonIcon icon={homeOutline} />
-          <IonLabel>Home</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="invoices" href="/invoices">
-          <IonIcon icon={documentTextOutline} />
-          <IonLabel>Invoices</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="reports" href="/reports">
-          <IonIcon icon={statsChartOutline} />
-          <IonLabel>Reports</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="settings" href="/settings">
-          <IonIcon icon={settingsOutline} />
-          <IonLabel>Settings</IonLabel>
-        </IonTabButton>
-      </IonTabBar>
-    </IonTabs>
+        <Redirect to="/home" />
+      </Switch>
+    </AppLayout>
   )
 }
 
@@ -81,23 +53,19 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <IonApp>
-        <IonReactRouter>
-          {!token ? (
-            <IonRouterOutlet>
-              <Route exact path="/" component={LandingPage} />
-              <Route exact path="/demo" component={DemoPage} />
-              <Route exact path="/auth/phone" component={PhonePage} />
-              <Route exact path="/auth/verify" component={VerifyOTPPage} />
-              <Route>
-                <Redirect to="/" />
-              </Route>
-            </IonRouterOutlet>
-          ) : (
-            <AuthenticatedApp />
-          )}
-        </IonReactRouter>
-      </IonApp>
+      <BrowserRouter>
+        {!token ? (
+          <Switch>
+            <Route exact path="/" component={LandingPage} />
+            <Route exact path="/demo" component={DemoPage} />
+            <Route exact path="/auth/phone" component={PhonePage} />
+            <Route exact path="/auth/verify" component={VerifyOTPPage} />
+            <Redirect to="/" />
+          </Switch>
+        ) : (
+          <AuthenticatedApp />
+        )}
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }

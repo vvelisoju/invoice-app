@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react'
-import {
-  IonInput,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonText
-} from '@ionic/react'
 import { useQuery } from '@tanstack/react-query'
 import { productApi } from '../../../lib/api'
 import { db } from '../../../db'
@@ -21,7 +14,6 @@ export default function ProductTypeahead({ value, onChange, onSelect }) {
     queryFn: async () => {
       if (!query || query.length < 2) return []
       
-      // Try local first
       const localProducts = await db.products
         .where('businessId')
         .equals(business?.id)
@@ -33,7 +25,6 @@ export default function ProductTypeahead({ value, onChange, onSelect }) {
 
       if (filtered.length > 0) return filtered
 
-      // Fall back to API
       try {
         const response = await productApi.search(query)
         return response.data || []
@@ -49,7 +40,7 @@ export default function ProductTypeahead({ value, onChange, onSelect }) {
   }, [value])
 
   const handleInputChange = (e) => {
-    const newValue = e.detail.value
+    const newValue = e.target.value
     setQuery(newValue)
     onChange?.(newValue)
     setShowSuggestions(true)
@@ -66,47 +57,32 @@ export default function ProductTypeahead({ value, onChange, onSelect }) {
   }
 
   return (
-    <div style={{ position: 'relative', flex: 1 }}>
-      <IonInput
+    <div className="relative flex-1">
+      <input
+        type="text"
         value={query}
         placeholder="Item name"
-        onIonInput={handleInputChange}
-        onIonFocus={() => setShowSuggestions(true)}
-        onIonBlur={handleBlur}
-        style={{ '--padding-start': '0' }}
+        onChange={handleInputChange}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={handleBlur}
+        className="w-full bg-transparent text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none"
       />
 
       {showSuggestions && suggestions.length > 0 && (
-        <IonList style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          background: 'white',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          borderRadius: '0 0 8px 8px',
-          maxHeight: '150px',
-          overflow: 'auto'
-        }}>
+        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-border rounded-b-lg shadow-lg max-h-36 overflow-auto">
           {suggestions.map((product) => (
-            <IonItem
+            <button
               key={product.id}
-              button
               onClick={() => handleSelect(product)}
-              style={{ '--min-height': '44px' }}
+              className="w-full px-3 py-2.5 text-left hover:bg-bgPrimary transition-colors border-b border-border last:border-b-0"
             >
-              <IonLabel>
-                <h3 style={{ fontSize: '14px' }}>{product.name}</h3>
-                {product.defaultRate && (
-                  <IonText color="medium">
-                    <p style={{ fontSize: '12px' }}>₹{product.defaultRate}</p>
-                  </IonText>
-                )}
-              </IonLabel>
-            </IonItem>
+              <div className="text-sm text-textPrimary">{product.name}</div>
+              {product.defaultRate && (
+                <div className="text-xs text-textSecondary">₹{product.defaultRate}</div>
+              )}
+            </button>
           ))}
-        </IonList>
+        </div>
       )}
     </div>
   )

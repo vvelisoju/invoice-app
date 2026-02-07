@@ -1,4 +1,3 @@
-import { IonPage, IonContent } from '@ionic/react'
 import LandingHeader from '../components/landing/LandingHeader'
 import HeroSection from '../components/landing/HeroSection'
 import FeaturesSection from '../components/landing/FeaturesSection'
@@ -9,16 +8,16 @@ import './LandingPage.css'
 
 function LandingPage() {
   return (
-    <IonPage>
+    <div className="min-h-screen bg-white flex flex-col">
       <LandingHeader />
-      <IonContent className="landing-content">
+      <main className="flex-1 landing-content">
         <HeroSection />
         <FeaturesSection />
         <PricingSection />
         <FAQSection />
         <LandingFooter />
-      </IonContent>
-    </IonPage>
+      </main>
+    </div>
   )
 }
 

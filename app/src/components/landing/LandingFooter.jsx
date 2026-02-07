@@ -1,4 +1,3 @@
-import { IonButton } from '@ionic/react'
 import { useHistory } from 'react-router-dom'
 import { BRANDING } from '../../config/branding'
 import './LandingFooter.css'
@@ -15,13 +14,12 @@ function LandingFooter() {
           <p className="footer-cta-subtitle">
             Join thousands of businesses using Simple Invoice for fast, reliable invoicing
           </p>
-          <IonButton 
-            size="large" 
+          <button 
             className="footer-cta-btn"
             onClick={() => history.push('/demo')}
           >
             Get Started Free
-          </IonButton>
+          </button>
         </div>
       </div>
       
