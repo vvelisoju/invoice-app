@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal } from 'lucide-react'
+import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star } from 'lucide-react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import {
@@ -24,13 +24,12 @@ const STATUS_FILTERS = [
   { key: 'active', label: 'Active Customers' },
   { key: 'outstanding', label: 'Outstanding Balance', badgeColor: 'bg-accentOrange' },
   { key: 'inactive', label: 'Inactive', badgeColor: 'bg-gray-400' },
-  { key: 'favorites', label: 'Favorites', badgeColor: 'bg-yellow-400' },
+  // { key: 'favorites', label: 'Favorites', badgeColor: 'bg-yellow-400' }, // Hidden for future use
 ]
 
 const TABLE_COLUMNS = [
-  { key: 'name', label: 'Customer Name', colSpan: 3 },
-  { key: 'contact', label: 'Contact Person', colSpan: 2 },
-  { key: 'emailPhone', label: 'Email / Phone', colSpan: 2 },
+  { key: 'name', label: 'Customer Name', colSpan: 4 },
+  { key: 'emailPhone', label: 'Email / Phone', colSpan: 3 },
   { key: 'balance', label: 'Open Balance', colSpan: 2, headerAlign: 'right', align: 'right' },
   { key: 'actions', label: 'Actions', colSpan: 2, headerAlign: 'center', align: 'center' },
 ]
@@ -107,6 +106,9 @@ export default function CustomerListPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
 
   // Page state
   const [page, setPage] = useState(0)
@@ -160,9 +162,9 @@ export default function CustomerListPage() {
       case 'inactive':
         // Customers with no invoices at all
         return allCustomers.filter(c => !c.invoices || c.invoices.length === 0)
-      case 'favorites':
-        // Placeholder — no favorite flag in schema, show none
-        return []
+      // case 'favorites':
+      //   // Placeholder — no favorite flag in schema, show none
+      //   return []
       default:
         return allCustomers
     }
@@ -210,6 +212,69 @@ export default function CustomerListPage() {
     if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
   }
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) => Promise.all(ids.map(id => customerApi.delete(id))),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      setSelectedIds(new Set())
+      setShowBulkActions(false)
+      setShowBulkDeleteConfirm(false)
+    },
+    onError: () => {
+      // Keep modal open on error to show the error message
+    }
+  })
+
+  // Bulk favorite mutation (placeholder for future)
+  const bulkFavoriteMutation = useMutation({
+    mutationFn: (ids) => {
+      // Placeholder: future implementation for favorites
+      console.log('Adding to favorites:', ids)
+      return Promise.resolve()
+    },
+    onSuccess: () => {
+      setSelectedIds(new Set())
+      setShowBulkActions(false)
+    }
+  })
+
+  const handleSelectionChange = useCallback((selectedIdsSet) => {
+    setSelectedIds(selectedIdsSet)
+    setShowBulkActions(selectedIdsSet.size > 0)
+  }, [])
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size > 0) {
+      setShowBulkDeleteConfirm(true)
+    }
+  }
+
+  const confirmBulkDelete = () => {
+    if (selectedIds.size > 0) {
+      bulkDeleteMutation.mutate(Array.from(selectedIds))
+      // Don't close modal here - let it stay open until success or error
+    }
+  }
+
+  const cancelBulkDelete = () => {
+    if (!bulkDeleteMutation.isPending) {
+      setShowBulkDeleteConfirm(false)
+      bulkDeleteMutation.reset()
+    }
+  }
+
+  const handleBulkFavorite = () => {
+    if (selectedIds.size > 0) {
+      bulkFavoriteMutation.mutate(Array.from(selectedIds))
+    }
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+    setShowBulkActions(false)
+  }
+
   const renderRow = (customer) => {
     const initials = getInitials(customer.name)
     const color = getAvatarColor(customer.name)
@@ -231,8 +296,6 @@ export default function CustomerListPage() {
         </div>
       </div>,
 
-      // Contact Person
-      <span key="contact" className="text-textSecondary">{customer.name?.split(' ')[0] || '--'}</span>,
 
       // Email / Phone
       <div key="emailPhone">
@@ -364,6 +427,40 @@ export default function CustomerListPage() {
       {/* Table */}
       <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
+          {/* Bulk Actions Bar */}
+          {showBulkActions && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedIds.size} {selectedIds.size === 1 ? 'customer' : 'customers'} selected
+                </span>
+                <button
+                  onClick={clearSelection}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear selection
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBulkFavorite}
+                  disabled={bulkFavoriteMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  <Star className="w-4 h-4" />
+                  {bulkFavoriteMutation.isPending ? 'Adding...' : 'Add to Favorite'}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          )}
           <DataTable
             columns={TABLE_COLUMNS}
             rows={paginatedCustomers}
@@ -372,6 +469,7 @@ export default function CustomerListPage() {
             onRowClick={(c) => handleEdit(c)}
             getRowClassName={() => ''}
             selectable={true}
+            onSelectionChange={handleSelectionChange}
             isLoading={isLoading}
             emptyIcon={<Users className="w-16 h-16 text-gray-300 mb-4" />}
             emptyTitle={statusFilter !== 'active' ? 'No customers match this filter' : 'No customers yet'}
@@ -493,6 +591,70 @@ export default function CustomerListPage() {
                 {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              {bulkDeleteMutation.isSuccess ? (
+                <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-textPrimary text-center mb-2">
+              {bulkDeleteMutation.isSuccess ? 'Deleted Successfully' : 'Delete Customers'}
+            </h3>
+            <p className="text-sm text-textSecondary text-center mb-6">
+              {bulkDeleteMutation.isSuccess 
+                ? `${selectedIds.size} ${selectedIds.size === 1 ? 'customer' : 'customers'} deleted successfully.`
+                : `Are you sure you want to delete <span className="font-semibold text-textPrimary">${selectedIds.size} selected ${selectedIds.size === 1 ? 'customer' : 'customers'}</span>? This action cannot be undone.`
+              }
+            </p>
+            {bulkDeleteMutation.isError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                <p className="text-sm text-red-600 text-center">
+                  {bulkDeleteMutation.error?.response?.data?.error?.message || 'Cannot delete these customers. They may have existing invoices.'}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              {!bulkDeleteMutation.isSuccess ? (
+                <>
+                  <button
+                    onClick={cancelBulkDelete}
+                    disabled={bulkDeleteMutation.isPending}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:text-textPrimary bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmBulkDelete}
+                    disabled={bulkDeleteMutation.isPending}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {bulkDeleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowBulkDeleteConfirm(false)
+                    bulkDeleteMutation.reset()
+                  }}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>

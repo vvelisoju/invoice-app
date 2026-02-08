@@ -23,10 +23,10 @@ import {
  * Each tab has a `key` used to look up its sidebar config.
  */
 export const headerTabs = [
-  { key: 'documents', label: 'My Documents', icon: FileText, basePath: '/invoices' },
-  { key: 'customers', label: 'My Customers', icon: Users, basePath: '/customers' },
-  { key: 'products', label: 'My Products', icon: Package, basePath: '/products' },
-  { key: 'reports', label: 'My Reports', icon: PieChart, basePath: '/reports' },
+  { key: 'documents', label: 'Documents', icon: FileText, basePath: '/invoices' },
+  { key: 'customers', label: 'Customers', icon: Users, basePath: '/customers' },
+  { key: 'products', label: 'Products', icon: Package, basePath: '/products' },
+  { key: 'reports', label: 'Reports', icon: PieChart, basePath: '/reports' },
 ]
 
 /**

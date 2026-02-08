@@ -29,7 +29,6 @@ const DOC_TYPE_BADGE = {
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Documents' },
   { key: 'ISSUED', label: 'Unpaid', badgeColor: 'bg-accentOrange' },
-  { key: 'OVERDUE', label: 'Overdue', badgeColor: 'bg-red-500' },
   { key: 'PAID', label: 'Paid', badgeColor: 'bg-green-600' },
   { key: 'DRAFT', label: 'Draft', badgeColor: 'bg-gray-400' },
 ]
