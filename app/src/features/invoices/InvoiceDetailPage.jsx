@@ -231,6 +231,8 @@ export default function InvoiceDetailPage() {
           customerName: invoice.customer?.name || '',
           customerPhone: invoice.customer?.phone || '',
           customerStateCode: invoice.customerStateCode || null,
+          fromAddress: invoice.fromAddress || '',
+          billTo: invoice.billTo || '',
           shipTo: invoice.shipTo || '',
           lineItems: (invoice.lineItems || []).map(item => ({
             name: item.name,

@@ -222,6 +222,11 @@ model Invoice {
   // or { "igst": 18.0, "igstAmount": 900 }
   taxBreakup Json?
   
+  // Snapshot of address text at time of creation (editable per-invoice)
+  fromAddress String?  // Business address snapshot
+  billTo      String?  // Bill-to address text
+  shipTo      String?  // Ship-to address text
+  
   // Notes and terms
   notes String?
   terms String?

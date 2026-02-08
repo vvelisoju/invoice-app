@@ -26,6 +26,48 @@ const formatDate = (dateString) => {
 const getLogoUrl = (invoice) => invoice.logoUrl || invoice.business?.logoUrl
 const getSignatureUrl = (invoice) => invoice.signatureUrl || invoice.business?.signatureUrl
 
+// Resolve address fields: prefer invoice-level snapshots, fallback to relations
+// Returns { lines: string[] } for rendering multi-line text blocks
+const getFromAddress = (invoice) => {
+  if (invoice.fromAddress) return invoice.fromAddress.split('\n').filter(Boolean)
+  const parts = []
+  if (invoice.business?.name) parts.push(invoice.business.name)
+  if (invoice.business?.address) parts.push(invoice.business.address)
+  if (invoice.business?.gstin) parts.push(`GSTIN: ${invoice.business.gstin}`)
+  return parts
+}
+
+const getBillTo = (invoice) => {
+  if (invoice.billTo) return invoice.billTo.split('\n').filter(Boolean)
+  const parts = []
+  if (invoice.customer?.name) parts.push(invoice.customer.name)
+  if (invoice.customer?.address) parts.push(invoice.customer.address)
+  if (invoice.customer?.phone) parts.push(invoice.customer.phone)
+  if (invoice.customer?.email) parts.push(invoice.customer.email)
+  if (invoice.customer?.gstin) parts.push(`GSTIN: ${invoice.customer.gstin}`)
+  return parts
+}
+
+const getShipTo = (invoice) => {
+  if (invoice.shipTo) return invoice.shipTo.split('\n').filter(Boolean)
+  const parts = []
+  if (invoice.customer?.name) parts.push(invoice.customer.name)
+  if (invoice.customer?.address) parts.push(invoice.customer.address)
+  return parts
+}
+
+// Render multi-line address block for PDF
+function AddressBlock({ lines, nameStyle, detailStyle }) {
+  if (!lines || lines.length === 0) return null
+  return (
+    <>
+      {lines.map((line, i) => (
+        <Text key={i} style={i === 0 ? nameStyle : detailStyle}>{line}</Text>
+      ))}
+    </>
+  )
+}
+
 // Shared branded footer — configurable per plan (showBranding flag)
 function BrandedFooter({ showBranding = true }) {
   if (!showBranding) return null
@@ -76,9 +118,11 @@ export function CleanTemplate({ invoice }) {
               <Image src={getLogoUrl(invoice)} style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 6 }} />
             )}
             <Text style={cleanStyles.title}>INVOICE</Text>
-            {invoice.business?.name && <Text style={{ marginTop: 8, fontSize: 12 }}>{invoice.business.name}</Text>}
-            {invoice.business?.address && <Text style={{ color: '#666', marginTop: 4 }}>{invoice.business.address}</Text>}
-            {invoice.business?.gstin && <Text style={{ color: '#666', marginTop: 4 }}>GSTIN: {invoice.business.gstin}</Text>}
+            <AddressBlock
+              lines={getFromAddress(invoice)}
+              nameStyle={{ marginTop: 8, fontSize: 12 }}
+              detailStyle={{ color: '#666', marginTop: 4 }}
+            />
           </View>
           <View style={cleanStyles.invoiceInfo}>
             <Text style={cleanStyles.invoiceNumber}>#{invoice.invoiceNumber}</Text>
@@ -88,10 +132,11 @@ export function CleanTemplate({ invoice }) {
         </View>
         <View style={cleanStyles.section}>
           <Text style={cleanStyles.sectionTitle}>Bill To</Text>
-          {invoice.customer?.name && <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{invoice.customer.name}</Text>}
-          {invoice.customer?.phone && <Text style={{ color: '#666', marginTop: 2 }}>{invoice.customer.phone}</Text>}
-          {invoice.customer?.address && <Text style={{ color: '#666', marginTop: 2 }}>{invoice.customer.address}</Text>}
-          {invoice.customer?.gstin && <Text style={{ color: '#666', marginTop: 2 }}>GSTIN: {invoice.customer.gstin}</Text>}
+          <AddressBlock
+            lines={getBillTo(invoice)}
+            nameStyle={{ fontSize: 12, fontWeight: 'bold' }}
+            detailStyle={{ color: '#666', marginTop: 2 }}
+          />
         </View>
         <View style={cleanStyles.table}>
           <View style={cleanStyles.tableHeader}>
@@ -228,9 +273,11 @@ export function ModernRedTemplate({ invoice }) {
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
               <Text style={modernRedStyles.title}>INVOICE</Text>
-              {invoice.business?.name && <Text style={{ fontSize: 11, color: '#374151', marginTop: 4 }}>{invoice.business.name}</Text>}
-              {invoice.business?.address && <Text style={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}>{invoice.business.address}</Text>}
-              {invoice.business?.gstin && <Text style={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}>GSTIN: {invoice.business.gstin}</Text>}
+              <AddressBlock
+                lines={getFromAddress(invoice)}
+                nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}
+              />
             </View>
             <View style={modernRedStyles.invoiceMetaBox}>
               <View style={modernRedStyles.metaRow}>
@@ -253,15 +300,19 @@ export function ModernRedTemplate({ invoice }) {
           <View style={modernRedStyles.addressRow}>
             <View style={modernRedStyles.addressBlock}>
               <Text style={modernRedStyles.addressLabel}>Bill To</Text>
-              {invoice.customer?.name && <Text style={modernRedStyles.addressName}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={modernRedStyles.addressDetail}>{invoice.customer.address}</Text>}
-              {invoice.customer?.phone && <Text style={modernRedStyles.addressDetail}>{invoice.customer.phone}</Text>}
-              {invoice.customer?.gstin && <Text style={modernRedStyles.addressDetail}>GSTIN: {invoice.customer.gstin}</Text>}
+              <AddressBlock
+                lines={getBillTo(invoice)}
+                nameStyle={modernRedStyles.addressName}
+                detailStyle={modernRedStyles.addressDetail}
+              />
             </View>
             <View style={modernRedStyles.addressBlock}>
               <Text style={modernRedStyles.addressLabel}>Ship To</Text>
-              {invoice.customer?.name && <Text style={modernRedStyles.addressName}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={modernRedStyles.addressDetail}>{invoice.customer.address}</Text>}
+              <AddressBlock
+                lines={getShipTo(invoice)}
+                nameStyle={modernRedStyles.addressName}
+                detailStyle={modernRedStyles.addressDetail}
+              />
             </View>
           </View>
           <View style={modernRedStyles.table}>
@@ -360,9 +411,11 @@ export function ClassicRedTemplate({ invoice }) {
               {getLogoUrl(invoice) && (
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
-              <Text style={classicRedStyles.businessName}>{invoice.business?.name || 'Business'}</Text>
-              {invoice.business?.address && <Text style={{ fontSize: 9, color: '#6B7280', marginTop: 3 }}>{invoice.business.address}</Text>}
-              {invoice.business?.gstin && <Text style={{ fontSize: 9, color: '#6B7280', marginTop: 1 }}>GSTIN: {invoice.business.gstin}</Text>}
+              <AddressBlock
+                lines={getFromAddress(invoice)}
+                nameStyle={classicRedStyles.businessName}
+                detailStyle={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}
+              />
             </View>
             <View>
               <Text style={classicRedStyles.invoiceTitle}>INVOICE</Text>
@@ -385,15 +438,19 @@ export function ClassicRedTemplate({ invoice }) {
           <View style={classicRedStyles.addressRow}>
             <View style={classicRedStyles.addressBlock}>
               <Text style={classicRedStyles.addressLabel}>Bill To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
-              {invoice.customer?.phone && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.phone}</Text>}
-              {invoice.customer?.gstin && <Text style={{ fontSize: 9, color: '#6B7280' }}>GSTIN: {invoice.customer.gstin}</Text>}
+              <AddressBlock
+                lines={getBillTo(invoice)}
+                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
             <View style={classicRedStyles.addressBlock}>
               <Text style={classicRedStyles.addressLabel}>Ship To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
+              <AddressBlock
+                lines={getShipTo(invoice)}
+                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
           </View>
           <View style={classicRedStyles.table}>
@@ -496,21 +553,27 @@ export function WexlerTemplate({ invoice }) {
           <View style={wexlerStyles.addressRow}>
             <View style={wexlerStyles.addressBlock}>
               <Text style={wexlerStyles.addressLabel}>From</Text>
-              {invoice.business?.name && <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>{invoice.business.name}</Text>}
-              {invoice.business?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.business.address}</Text>}
-              {invoice.business?.gstin && <Text style={{ fontSize: 9, color: '#6B7280' }}>GSTIN: {invoice.business.gstin}</Text>}
+              <AddressBlock
+                lines={getFromAddress(invoice)}
+                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
             <View style={wexlerStyles.addressBlock}>
               <Text style={wexlerStyles.addressLabel}>Bill To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
-              {invoice.customer?.phone && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.phone}</Text>}
-              {invoice.customer?.gstin && <Text style={{ fontSize: 9, color: '#6B7280' }}>GSTIN: {invoice.customer.gstin}</Text>}
+              <AddressBlock
+                lines={getBillTo(invoice)}
+                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
             <View style={wexlerStyles.addressBlock}>
               <Text style={wexlerStyles.addressLabel}>Ship To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
+              <AddressBlock
+                lines={getShipTo(invoice)}
+                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
           </View>
           <View style={wexlerStyles.table}>
@@ -608,9 +671,11 @@ export function PlexerTemplate({ invoice }) {
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
               <Text style={plexerStyles.title}>INVOICE</Text>
-              {invoice.business?.name && <Text style={{ fontSize: 11, color: '#374151', marginTop: 4 }}>{invoice.business.name}</Text>}
-              {invoice.business?.address && <Text style={plexerStyles.businessDetail}>{invoice.business.address}</Text>}
-              {invoice.business?.gstin && <Text style={plexerStyles.businessDetail}>GSTIN: {invoice.business.gstin}</Text>}
+              <AddressBlock
+                lines={getFromAddress(invoice)}
+                nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
+                detailStyle={plexerStyles.businessDetail}
+              />
             </View>
             <View style={plexerStyles.metaBox}>
               <View style={plexerStyles.metaRow}>
@@ -633,15 +698,19 @@ export function PlexerTemplate({ invoice }) {
           <View style={plexerStyles.addressRow}>
             <View style={plexerStyles.addressBlock}>
               <Text style={plexerStyles.addressLabel}>Bill To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
-              {invoice.customer?.phone && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.phone}</Text>}
-              {invoice.customer?.gstin && <Text style={{ fontSize: 9, color: '#6B7280' }}>GSTIN: {invoice.customer.gstin}</Text>}
+              <AddressBlock
+                lines={getBillTo(invoice)}
+                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
             <View style={plexerStyles.addressBlock}>
               <Text style={plexerStyles.addressLabel}>Ship To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
+              <AddressBlock
+                lines={getShipTo(invoice)}
+                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
           </View>
           <View style={plexerStyles.table}>
@@ -739,9 +808,11 @@ export function ContemporaryTemplate({ invoice }) {
                 <Image src={getLogoUrl(invoice)} style={{ width: 85, height: 85, objectFit: 'contain', marginBottom: 6 }} />
               )}
               <Text style={contemporaryStyles.title}>INVOICE</Text>
-              {invoice.business?.name && <Text style={contemporaryStyles.businessInfo}>{invoice.business.name}</Text>}
-              {invoice.business?.address && <Text style={contemporaryStyles.businessInfo}>{invoice.business.address}</Text>}
-              {invoice.business?.gstin && <Text style={contemporaryStyles.businessInfo}>GSTIN: {invoice.business.gstin}</Text>}
+              <AddressBlock
+                lines={getFromAddress(invoice)}
+                nameStyle={contemporaryStyles.businessInfo}
+                detailStyle={contemporaryStyles.businessInfo}
+              />
             </View>
             <View style={contemporaryStyles.metaRight}>
               <Text style={contemporaryStyles.metaLabel}>Invoice #</Text>
@@ -765,15 +836,19 @@ export function ContemporaryTemplate({ invoice }) {
           <View style={contemporaryStyles.addressRow}>
             <View style={contemporaryStyles.addressBlock}>
               <Text style={contemporaryStyles.addressLabel}>Bill To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
-              {invoice.customer?.phone && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.phone}</Text>}
-              {invoice.customer?.gstin && <Text style={{ fontSize: 9, color: '#6B7280' }}>GSTIN: {invoice.customer.gstin}</Text>}
+              <AddressBlock
+                lines={getBillTo(invoice)}
+                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
             <View style={contemporaryStyles.addressBlock}>
               <Text style={contemporaryStyles.addressLabel}>Ship To</Text>
-              {invoice.customer?.name && <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>{invoice.customer.name}</Text>}
-              {invoice.customer?.address && <Text style={{ fontSize: 9, color: '#6B7280' }}>{invoice.customer.address}</Text>}
+              <AddressBlock
+                lines={getShipTo(invoice)}
+                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+              />
             </View>
           </View>
           <View style={contemporaryStyles.table}>

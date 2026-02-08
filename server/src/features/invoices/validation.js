@@ -18,6 +18,9 @@ export const createInvoiceSchema = z.object({
   discountTotal: z.number().nonnegative().optional().or(z.string().transform(Number)).default(0),
   taxRate: z.number().nonnegative().max(100).optional().or(z.string().transform(Number)).nullable(),
   customerStateCode: z.string().optional().nullable(),
+  fromAddress: z.string().optional().nullable(),
+  billTo: z.string().optional().nullable(),
+  shipTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   terms: z.string().optional().nullable()
 })
@@ -30,6 +33,9 @@ export const updateInvoiceSchema = z.object({
   discountTotal: z.number().nonnegative().optional().or(z.string().transform(Number)),
   taxRate: z.number().nonnegative().max(100).optional().or(z.string().transform(Number)).nullable(),
   customerStateCode: z.string().optional().nullable(),
+  fromAddress: z.string().optional().nullable(),
+  billTo: z.string().optional().nullable(),
+  shipTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   terms: z.string().optional().nullable()
 })

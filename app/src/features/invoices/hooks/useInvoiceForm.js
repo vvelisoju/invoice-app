@@ -20,6 +20,8 @@ const createEmptyInvoice = (businessId) => ({
   customerId: null,
   customerName: '',
   customerPhone: '',
+  fromAddress: '',
+  billTo: '',
   shipTo: '',
   poNumber: '',
   invoiceNumber: '',
@@ -189,14 +191,20 @@ export function useInvoiceForm(invoiceId = null) {
     setIsDirty(true)
   }, [calculateTotals])
 
-  // Set customer
+  // Set customer — also snapshot billTo text from customer details
   const setCustomer = useCallback((customer) => {
+    const billToParts = []
+    if (customer?.name) billToParts.push(customer.name)
+    if (customer?.address) billToParts.push(customer.address)
+    if (customer?.phone) billToParts.push(customer.phone)
+    if (customer?.email) billToParts.push(customer.email)
     setInvoice(prev => ({
       ...prev,
       customerId: customer?.id || null,
       customerName: customer?.name || '',
       customerPhone: customer?.phone || '',
       customerStateCode: customer?.stateCode || null,
+      billTo: billToParts.join('\n'),
       updatedAt: new Date().toISOString()
     }))
     setIsDirty(true)

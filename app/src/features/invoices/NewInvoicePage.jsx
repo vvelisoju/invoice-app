@@ -107,6 +107,8 @@ export default function NewInvoicePage() {
       customerName: inv.customer?.name || '',
       customerPhone: inv.customer?.phone || '',
       customerStateCode: inv.customerStateCode || null,
+      fromAddress: inv.fromAddress || '',
+      billTo: inv.billTo || '',
       shipTo: inv.shipTo || '',
       invoiceNumber: inv.invoiceNumber || '',
       date: inv.date ? inv.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -140,6 +142,8 @@ export default function NewInvoicePage() {
       customerName: cloneData.customerName || '',
       customerPhone: cloneData.customerPhone || '',
       customerStateCode: cloneData.customerStateCode || null,
+      fromAddress: cloneData.fromAddress || '',
+      billTo: cloneData.billTo || '',
       shipTo: cloneData.shipTo || '',
       lineItems: (cloneData.lineItems || []).map(item => ({
         id: uuidv4(),
@@ -181,6 +185,9 @@ export default function NewInvoicePage() {
         discountTotal: parseFloat(invoice.discountTotal) || 0,
         taxRate: invoice.taxRate ? parseFloat(invoice.taxRate) : null,
         customerStateCode: invoice.customerStateCode || null,
+        fromAddress: fromAddress || null,
+        billTo: invoice.billTo || null,
+        shipTo: invoice.shipTo || null,
         notes: invoice.notes || null,
         terms: invoice.terms || null
       }
@@ -261,7 +268,7 @@ export default function NewInvoicePage() {
   }, [businessProfile])
 
   // Build full FROM address from business profile
-  const fromAddress = (() => {
+  const computedFromAddress = (() => {
     const bp = businessProfile
     if (!bp) return business?.name || ''
     const parts = [bp.name]
@@ -274,6 +281,9 @@ export default function NewInvoicePage() {
     if (bp.gstEnabled && bp.gstin) parts.push(`GSTIN: ${bp.gstin}`)
     return parts.join('\n')
   })()
+
+  // Use stored fromAddress (edit mode) or computed from business profile
+  const fromAddress = invoice.fromAddress || computedFromAddress
 
   return (
     <div className="p-2 md:p-6 relative">
@@ -307,8 +317,8 @@ export default function NewInvoicePage() {
             fromAddress={fromAddress}
             onFromAddressChange={() => {}}
             businessProfile={businessProfile}
-            billTo={invoice.customerName || ''}
-            onBillToChange={(val) => updateField('customerName', val)}
+            billTo={invoice.billTo || ''}
+            onBillToChange={(val) => updateField('billTo', val)}
             selectedCustomer={selectedCustomer}
             onCustomerSelect={(customer) => {
               setSelectedCustomer(customer)

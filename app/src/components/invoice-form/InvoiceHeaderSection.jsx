@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp } from 'lucide-react'
+import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import LogoUpload from './LogoUpload'
@@ -29,6 +29,7 @@ export default function InvoiceHeaderSection({
 }) {
   const isAdvanced = formMode === 'advanced'
   const [fromCollapsed, setFromCollapsed] = useState(true)
+  const [metaCollapsed, setMetaCollapsed] = useState(true)
   const [billToText, setBillToText] = useState(billTo || '')
   const [searchTerm, setSearchTerm] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -490,60 +491,98 @@ export default function InvoiceHeaderSection({
 
       {/* Right Column: Logo & Metadata */}
       <div className="w-full md:w-72 flex flex-col gap-4 md:gap-6">
-        {/* Logo Upload / Display */}
-        <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
-
-        {/* Invoice Meta */}
-        <div className="bg-bgPrimary/30 rounded-xl p-4 md:p-5 border border-transparent active:border-border md:hover:border-border transition-all space-y-3 md:space-y-4">
-          <div>
-            <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Invoice #</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={invoiceNumber}
-                onChange={(e) => onInvoiceNumberChange(e.target.value)}
-                placeholder="Auto-generated"
-                className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm font-semibold text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-              />
-              <Hash className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary/30" />
+        {/* Mobile: compact summary row for Invoice # & Date */}
+        <div className="md:hidden">
+          <button
+            onClick={() => setMetaCollapsed(!metaCollapsed)}
+            className="w-full flex items-center justify-between px-1 mb-2"
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold text-violet-600 uppercase tracking-wide">
+              <Hash className="w-3.5 h-3.5 text-violet-500/70" /> Invoice Details
+              {metaCollapsed ? (
+                <ChevronDown className="w-3.5 h-3.5 text-violet-500/50" />
+              ) : (
+                <ChevronUp className="w-3.5 h-3.5 text-violet-500/50" />
+              )}
+            </span>
+          </button>
+          {/* Collapsed: show summary chips */}
+          {metaCollapsed && (
+            <div className="flex items-center gap-2 px-1 flex-wrap">
+              {invoiceNumber && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-textSecondary bg-bgPrimary/50 px-2 py-1 rounded-md border border-border/50">
+                  <Hash className="w-3 h-3 text-textSecondary/50" />
+                  {invoiceNumber}
+                </span>
+              )}
+              {invoiceDate && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-textSecondary bg-bgPrimary/50 px-2 py-1 rounded-md border border-border/50">
+                  <Calendar className="w-3 h-3 text-textSecondary/50" />
+                  {new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
             </div>
-          </div>
-          <div>
-            <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">
-              {isAdvanced ? 'Invoice Date' : 'Date'}
-            </label>
-            <input
-              type="date"
-              value={invoiceDate}
-              onChange={(e) => onInvoiceDateChange(e.target.value)}
-              className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-            />
-          </div>
+          )}
+        </div>
 
-          {/* Advanced Fields: P.O.# & Due Date */}
-          {isAdvanced && (
-            <>
-              <div>
-                <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">P.O.#</label>
+        {/* Logo Upload / Display — hidden on mobile when collapsed */}
+        <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
+          <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
+        </div>
+
+        {/* Invoice Meta — hidden on mobile when collapsed */}
+        <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
+          <div className="bg-bgPrimary/30 rounded-xl p-4 md:p-5 border border-transparent active:border-border md:hover:border-border transition-all space-y-3 md:space-y-4">
+            <div>
+              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Invoice #</label>
+              <div className="relative">
                 <input
                   type="text"
-                  value={poNumber}
-                  onChange={(e) => onPoNumberChange(e.target.value)}
-                  placeholder="Purchase Order (optional)"
-                  className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  value={invoiceNumber}
+                  onChange={(e) => onInvoiceNumberChange(e.target.value)}
+                  placeholder="Auto-generated"
+                  className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm font-semibold text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                 />
+                <Hash className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary/30" />
               </div>
-              <div>
-                <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Due Date</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => onDueDateChange(e.target.value)}
-                  className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                />
-              </div>
-            </>
-          )}
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">
+                {isAdvanced ? 'Invoice Date' : 'Date'}
+              </label>
+              <input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => onInvoiceDateChange(e.target.value)}
+                className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              />
+            </div>
+
+            {/* Advanced Fields: P.O.# & Due Date */}
+            {isAdvanced && (
+              <>
+                <div>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">P.O.#</label>
+                  <input
+                    type="text"
+                    value={poNumber}
+                    onChange={(e) => onPoNumberChange(e.target.value)}
+                    placeholder="Purchase Order (optional)"
+                    className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Due Date</label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => onDueDateChange(e.target.value)}
+                    className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
