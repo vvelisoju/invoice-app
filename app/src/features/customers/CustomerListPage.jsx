@@ -425,7 +425,7 @@ export default function CustomerListPage() {
       </PageToolbar>
 
       {/* Table */}
-      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Bulk Actions Bar */}
           {showBulkActions && (

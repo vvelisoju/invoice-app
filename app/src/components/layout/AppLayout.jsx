@@ -26,7 +26,7 @@ export default function AppLayout({ children }) {
   const isHome = location.pathname === '/home'
 
   return (
-    <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-screen overflow-hidden flex flex-col safe-top">
+    <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
       <AppHeader onMenuToggle={() => setDrawerOpen(!drawerOpen)} />
 
       {/* Mobile Drawer Overlay */}
@@ -44,7 +44,7 @@ export default function AppLayout({ children }) {
 
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
-        <main className="flex-1 overflow-y-auto bg-bgPrimary pb-20 md:pb-0">
+        <main className="flex-1 overflow-y-auto bg-bgPrimary pb-mobile-nav">
           {children}
         </main>
       </div>

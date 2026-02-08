@@ -486,7 +486,7 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* PDF Viewer Area — fills remaining space */}
-      <div className="flex-1 bg-gray-100 overflow-auto">
+      <div className="flex-1 bg-gray-100 pb-mobile-nav overflow-auto">
         {isGeneratingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -504,7 +504,7 @@ export default function InvoiceDetailPage() {
             <iframe
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
               className="md:hidden w-full border-0"
-              style={{ height: 'calc(100vh - 160px)', minHeight: 500 }}
+              style={{ height: 'calc(100dvh - 160px)', minHeight: 500 }}
               title={`Invoice ${invoice.invoiceNumber} PDF`}
             />
           </>

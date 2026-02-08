@@ -30,8 +30,15 @@
 }
 
 html {
-  /* Prevent pull-to-refresh in Capacitor WebView */
-  overscroll-behavior: none;
+  /* Prevent pull-to-refresh on the document itself (Capacitor WebView) */
+  overscroll-behavior-y: none;
+}
+
+/* Dynamic viewport height — adjusts when mobile browser chrome shows/hides.
+   Falls back to 100vh for browsers that don't support dvh. */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
 }
 
 body {
@@ -64,6 +71,17 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
 .safe-right { padding-right: env(safe-area-inset-right, 0px); }
 .safe-x { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
 .safe-y { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Bottom padding that clears the mobile bottom nav (h-16 = 4rem) + safe area + breathing room.
+   On desktop (md:) this is zeroed out since there is no bottom nav. */
+.pb-mobile-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+@media (min-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
+  }
+}
 
 /* Hide scrollbar but keep functionality */
 ::-webkit-scrollbar {
@@ -106,5 +124,17 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Native-feel momentum scrolling for Capacitor WebView */
+  .overflow-y-auto,
+  [style*="overflow"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Optimise vertical scroll containers: remove touch delay, allow rubber-band */
+  main, .scroll-container {
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
   }
 }

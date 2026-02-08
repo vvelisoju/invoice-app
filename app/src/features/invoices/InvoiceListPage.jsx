@@ -299,7 +299,7 @@ export default function InvoiceListPage() {
       </div>
 
       {/* Table Section */}
-      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <DataTable
             columns={TABLE_COLUMNS}

@@ -1262,7 +1262,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 px-3 md:px-8 py-3 md:py-6 overflow-y-auto">
+      <div className="flex-1 px-3 md:px-8 py-3 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-3 md:space-y-6">
 
           {/* Business Information Tab */}

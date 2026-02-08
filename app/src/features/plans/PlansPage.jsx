@@ -195,7 +195,7 @@ export default function PlansPage() {
         }
       />
 
-      <div className="flex-1 px-3 py-4 md:px-8 md:py-6 overflow-y-auto">
+      <div className="flex-1 px-3 py-4 md:px-8 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-5xl mx-auto space-y-5 md:space-y-8">
 
           {/* Current Usage — compact on mobile */}

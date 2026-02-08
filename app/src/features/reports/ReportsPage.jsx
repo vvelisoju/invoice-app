@@ -352,7 +352,7 @@ export default function ReportsPage() {
   }, [documents])
 
   return (
-    <div className="flex-1 overflow-y-auto bg-bgPrimary p-3 md:p-6">
+    <div className="flex-1 overflow-y-auto bg-bgPrimary p-3 md:p-6 pb-mobile-nav">
       <div className="max-w-7xl mx-auto flex flex-col h-full">
 
         {/* Filter & Search Section (Top Card) */}
