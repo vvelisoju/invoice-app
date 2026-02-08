@@ -1,4 +1,4 @@
-// Invoice App - Prisma Schema V1
+// Invoice Baba - Prisma Schema V1
 // India + GST, Offline-sync ready, Plan enforcement, Template customization
 
 generator client {
@@ -220,6 +220,10 @@ model Invoice {
   // Notes and terms
   notes String?
   terms String?
+  
+  // Snapshot of business logo & signature at time of creation
+  logoUrl      String?
+  signatureUrl String?
   
   // Template snapshot (immutable after issuance)
   // Client-side PDF generation: template config is snapshotted for consistent rendering

@@ -474,16 +474,6 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
             placeholder="Description"
           />
         </div>
-        {/* Qty */}
-        <div className="col-span-3 md:col-span-1">
-          <input
-            type="number"
-            value={item.quantity || ''}
-            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
-            placeholder="Qty"
-            className="w-full bg-bgPrimary/30 px-2 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
-          />
-        </div>
         {/* Unit Price */}
         <div className="col-span-4 md:col-span-2">
           <input
@@ -492,6 +482,16 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
             onChange={(e) => onUpdate(index, 'rate', e.target.value)}
             placeholder="Price"
             className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+          />
+        </div>
+        {/* Qty */}
+        <div className="col-span-3 md:col-span-1">
+          <input
+            type="number"
+            value={item.quantity || ''}
+            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+            placeholder="Qty"
+            className="w-full bg-bgPrimary/30 px-2 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
           />
         </div>
         {/* Amount */}
@@ -619,14 +619,14 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
       {/* Header Row — hidden on mobile for cleaner card-like layout */}
       {isAdvanced ? (
         <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
-          <div className="col-span-1">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Qty</span>
-          </div>
           <div className="col-span-5">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Description</span>
           </div>
           <div className="col-span-2">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Unit Price</span>
+          </div>
+          <div className="col-span-1">
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Qty</span>
           </div>
           <div className="col-span-2">
             <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Amount</span>

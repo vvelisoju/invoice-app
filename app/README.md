@@ -1,4 +1,4 @@
-# Invoice App - Frontend Client
+# Invoice Baba - Frontend Client
 
 ## Tech Stack
 - **Framework**: React 18

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2 } from 'lucide-react'
+import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import LogoUpload from './LogoUpload'
@@ -8,6 +8,7 @@ export default function InvoiceHeaderSection({
   formMode,
   fromAddress,
   onFromAddressChange,
+  businessProfile,
   billTo,
   onBillToChange,
   selectedCustomer,
@@ -23,10 +24,11 @@ export default function InvoiceHeaderSection({
   onPoNumberChange,
   dueDate,
   onDueDateChange,
-  onLogoClick
+  onLogoClick,
+  onEditSettings
 }) {
   const isAdvanced = formMode === 'advanced'
-  const [billToText, setBillToText] = useState('')
+  const [billToText, setBillToText] = useState(billTo || '')
   const [searchTerm, setSearchTerm] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -34,7 +36,7 @@ export default function InvoiceHeaderSection({
   const textareaRef = useRef(null)
 
   // Ship To state (mirrors Bill To)
-  const [shipToText, setShipToText] = useState('')
+  const [shipToText, setShipToText] = useState(shipTo || '')
   const [shipSearchTerm, setShipSearchTerm] = useState('')
   const [showShipSuggestions, setShowShipSuggestions] = useState(false)
   const [shipHighlightedIndex, setShipHighlightedIndex] = useState(-1)
@@ -76,6 +78,20 @@ export default function InvoiceHeaderSection({
     if (customer.email) parts.push(customer.email)
     return parts.join('\n')
   }
+
+  // Sync billToText from prop (e.g. sessionStorage draft restoration)
+  useEffect(() => {
+    if (billTo && !billToText) {
+      setBillToText(billTo)
+    }
+  }, [billTo])
+
+  // Sync shipToText from prop (e.g. sessionStorage draft restoration)
+  useEffect(() => {
+    if (shipTo && !shipToText) {
+      setShipToText(shipTo)
+    }
+  }, [shipTo])
 
   // Sync when a customer is selected externally (e.g. from modal)
   useEffect(() => {
@@ -224,16 +240,26 @@ export default function InvoiceHeaderSection({
       <div className={`flex-1 ${isAdvanced ? 'space-y-4 md:space-y-5' : 'space-y-4 md:space-y-6'}`}>
         {/* From Section */}
         <div className="group relative transition-all">
-          <label className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide mb-2">
-            <Building className="w-3.5 h-3.5 text-primary/70" /> From
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide">
+              <Building className="w-3.5 h-3.5 text-primary/70" /> From
+            </label>
+            <button
+              onClick={onEditSettings}
+              className="flex items-center gap-1 text-[11px] font-medium text-textSecondary active:text-primary md:hover:text-primary transition-colors"
+              title="Edit Business Settings"
+            >
+              <Settings className="w-3 h-3" />
+              <span className="hidden sm:inline">Edit Settings</span>
+            </button>
+          </div>
           <div className="relative">
             <textarea
               placeholder="Your Business Name & Address"
               rows={3}
               value={fromAddress}
-              onChange={(e) => onFromAddressChange(e.target.value)}
-              className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
+              readOnly
+              className="w-full p-3 md:p-4 bg-bgPrimary/30 border border-transparent rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none transition-all resize-none text-sm leading-relaxed cursor-default"
             />
             {fromAddress && (
               <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -447,8 +473,8 @@ export default function InvoiceHeaderSection({
 
       {/* Right Column: Logo & Metadata */}
       <div className="w-full md:w-72 flex flex-col gap-4 md:gap-6">
-        {/* Logo Upload */}
-        <LogoUpload onClick={onLogoClick} />
+        {/* Logo Upload / Display */}
+        <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
 
         {/* Invoice Meta */}
         <div className="bg-bgPrimary/30 rounded-xl p-4 md:p-5 border border-transparent active:border-border md:hover:border-border transition-all space-y-3 md:space-y-4">

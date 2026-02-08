@@ -63,6 +63,43 @@ export default async function businessRoutes(fastify) {
     }
   }, handlers.uploadLogo)
 
+  // Upload signature image
+  fastify.post('/signature', {
+    schema: {
+      description: 'Upload signature image',
+      tags: ['business'],
+      consumes: ['multipart/form-data'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                signatureUrl: { type: 'string' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, handlers.uploadSignature)
+
+  // Proxy GCS images (avoids CORS issues for PDF generation)
+  fastify.get('/image-proxy', {
+    schema: {
+      description: 'Proxy a GCS image to avoid CORS issues',
+      tags: ['business'],
+      querystring: {
+        type: 'object',
+        properties: {
+          url: { type: 'string' }
+        },
+        required: ['url']
+      }
+    }
+  }, handlers.proxyImage)
+
   // Get business stats (dashboard)
   fastify.get('/stats', {
     schema: {

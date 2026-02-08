@@ -30,14 +30,16 @@ function NavItem({ icon: Icon, label, active = false, onClose }) {
 /**
  * InvoiceNavbar — Top navigation bar with logo, nav items, and active tab.
  */
-export default function InvoiceNavbar({ brandName = 'InvoiceApp' }) {
+export default function InvoiceNavbar({ brandName = 'Invoice Baba' }) {
   return (
     <nav className="bg-bgSecondary border-b border-border h-14 flex items-center px-6 shrink-0 z-20">
       {/* Logo */}
       <div className="flex items-center gap-3 mr-8">
-        <div className="w-9 h-9 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-          <FileText className="w-4 h-4 text-white" />
-        </div>
+        <img
+          src="/assets/brand/icon-transparent.png"
+          alt="Invoice Baba"
+          className="w-9 h-9"
+        />
         <span className="font-bold text-xl text-textPrimary tracking-tight">{brandName}</span>
       </div>
 

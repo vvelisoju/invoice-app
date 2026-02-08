@@ -236,187 +236,301 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Compact Top Bar */}
-      <div className="px-3 md:px-6 py-2 md:py-3 border-b border-border bg-white flex items-center justify-between gap-2 md:gap-4 shrink-0">
-        {/* Left: Back + Title + Status */}
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => history.push('/invoices')}
-            className="w-11 h-11 flex items-center justify-center rounded-lg active:bg-bgPrimary md:hover:bg-bgPrimary text-textSecondary active:text-textPrimary md:hover:text-textPrimary transition-colors shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-base font-bold text-textPrimary truncate">
-                Invoice #{invoice.invoiceNumber}
-              </h1>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${status.bg} ${status.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                {status.label}
-              </span>
+      {/* Top Bar — Row 1: Back + Title + Status + More */}
+      <div className="px-3 md:px-6 py-2 md:py-3 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => history.push('/invoices')}
+              className="w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-lg active:bg-bgPrimary md:hover:bg-bgPrimary text-textSecondary shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm md:text-base font-bold text-textPrimary truncate">
+                  Invoice #{invoice.invoiceNumber}
+                </h1>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${status.bg} ${status.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                  {status.label}
+                </span>
+              </div>
+              <span className="text-xs text-textSecondary">{formatDate(invoice.date)}</span>
             </div>
-            <span className="text-xs text-textSecondary">{formatDate(invoice.date)}</span>
           </div>
-        </div>
 
-        {/* Right: Action Buttons */}
-        <div className="flex items-center gap-1 md:gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
-          {/* Primary action: Issue / Mark Paid */}
-          {invoice.status === 'DRAFT' && (
-            <button
-              onClick={() => issueMutation.mutate()}
-              disabled={issueMutation.isPending}
-              className="px-3.5 py-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
-            >
-              {issueMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Issue
-            </button>
-          )}
-          {invoice.status === 'ISSUED' && (
-            <button
-              onClick={() => { setPendingStatus('PAID'); setShowStatusConfirm(true) }}
-              className="px-3.5 py-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              Mark Paid
-            </button>
-          )}
-
-          {/* Select Template */}
-          <button
-            onClick={() => setShowTemplateModal(true)}
-            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-primary/30 transition-colors flex items-center justify-center gap-1.5 shrink-0"
-            title="Select Template"
-          >
-            <Palette className="w-4 h-4" />
-            <span className="hidden lg:inline">Template</span>
-          </button>
-
-          {/* WhatsApp */}
-          <button
-            onClick={handleWhatsAppShare}
-            disabled={!pdfBlob}
-            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-[#25D366] active:bg-green-50 md:hover:bg-green-50 rounded-lg border border-[#25D366]/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
-            title="Share on WhatsApp"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span className="hidden lg:inline">WhatsApp</span>
-          </button>
-
-          {/* Download */}
-          <button
-            onClick={handleDownload}
-            disabled={!pdfBlob}
-            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
-            title="Download PDF"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden lg:inline">Download</span>
-          </button>
-
-          {/* Print — hidden on mobile (not useful in WebView) */}
-          <button
-            onClick={handlePrint}
-            disabled={!pdfBlob}
-            className="hidden md:flex w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
-            title="Print"
-          >
-            <Printer className="w-4 h-4" />
-            <span className="hidden lg:inline">Print</span>
-          </button>
-
-          {/* Share */}
-          <button
-            onClick={handleShare}
-            disabled={!pdfBlob}
-            className="w-10 h-10 md:w-auto md:px-3 md:py-1.5 text-sm font-medium text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 shrink-0"
-            title="Share"
-          >
-            <Share2 className="w-4 h-4" />
-            <span className="hidden lg:inline">Share</span>
-          </button>
-
-          {/* More Actions */}
-          <div className="relative shrink-0">
-            <button
-              onClick={() => setShowMoreActions(!showMoreActions)}
-              className="w-10 h-10 flex items-center justify-center text-textSecondary active:bg-bgPrimary md:hover:bg-bgPrimary rounded-lg border border-border transition-colors"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-            {showMoreActions && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
-                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
-
-                  {invoice.status === 'DRAFT' && (
-                    <button
-                      onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
-                      className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
-                    >
-                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setShowMoreActions(false); handleCopyLink() }}
-                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
-                  >
-                    <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
-                  </button>
-                  <button
-                    onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
-                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
-                  >
-                    <Plus className="w-4 h-4 text-textSecondary" /> Create Another
-                  </button>
-                  {invoice.status === 'ISSUED' && (
-                    <button
-                      onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
-                      className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 md:hover:bg-red-50 flex items-center gap-2.5"
-                    >
-                      <Ban className="w-4 h-4" /> Cancel Invoice
-                    </button>
-                  )}
-                  {invoice.status === 'PAID' && (
-                    <button
-                      onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
-                      className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary md:hover:bg-bgPrimary flex items-center gap-2.5"
-                    >
-                      <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
-                    </button>
-                  )}
-                  {invoice.status === 'DRAFT' && (
-                    <>
-                      <div className="border-t border-border my-1" />
-                      <button
-                        onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                        className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 md:hover:bg-red-50 flex items-center gap-2.5"
-                      >
-                        <Trash2 className="w-4 h-4" /> Delete Invoice
-                      </button>
-                    </>
-                  )}
-                </div>
-              </>
+          {/* Desktop-only action buttons */}
+          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            {invoice.status === 'DRAFT' && (
+              <button
+                onClick={() => issueMutation.mutate()}
+                disabled={issueMutation.isPending}
+                className="px-3.5 py-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {issueMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Issue
+              </button>
             )}
+            {invoice.status === 'ISSUED' && (
+              <button
+                onClick={() => { setPendingStatus('PAID'); setShowStatusConfirm(true) }}
+                className="px-3.5 py-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                Mark Paid
+              </button>
+            )}
+            <button
+              onClick={() => setShowTemplateModal(true)}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-primary hover:bg-blue-50 rounded-lg border border-primary/30 transition-colors flex items-center gap-1.5"
+              title="Select Template"
+            >
+              <Palette className="w-4 h-4" />
+              <span className="hidden lg:inline">Template</span>
+            </button>
+            <button
+              onClick={handleWhatsAppShare}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-[#25D366] hover:bg-green-50 rounded-lg border border-[#25D366]/30 transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden lg:inline">WhatsApp</span>
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Download"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden lg:inline">Download</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Print"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden lg:inline">Print</span>
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Share"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden lg:inline">Share</span>
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreActions(!showMoreActions)}
+                className="w-10 h-10 flex items-center justify-center text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {showMoreActions && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+                    {invoice.status === 'DRAFT' && (
+                      <button
+                        onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
+                        className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                      >
+                        <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setShowMoreActions(false); handleCopyLink() }}
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    >
+                      <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    >
+                      <Plus className="w-4 h-4 text-textSecondary" /> Create Another
+                    </button>
+                    {invoice.status === 'ISSUED' && (
+                      <button
+                        onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
+                        className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                      >
+                        <Ban className="w-4 h-4" /> Cancel Invoice
+                      </button>
+                    )}
+                    {invoice.status === 'PAID' && (
+                      <button
+                        onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
+                        className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                      >
+                        <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
+                      </button>
+                    )}
+                    {invoice.status === 'DRAFT' && (
+                      <>
+                        <div className="border-t border-border my-1" />
+                        <button
+                          onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                          className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                        >
+                          <Trash2 className="w-4 h-4" /> Delete Invoice
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Mobile Action Bar — horizontal scroll, below header */}
+      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
+        {invoice.status === 'DRAFT' && (
+          <button
+            onClick={() => issueMutation.mutate()}
+            disabled={issueMutation.isPending}
+            className="px-3 py-2 text-xs font-semibold text-white bg-green-600 active:bg-green-700 rounded-lg flex items-center gap-1.5 shrink-0 disabled:opacity-60"
+          >
+            {issueMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            Issue
+          </button>
+        )}
+        {invoice.status === 'ISSUED' && (
+          <button
+            onClick={() => { setPendingStatus('PAID'); setShowStatusConfirm(true) }}
+            className="px-3 py-2 text-xs font-semibold text-white bg-green-600 active:bg-green-700 rounded-lg flex items-center gap-1.5 shrink-0"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Mark Paid
+          </button>
+        )}
+        <button
+          onClick={() => setShowTemplateModal(true)}
+          className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 rounded-lg border border-primary/30 flex items-center gap-1.5 shrink-0"
+        >
+          <Palette className="w-3.5 h-3.5" />
+          Template
+        </button>
+        <button
+          onClick={handleWhatsAppShare}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-[#25D366] active:bg-green-50 rounded-lg border border-[#25D366]/30 flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp
+        </button>
+        <button
+          onClick={handleDownload}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Download
+        </button>
+        <button
+          onClick={handleShare}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          Share
+        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowMoreActions(!showMoreActions)}
+            className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5"
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+            More
+          </button>
+          {showMoreActions && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
+              <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+                {invoice.status === 'DRAFT' && (
+                  <button
+                    onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
+                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
+                  >
+                    <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowMoreActions(false); handleCopyLink() }}
+                  className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
+                >
+                  <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
+                </button>
+                <button
+                  onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
+                  className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
+                >
+                  <Plus className="w-4 h-4 text-textSecondary" /> Create Another
+                </button>
+                {invoice.status === 'ISSUED' && (
+                  <button
+                    onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
+                    className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-2.5"
+                  >
+                    <Ban className="w-4 h-4" /> Cancel Invoice
+                  </button>
+                )}
+                {invoice.status === 'PAID' && (
+                  <button
+                    onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
+                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
+                  >
+                    <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
+                  </button>
+                )}
+                {invoice.status === 'DRAFT' && (
+                  <>
+                    <div className="border-t border-border my-1" />
+                    <button
+                      onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                      className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-2.5"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Invoice
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* PDF Viewer Area — fills remaining space */}
-      <div className="flex-1 bg-gray-100 overflow-hidden">
+      <div className="flex-1 bg-gray-100 overflow-auto">
         {isGeneratingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-textSecondary">Generating PDF preview...</p>
           </div>
         ) : pdfUrl ? (
-          <iframe
-            src={pdfUrl}
-            className="w-full h-full border-0"
-            title={`Invoice ${invoice.invoiceNumber} PDF`}
-          />
+          <>
+            {/* Desktop: full iframe viewer */}
+            <iframe
+              src={pdfUrl}
+              className="hidden md:block w-full h-full border-0"
+              title={`Invoice ${invoice.invoiceNumber} PDF`}
+            />
+            {/* Mobile: embedded PDF with proper scaling */}
+            <iframe
+              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              className="md:hidden w-full border-0"
+              style={{ height: 'calc(100vh - 160px)', minHeight: 500 }}
+              title={`Invoice ${invoice.invoiceNumber} PDF`}
+            />
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-sm text-textSecondary">PDF preview unavailable</p>

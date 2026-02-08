@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useHistory } from 'react-router-dom'
-import { FileText, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../../lib/api'
 
@@ -38,10 +38,11 @@ export default function PhonePage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-14 h-14 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-4">
-            <FileText className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-textPrimary mb-2">Invoice App</h1>
+          <img
+            src="/assets/brand/logo-full-transparent.png"
+            alt="Invoice Baba"
+            className="h-16 mx-auto mb-4"
+          />
           <p className="text-textSecondary text-sm">
             Enter your phone number to get started
           </p>

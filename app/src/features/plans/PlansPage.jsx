@@ -98,7 +98,7 @@ export default function PlansPage() {
         key: order.razorpayKeyId,
         amount: order.amount,
         currency: order.currency,
-        name: 'InvoiceApp',
+        name: 'Invoice Baba',
         description: `${selectedPlan?.displayName || 'Plan'} - Yearly Subscription`,
         order_id: order.razorpayOrderId,
         handler: async function (response) {

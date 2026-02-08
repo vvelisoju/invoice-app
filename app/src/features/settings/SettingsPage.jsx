@@ -19,7 +19,8 @@ import {
   Check,
   Upload,
   ImageIcon,
-  X
+  X,
+  PenLine
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi } from '../../lib/api'
@@ -27,6 +28,7 @@ import { useAuthStore } from '../../store/authStore'
 import { PageToolbar } from '../../components/data-table'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../invoices/utils/templates/registry'
+import BusinessInfoForm, { FieldInput, FieldTextarea, FieldToggle } from '../../components/settings/BusinessInfoForm'
 
 const SETTINGS_TABS = [
   { key: 'business', label: 'Business Info', mobileLabel: 'Business', icon: Building2 },
@@ -34,55 +36,6 @@ const SETTINGS_TABS = [
   { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
 ]
-
-function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLength, description }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
-      <input
-        type={type}
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-      />
-      {description && <p className="text-[11px] text-textSecondary mt-1 ml-0.5">{description}</p>}
-    </div>
-  )
-}
-
-function FieldTextarea({ label, value, onChange, placeholder, rows = 3 }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
-      <textarea
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
-      />
-    </div>
-  )
-}
-
-function FieldToggle({ label, description, checked, onChange }) {
-  return (
-    <div className="flex items-center justify-between py-2.5 px-3 md:py-3 md:px-4 bg-gray-50 rounded-lg border border-border">
-      <div>
-        <span className="text-sm font-medium text-textPrimary">{label}</span>
-        {description && <p className="text-xs text-textSecondary mt-0.5">{description}</p>}
-      </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ml-4 ${checked ? 'bg-primary' : 'bg-gray-300'}`}
-      >
-        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
-      </button>
-    </div>
-  )
-}
 
 function InvoiceTypesSection({ enabledTypes, onChange }) {
   const toggleType = (key) => {
@@ -359,6 +312,7 @@ function TemplateSection() {
 }
 
 function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
+  const queryClient = useQueryClient()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
   const fileInputRef = useRef(null)
@@ -383,13 +337,24 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
     try {
       const response = await businessApi.uploadLogo(file)
       const url = response.data?.data?.logoUrl || response.data?.logoUrl
-      if (url) onUploaded(url)
+      if (url) {
+        onUploaded(url)
+        queryClient.invalidateQueries({ queryKey: ['business'] })
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload logo')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
+
+  const handleRemove = async () => {
+    onRemove()
+    try {
+      await businessApi.updateProfile({ logoUrl: null })
+      queryClient.invalidateQueries({ queryKey: ['business'] })
+    } catch {}
   }
 
   return (
@@ -438,7 +403,7 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
               </button>
               {logoUrl && (
                 <button
-                  onClick={onRemove}
+                  onClick={handleRemove}
                   className="px-4 py-2 text-sm font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <X className="w-4 h-4" />
@@ -453,6 +418,134 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
               <p className="text-xs text-red-600 mt-1.5">{error}</p>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SignatureSettingsSection({ signatureUrl, signatureName, businessName, onSignatureUrlChange, onSignatureNameChange }) {
+  const queryClient = useQueryClient()
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState(null)
+  const fileInputRef = useRef(null)
+
+  // Default signatureName to businessName if empty
+  const effectiveName = signatureName || businessName || ''
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a JPEG, PNG, GIF, WebP, or SVG image')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be under 5MB')
+      return
+    }
+    setError(null)
+    setUploading(true)
+    try {
+      const response = await businessApi.uploadSignature(file)
+      const url = response.data?.data?.signatureUrl || response.data?.signatureUrl
+      if (url) {
+        onSignatureUrlChange(url)
+        queryClient.invalidateQueries({ queryKey: ['business'] })
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload signature')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemove = async () => {
+    onSignatureUrlChange(null)
+    try {
+      await businessApi.updateProfile({ signatureUrl: null })
+      queryClient.invalidateQueries({ queryKey: ['business'] })
+    } catch {}
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+          <PenLine className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Signature</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Your signature will appear on invoices</p>
+        </div>
+      </div>
+      <div className="p-4 md:p-6 space-y-4">
+        {/* Signature Image Upload — same layout as Logo */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+            {signatureUrl ? (
+              <img src={signatureUrl} alt="Signature" className="w-full h-full object-contain p-1" />
+            ) : (
+              <PenLine className="w-8 h-8 text-gray-300" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2 border border-blue-100 disabled:opacity-60"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {signatureUrl ? 'Change Signature' : 'Upload Signature'}
+              </button>
+              {signatureUrl && (
+                <button
+                  onClick={handleRemove}
+                  className="px-4 py-2 text-sm font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-textSecondary mt-2">
+              Upload a signature image. Max 5MB. JPEG, PNG, WebP, or SVG.
+            </p>
+            {error && <p className="text-xs text-red-600 mt-1.5">{error}</p>}
+          </div>
+        </div>
+
+        {/* Text Signature — always visible below */}
+        <div className="pt-3 border-t border-border space-y-3">
+          <p className="text-xs font-medium text-textSecondary">Or use a text signature</p>
+          <FieldInput
+            label="Signatory Name"
+            value={effectiveName}
+            onChange={(v) => onSignatureNameChange(v)}
+            placeholder="e.g., John Doe"
+            description="Displayed in a handwriting-style font on invoices"
+          />
+          {effectiveName && (
+            <div className="px-4 py-3 bg-gray-50 rounded-lg border border-border">
+              <p className="text-[11px] text-textSecondary uppercase tracking-wider font-medium mb-1">Preview</p>
+              <span
+                className="text-2xl text-textPrimary"
+                style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Satisfy', cursive", fontStyle: 'italic' }}
+              >
+                {effectiveName}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -680,15 +773,13 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="p-4 md:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
-                  <FieldInput label="Business Name" value={formData.name} onChange={(v) => handleChange('name', v)} placeholder="Your business name" />
-                  <FieldInput label="Phone" type="tel" value={formData.phone} onChange={(v) => handleChange('phone', v)} placeholder="Business phone number" />
-                  <FieldInput label="Email" type="email" value={formData.email} onChange={(v) => handleChange('email', v)} placeholder="Business email" />
-                  <FieldInput label="Website" value={formData.website} onChange={(v) => handleChange('website', v)} placeholder="https://yourbusiness.com" />
-                  <div className="md:col-span-2">
-                    <FieldTextarea label="Address" value={formData.address} onChange={(v) => handleChange('address', v)} placeholder="Business address" />
-                  </div>
-                </div>
+                <BusinessInfoForm
+                  formData={formData}
+                  onChange={(newData) => {
+                    setFormData(newData)
+                    setIsDirty(true)
+                  }}
+                />
               </div>
             </div>
           )}
@@ -890,6 +981,15 @@ export default function SettingsPage() {
                 logoUrl={formData.logoUrl}
                 onUploaded={(url) => handleChange('logoUrl', url)}
                 onRemove={() => handleChange('logoUrl', null)}
+              />
+
+              {/* Signature Settings — 2 options: Upload Image or Text */}
+              <SignatureSettingsSection
+                signatureUrl={formData.signatureUrl}
+                signatureName={formData.signatureName}
+                businessName={formData.name}
+                onSignatureUrlChange={(url) => handleChange('signatureUrl', url)}
+                onSignatureNameChange={(name) => handleChange('signatureName', name)}
               />
 
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">

@@ -11,7 +11,10 @@ export default function InvoiceTotalsFooter({
   onTermsChange,
   lineItems = [],
   currency = 'INR',
-  formatCurrency
+  formatCurrency,
+  signatureUrl,
+  signatureName,
+  onSignatureClick
 }) {
   // Compute per-tax-rate breakdown from line items
   const taxBreakdown = useMemo(() => {
@@ -108,12 +111,41 @@ export default function InvoiceTotalsFooter({
         </div>
 
         {/* Signature Area */}
-        <div className="mt-4 md:mt-6 bg-yellow-50/50 border border-yellow-100 rounded-xl p-4 md:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:bg-yellow-50 md:hover:bg-yellow-50 transition-colors group h-24 md:h-28">
-          <span className="text-sm font-medium text-yellow-800 mb-1 group-hover:scale-105 transition-transform">
-            Add Your Signature
-          </span>
-          <PenLine className="w-6 h-6 text-yellow-600/50 group-hover:text-yellow-600 transition-colors" />
-        </div>
+        {signatureUrl || signatureName ? (
+          <div
+            onClick={onSignatureClick}
+            className="mt-4 md:mt-6 bg-gray-50/50 border border-border rounded-xl p-4 md:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:border-primary md:hover:border-primary transition-colors"
+          >
+            {signatureUrl && (
+              <img
+                src={signatureUrl}
+                alt="Signature"
+                className="max-h-16 md:max-h-20 max-w-full object-contain mb-1"
+              />
+            )}
+            {signatureName && !signatureUrl && (
+              <span
+                className="text-lg md:text-xl text-textPrimary"
+                style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Satisfy', cursive", fontStyle: 'italic' }}
+              >
+                {signatureName}
+              </span>
+            )}
+            <span className="text-[10px] text-textSecondary mt-1 uppercase tracking-wider font-medium">
+              Authorized Signatory
+            </span>
+          </div>
+        ) : (
+          <div
+            onClick={onSignatureClick}
+            className="mt-4 md:mt-6 bg-yellow-50/50 border border-yellow-100 rounded-xl p-4 md:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:bg-yellow-50 md:hover:bg-yellow-50 transition-colors group h-24 md:h-28"
+          >
+            <span className="text-sm font-medium text-yellow-800 mb-1 group-hover:scale-105 transition-transform">
+              Add Your Signature
+            </span>
+            <PenLine className="w-6 h-6 text-yellow-600/50 group-hover:text-yellow-600 transition-colors" />
+          </div>
+        )}
       </div>
     </div>
   )

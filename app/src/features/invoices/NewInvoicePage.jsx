@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { Save, Loader2, ChevronDown } from 'lucide-react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useInvoiceForm } from './hooks/useInvoiceForm'
 import { useAuthStore } from '../../store/authStore'
 import { invoiceApi, businessApi } from '../../lib/api'
@@ -10,13 +10,20 @@ import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
+import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
+import ImageUploadModal from '../../components/settings/ImageUploadModal'
+
+const FORM_MODE_KEY = 'invoice_form_mode'
 
 export default function NewInvoicePage() {
   const history = useHistory()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const business = useAuthStore((state) => state.business)
   const [error, setError] = useState('')
-  const [formMode, setFormMode] = useState('basic')
+  const [formMode, setFormMode] = useState(() => {
+    try { return localStorage.getItem(FORM_MODE_KEY) || 'basic' } catch { return 'basic' }
+  })
   const [showCreateCustomer, setShowCreateCustomer] = useState(false)
   const [createCustomerName, setCreateCustomerName] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
@@ -25,9 +32,19 @@ export default function NewInvoicePage() {
   const [createProductLineIndex, setCreateProductLineIndex] = useState(null)
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
   const [showTitleDropdown, setShowTitleDropdown] = useState(false)
-  const [termsLoaded, setTermsLoaded] = useState(false)
   const [showPlanLimit, setShowPlanLimit] = useState(false)
   const [planLimitData, setPlanLimitData] = useState(null)
+  const [showBusinessSettings, setShowBusinessSettings] = useState(false)
+  const [showLogoUpload, setShowLogoUpload] = useState(false)
+  const [showSignatureUpload, setShowSignatureUpload] = useState(false)
+  const termsDebounceRef = useRef(null)
+  const defaultsAppliedRef = useRef(false)
+
+  // Persist form mode selection
+  const handleFormModeChange = (mode) => {
+    setFormMode(mode)
+    try { localStorage.setItem(FORM_MODE_KEY, mode) } catch {}
+  }
 
   // Read ?type= query param and set invoice title on mount / URL change
   useEffect(() => {
@@ -39,13 +56,15 @@ export default function NewInvoicePage() {
     }
   }, [location.search])
 
-  // Fetch business profile for default terms
+  // Fetch business profile — always fresh so invoice number + terms are current
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data?.data || response.data
-    }
+    },
+    staleTime: 0,
+    refetchOnMount: 'always'
   })
 
   const {
@@ -93,6 +112,14 @@ export default function NewInvoicePage() {
       return response.data
     },
     onSuccess: (data) => {
+      // Reset form state for next invoice
+      resetForm()
+      setSelectedCustomer(null)
+      setError('')
+      defaultsAppliedRef.current = false
+      // Refetch business profile to get updated nextInvoiceNumber
+      queryClient.invalidateQueries({ queryKey: ['business'] })
+      // Navigate to the created invoice
       history.push(`/invoices/${data.id}`)
     },
     onError: (err) => {
@@ -125,32 +152,54 @@ export default function NewInvoicePage() {
     }).format(value || 0)
   }
 
-  // Pre-populate terms and invoice number from business defaults (once)
+  // Always apply invoice number from server (auto-incremented, server is source of truth)
   useEffect(() => {
-    if (businessProfile && !termsLoaded) {
-      if (businessProfile.defaultTerms && !invoice.terms) {
-        updateField('terms', businessProfile.defaultTerms)
-      }
-      if (!invoice.invoiceNumber && businessProfile.invoicePrefix != null && businessProfile.nextInvoiceNumber != null) {
-        const nextNum = String(businessProfile.nextInvoiceNumber).padStart(4, '0')
-        updateField('invoiceNumber', `${businessProfile.invoicePrefix}${nextNum}`)
-      }
-      setTermsLoaded(true)
+    if (!businessProfile) return
+    if (businessProfile.invoicePrefix != null && businessProfile.nextInvoiceNumber != null) {
+      const nextNum = String(businessProfile.nextInvoiceNumber).padStart(4, '0')
+      updateField('invoiceNumber', `${businessProfile.invoicePrefix}${nextNum}`)
     }
-  }, [businessProfile, termsLoaded, invoice.terms, invoice.invoiceNumber, updateField])
+  }, [businessProfile])
 
-  const fromAddress = business?.name || ''
+  // Apply default terms only once on initial load (not on refetches from debounced save)
+  useEffect(() => {
+    if (!businessProfile || defaultsAppliedRef.current) return
+    if (businessProfile.defaultTerms != null && !invoice.terms) {
+      updateField('terms', businessProfile.defaultTerms)
+    }
+    defaultsAppliedRef.current = true
+  }, [businessProfile])
+
+  // Build full FROM address from business profile
+  const fromAddress = (() => {
+    const bp = businessProfile
+    if (!bp) return business?.name || ''
+    const parts = [bp.name]
+    if (bp.address) parts.push(bp.address)
+    const contactParts = []
+    if (bp.phone) contactParts.push(bp.phone)
+    if (bp.email) contactParts.push(bp.email)
+    if (contactParts.length) parts.push(contactParts.join(' | '))
+    if (bp.website) parts.push(bp.website)
+    if (bp.gstEnabled && bp.gstin) parts.push(`GSTIN: ${bp.gstin}`)
+    return parts.join('\n')
+  })()
 
   return (
     <div className="p-2 md:p-6 relative">
       {/* Document Container */}
-      <div className={`${formMode === 'advanced' ? 'max-w-5xl' : 'max-w-4xl'} mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[600px] md:min-h-[800px] flex flex-col relative`}>
-        {/* Toolbar: Basic/Advanced toggle + Preview + Save */}
+      <div className="max-w-5xl mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[600px] md:min-h-[800px] flex flex-col relative">
+        {/* Toolbar: Basic/Advanced toggle + Invoice Title + Save */}
         <InvoiceFormToolbar
           formMode={formMode}
-          onFormModeChange={setFormMode}
+          onFormModeChange={handleFormModeChange}
           onSave={handleSave}
           isSaving={createMutation.isPending}
+          invoiceTitle={invoiceTitle}
+          onInvoiceTitleChange={setInvoiceTitle}
+          showTitleDropdown={showTitleDropdown}
+          onToggleTitleDropdown={() => setShowTitleDropdown(!showTitleDropdown)}
+          onCloseTitleDropdown={() => setShowTitleDropdown(false)}
         />
 
         {/* Error */}
@@ -162,42 +211,12 @@ export default function NewInvoicePage() {
 
         {/* Invoice Form Content */}
         <div className="p-3 md:p-10 flex-1">
-          {/* Invoice Title Selector */}
-          <div className="mb-6 flex items-center gap-3">
-            <div className="relative">
-              <button
-                onClick={() => setShowTitleDropdown(!showTitleDropdown)}
-                onBlur={() => setTimeout(() => setShowTitleDropdown(false), 150)}
-                className="text-2xl md:text-3xl font-bold text-textPrimary tracking-tight flex items-center gap-2 hover:text-primary transition-colors group"
-              >
-                {invoiceTitle}
-                <ChevronDown className="w-5 h-5 text-textSecondary/40 group-hover:text-primary transition-colors" />
-              </button>
-              {showTitleDropdown && (
-                <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[200px]">
-                  {ALL_INVOICE_TYPES.map((type) => (
-                    <button
-                      key={type.key}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setInvoiceTitle(type.label); setShowTitleDropdown(false) }}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors border-b border-border/30 last:border-b-0 ${
-                        invoiceTitle === type.label
-                          ? 'bg-blue-50 text-primary font-semibold'
-                          : 'text-textPrimary hover:bg-gray-50 font-medium'
-                      }`}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
           {/* Header Section: From, Bill To, Ship To, Logo, Meta */}
           <InvoiceHeaderSection
             formMode={formMode}
             fromAddress={fromAddress}
             onFromAddressChange={() => {}}
+            businessProfile={businessProfile}
             billTo={invoice.customerName || ''}
             onBillToChange={(val) => updateField('customerName', val)}
             selectedCustomer={selectedCustomer}
@@ -209,16 +228,18 @@ export default function NewInvoicePage() {
               setCreateCustomerName(name || '')
               setShowCreateCustomer(true)
             }}
-            shipTo=""
-            onShipToChange={() => {}}
+            shipTo={invoice.shipTo || ''}
+            onShipToChange={(val) => updateField('shipTo', val)}
             invoiceNumber={invoice.invoiceNumber || ''}
             onInvoiceNumberChange={(val) => updateField('invoiceNumber', val)}
             invoiceDate={invoice.date || new Date().toISOString().split('T')[0]}
             onInvoiceDateChange={(val) => updateField('date', val)}
-            poNumber=""
-            onPoNumberChange={() => {}}
+            poNumber={invoice.poNumber || ''}
+            onPoNumberChange={(val) => updateField('poNumber', val)}
             dueDate={invoice.dueDate || ''}
             onDueDateChange={(val) => updateField('dueDate', val)}
+            onLogoClick={() => setShowLogoUpload(true)}
+            onEditSettings={() => setShowBusinessSettings(true)}
           />
 
           {/* Line Items Section */}
@@ -246,9 +267,21 @@ export default function NewInvoicePage() {
             taxTotal={invoice.taxTotal}
             total={invoice.total}
             terms={invoice.terms || ''}
-            onTermsChange={(val) => updateField('terms', val)}
+            onTermsChange={(val) => {
+              updateField('terms', val)
+              // Debounced sync to business defaultTerms
+              if (termsDebounceRef.current) clearTimeout(termsDebounceRef.current)
+              termsDebounceRef.current = setTimeout(() => {
+                businessApi.updateProfile({ defaultTerms: val }).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['business'] })
+                }).catch(() => {})
+              }, 1500)
+            }}
             lineItems={invoice.lineItems}
             formatCurrency={formatCurrency}
+            signatureUrl={businessProfile?.signatureUrl}
+            signatureName={businessProfile?.signatureName || businessProfile?.name}
+            onSignatureClick={() => setShowSignatureUpload(true)}
           />
         </div>
 
@@ -270,7 +303,7 @@ export default function NewInvoicePage() {
 
       {/* Footer — hidden on mobile */}
       <div className="hidden md:block text-center mt-4 md:mt-6 mb-4">
-        <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
+        <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
       </div>
 
       {/* Create Customer Modal */}
@@ -302,6 +335,56 @@ export default function NewInvoicePage() {
         onClose={() => setShowPlanLimit(false)}
         usage={planLimitData?.usage || planLimitData}
         plan={planLimitData?.plan || planLimitData}
+      />
+
+      {/* Business Settings Modal */}
+      <BusinessSettingsModal
+        isOpen={showBusinessSettings}
+        onClose={() => {
+          setShowBusinessSettings(false)
+          // Re-read business settings so terms, invoice number, etc. update
+          queryClient.invalidateQueries({ queryKey: ['business'] })
+        }}
+      />
+
+      {/* Logo Upload Modal */}
+      <ImageUploadModal
+        isOpen={showLogoUpload}
+        onClose={() => setShowLogoUpload(false)}
+        title="Business Logo"
+        subtitle="Upload or change your business logo"
+        currentUrl={businessProfile?.logoUrl}
+        onUploaded={() => {
+          queryClient.invalidateQueries({ queryKey: ['business'] })
+        }}
+        onRemove={async () => {
+          await businessApi.updateProfile({ logoUrl: null })
+          queryClient.invalidateQueries({ queryKey: ['business'] })
+        }}
+        uploadFn={async (file) => {
+          const response = await businessApi.uploadLogo(file)
+          return response.data?.data?.logoUrl || response.data?.logoUrl
+        }}
+      />
+
+      {/* Signature Upload Modal */}
+      <ImageUploadModal
+        isOpen={showSignatureUpload}
+        onClose={() => setShowSignatureUpload(false)}
+        title="Signature"
+        subtitle="Upload a signature image for your invoices"
+        currentUrl={businessProfile?.signatureUrl}
+        onUploaded={(url) => {
+          queryClient.invalidateQueries({ queryKey: ['business'] })
+        }}
+        onRemove={() => {
+          businessApi.updateProfile({ signatureUrl: null })
+          queryClient.invalidateQueries({ queryKey: ['business'] })
+        }}
+        uploadFn={async (file) => {
+          const response = await businessApi.uploadSignature(file)
+          return response.data?.data?.signatureUrl || response.data?.signatureUrl
+        }}
       />
     </div>
   )

@@ -138,11 +138,13 @@ export default function AppSidebar({ mobile = false, onClose }) {
       {/* Drawer Header — Logo + Business Name */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm shrink-0">
-            <FileText className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src="/assets/brand/icon-transparent.png"
+            alt="Invoice Baba"
+            className="w-8 h-8 shrink-0"
+          />
           <span className="font-bold text-base text-textPrimary truncate">
-            {business?.name || 'InvoiceApp'}
+            {business?.name || 'Invoice Baba'}
           </span>
         </div>
         <button

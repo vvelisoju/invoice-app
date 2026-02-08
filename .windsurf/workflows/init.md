@@ -2,7 +2,7 @@
 description: Initialize project context - understand architecture for development session
 ---
 
-# Invoice App — Session Init
+# Invoice Baba — Session Init
 
 Run this at the start of every Cascade session. Read the files listed in each step, then internalize the architecture summary that follows.
 
@@ -59,7 +59,7 @@ Read this file completely — it is the source of truth for all data models:
 ## Architecture Summary (Internalize After Reading)
 
 ### Project Identity
-- **Product**: "Simple Invoice" — Indian GST-compliant invoicing app
+- **Product**: "Invoice Baba" — Indian GST-compliant invoicing app (tagline: "Billing Made Easy")
 - **Target**: Small businesses in India needing professional invoices
 - **Monorepo**: `app/` (frontend) + `server/` (backend) at project root
 

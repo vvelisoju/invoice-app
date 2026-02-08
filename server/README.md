@@ -1,4 +1,4 @@
-# Invoice App - Backend Server
+# Invoice Baba - Backend Server
 
 ## Tech Stack
 - **Runtime**: Node.js (LTS)

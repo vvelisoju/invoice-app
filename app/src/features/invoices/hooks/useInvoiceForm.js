@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { db, dbHelpers } from '../../../db'
 import { useAuthStore } from '../../../store/authStore'
 
+const DRAFT_STORAGE_KEY = 'invoice_draft'
+
 const createEmptyLineItem = () => ({
   id: uuidv4(),
   name: '',
@@ -18,6 +20,8 @@ const createEmptyInvoice = (businessId) => ({
   customerId: null,
   customerName: '',
   customerPhone: '',
+  shipTo: '',
+  poNumber: '',
   invoiceNumber: '',
   date: new Date().toISOString().split('T')[0],
   dueDate: null,
@@ -34,46 +38,63 @@ const createEmptyInvoice = (businessId) => ({
   updatedAt: new Date().toISOString()
 })
 
+const loadDraftFromSession = (businessId) => {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY)
+    if (raw) {
+      const draft = JSON.parse(raw)
+      if (draft && draft.businessId === businessId) return draft
+    }
+  } catch {}
+  return null
+}
+
+const saveDraftToSession = (invoice) => {
+  try {
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(invoice))
+  } catch {}
+}
+
+const clearDraftFromSession = () => {
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY)
+  } catch {}
+}
+
 export function useInvoiceForm(invoiceId = null) {
   const business = useAuthStore((state) => state.business)
-  const [invoice, setInvoice] = useState(() => 
-    createEmptyInvoice(business?.id)
-  )
+  const [invoice, setInvoice] = useState(() => {
+    // For new invoices, restore draft from sessionStorage if available
+    if (!invoiceId && business?.id) {
+      const draft = loadDraftFromSession(business.id)
+      if (draft) return draft
+    }
+    return createEmptyInvoice(business?.id)
+  })
   const [isDirty, setIsDirty] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
   const saveTimeoutRef = useRef(null)
 
-  // Load existing invoice or draft
+  // Load existing invoice for editing
   useEffect(() => {
-    const loadInvoice = async () => {
-      if (invoiceId) {
+    if (invoiceId && business?.id) {
+      const loadInvoice = async () => {
         const existing = await dbHelpers.getInvoiceWithItems(invoiceId)
         if (existing) {
           setInvoice(existing)
         }
-      } else {
-        // Check for unsaved draft
-        const drafts = await db.invoices
-          .where('businessId')
-          .equals(business?.id)
-          .and(inv => inv.status === 'DRAFT')
-          .reverse()
-          .sortBy('updatedAt')
-        
-        if (drafts.length > 0) {
-          const latestDraft = await dbHelpers.getInvoiceWithItems(drafts[0].id)
-          if (latestDraft) {
-            setInvoice(latestDraft)
-          }
-        }
       }
-    }
-
-    if (business?.id) {
       loadInvoice()
     }
   }, [invoiceId, business?.id])
+
+  // Persist draft to sessionStorage on every change (new invoices only)
+  useEffect(() => {
+    if (!invoiceId) {
+      saveDraftToSession(invoice)
+    }
+  }, [invoice, invoiceId])
 
   // Calculate totals
   const calculateTotals = useCallback((lineItems, discountTotal = 0, taxRate = null) => {
@@ -244,12 +265,21 @@ export function useInvoiceForm(invoiceId = null) {
     }
   }, [isDirty, saveToLocal])
 
-  // Reset form
-  const resetForm = useCallback(() => {
+  // Reset form, clear sessionStorage draft and IndexedDB draft
+  const resetForm = useCallback(async () => {
+    const oldId = invoice.id
     setInvoice(createEmptyInvoice(business?.id))
     setIsDirty(false)
     setLastSaved(null)
-  }, [business?.id])
+    clearDraftFromSession()
+    // Remove old draft from local DB
+    if (oldId) {
+      try {
+        await db.lineItems.where('invoiceId').equals(oldId).delete()
+        await db.invoices.delete(oldId)
+      } catch {}
+    }
+  }, [business?.id, invoice.id])
 
   return {
     invoice,

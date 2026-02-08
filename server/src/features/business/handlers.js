@@ -3,6 +3,7 @@ import * as businessService from './service.js'
 import { updateBusinessSchema } from './validation.js'
 import { ValidationError } from '../../common/errors.js'
 import { uploadFile, deleteFile } from '../../common/storage.js'
+import { config } from '../../common/config.js'
 
 export async function getProfile(request, reply) {
   const business = await businessService.getBusinessProfile(request.businessId)
@@ -80,4 +81,83 @@ export async function uploadLogo(request, reply) {
   const updated = await businessService.updateBusinessProfile(request.businessId, { logoUrl })
 
   return { data: { logoUrl: updated.logoUrl } }
+}
+
+export async function uploadSignature(request, reply) {
+  const file = await request.file()
+
+  if (!file) {
+    throw new ValidationError('No file uploaded')
+  }
+
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+  if (!allowedMimes.includes(file.mimetype)) {
+    throw new ValidationError(`Invalid file type: ${file.mimetype}. Allowed: JPEG, PNG, GIF, WebP, SVG`)
+  }
+
+  // Read file into buffer
+  const chunks = []
+  for await (const chunk of file.file) {
+    chunks.push(chunk)
+  }
+  const fileBuffer = Buffer.concat(chunks)
+
+  // Check size (5MB)
+  if (fileBuffer.length > 5 * 1024 * 1024) {
+    throw new ValidationError('File size exceeds 5MB limit')
+  }
+
+  // Delete old signature if exists
+  const currentBusiness = await businessService.getBusinessProfile(request.businessId)
+  if (currentBusiness.signatureUrl) {
+    try {
+      await deleteFile(currentBusiness.signatureUrl)
+    } catch (err) {
+      request.log.warn({ err }, 'Failed to delete old signature, continuing...')
+    }
+  }
+
+  // Upload to GCS
+  let signatureUrl
+  try {
+    signatureUrl = await uploadFile(fileBuffer, file.filename, `signatures/${request.businessId}`)
+  } catch (err) {
+    request.log.error({ err }, 'GCS upload failed')
+    throw new ValidationError(
+      err.message?.includes('Could not load the default credentials')
+        ? 'Cloud storage is not configured. Please set GCS_CLIENT_EMAIL and GCS_PRIVATE_KEY.'
+        : `Failed to upload signature: ${err.message || 'Unknown error'}`
+    )
+  }
+
+  // Update business profile with new signature URL
+  const updated = await businessService.updateBusinessProfile(request.businessId, { signatureUrl })
+
+  return { data: { signatureUrl: updated.signatureUrl } }
+}
+
+export async function proxyImage(request, reply) {
+  const { url } = request.query
+  if (!url) {
+    throw new ValidationError('Missing url parameter')
+  }
+
+  // Only allow proxying GCS URLs from our bucket for security
+  const allowedPrefix = `https://storage.googleapis.com/${config.gcs.bucket}/`
+  if (!url.startsWith(allowedPrefix)) {
+    throw new ValidationError('URL not allowed')
+  }
+
+  const response = await fetch(url)
+  if (!response.ok) {
+    return reply.status(response.status).send({ error: 'Failed to fetch image' })
+  }
+
+  const contentType = response.headers.get('content-type') || 'image/png'
+  const buffer = Buffer.from(await response.arrayBuffer())
+
+  return reply
+    .header('Content-Type', contentType)
+    .header('Cache-Control', 'public, max-age=86400')
+    .send(buffer)
 }

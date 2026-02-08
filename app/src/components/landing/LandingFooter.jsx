@@ -1,5 +1,5 @@
 import { useHistory } from 'react-router-dom'
-import { FileText, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { BRANDING } from '../../config/branding'
 
 function LandingFooter() {
@@ -16,7 +16,7 @@ function LandingFooter() {
             Ready to create your first invoice?
           </h2>
           <p className="text-base sm:text-lg text-blue-100 mb-8 max-w-xl mx-auto">
-            Join thousands of Indian businesses using Simple Invoice for fast, GST-compliant invoicing
+            Join thousands of Indian businesses using Invoice Baba for fast, GST-compliant invoicing
           </p>
           <button
             onClick={() => history.push('/auth/phone')}
@@ -36,9 +36,11 @@ function LandingFooter() {
             {/* Brand */}
             <div className="col-span-2 sm:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                  <FileText className="w-3.5 h-3.5 text-white" />
-                </div>
+                <img
+                  src="/assets/brand/icon-transparent.png"
+                  alt="Invoice Baba"
+                  className="w-7 h-7"
+                />
                 <span className="text-base font-bold text-white">{BRANDING.name}</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">{BRANDING.tagline}</p>

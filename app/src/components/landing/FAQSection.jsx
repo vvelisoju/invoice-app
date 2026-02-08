@@ -54,7 +54,7 @@ function FAQSection() {
             Frequently Asked Questions
           </h2>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            Everything you need to know about Simple Invoice
+            Everything you need to know about Invoice Baba
           </p>
         </div>
 

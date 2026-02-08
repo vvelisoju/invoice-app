@@ -97,6 +97,13 @@ export const businessApi = {
     return api.post('/business/logo', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
+  },
+  uploadSignature: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/business/signature', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   }
 }
 

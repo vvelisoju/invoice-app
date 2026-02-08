@@ -1,4 +1,4 @@
-# Invoice App
+# Invoice Baba — Billing Made Easy
 
 A **mobile-first, offline-capable invoice application** for small businesses in India with GST support.
 

@@ -1,9 +1,24 @@
 import { Image } from 'lucide-react'
 
 /**
- * LogoUpload — Dashed upload area for business logo.
+ * LogoUpload — Shows business logo if available, otherwise dashed upload placeholder.
  */
-export default function LogoUpload({ onClick }) {
+export default function LogoUpload({ logoUrl, onClick }) {
+  if (logoUrl) {
+    return (
+      <div
+        onClick={onClick}
+        className="h-32 bg-white border border-border rounded-xl flex items-center justify-center cursor-pointer group transition-all relative overflow-hidden active:border-primary md:hover:border-primary"
+      >
+        <img
+          src={logoUrl}
+          alt="Business Logo"
+          className="max-h-28 max-w-full object-contain p-2"
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       onClick={onClick}

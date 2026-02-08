@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { FileText, Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
+import { Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
 
@@ -93,15 +93,15 @@ export default function AppHeader({ onMenuToggle }) {
 
         {/* Logo & Brand */}
         <div
-          className="flex items-center gap-2 md:gap-3 mr-4 md:mr-8 cursor-pointer min-w-0"
+          className="flex items-center mr-4 md:mr-8 cursor-pointer min-w-0"
           onClick={() => history.push('/home')}
         >
-          <div className="w-8 h-8 md:w-9 md:h-9 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm shrink-0">
-            <FileText className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-lg md:text-xl text-textPrimary tracking-tight truncate">
-            {business?.name || 'InvoiceApp'}
-          </span>
+          <img
+            src="/assets/brand/logo-full-transparent.png"
+            alt="Invoice Baba"
+            style={{ height: 'calc(var(--spacing) * 15)' }}
+            className="shrink-0"
+          />
         </div>
 
         {/* Navigation Tabs — hidden on mobile (bottom nav replaces this) */}

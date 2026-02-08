@@ -342,7 +342,7 @@ export default function InvoiceListPage() {
 
       {/* Footer — hidden on mobile */}
       <div className="hidden md:block text-center py-4 bg-bgPrimary">
-        <p className="text-xs text-textSecondary">© 2026 InvoiceApp. All rights reserved.</p>
+        <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
       </div>
     </div>
   )

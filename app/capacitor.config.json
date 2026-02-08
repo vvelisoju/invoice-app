@@ -1,6 +1,6 @@
 {
-  "appId": "com.invoiceapp.mobile",
-  "appName": "Invoice App",
+  "appId": "com.invoicebaba.app",
+  "appName": "Invoice Baba",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

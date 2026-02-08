@@ -96,6 +96,8 @@ export const createInvoice = async (prisma, businessId, data) => {
       placeOfSupplyStateCode: data.customerStateCode || null,
       notes: data.notes || null,
       terms: data.terms || business.defaultTerms || null,
+      logoUrl: business.logoUrl || null,
+      signatureUrl: business.signatureUrl || null,
       lineItems: {
         create: data.lineItems.map(item => ({
           id: item.id || uuidv4(),
@@ -327,12 +329,19 @@ export const issueInvoice = async (prisma, invoiceId, businessId, templateData) 
   // Check plan limits before issuing
   await checkCanIssueInvoice(businessId)
 
-  // Update invoice with template snapshot
+  // Fetch latest business logo/signature for snapshot
+  const business = await prisma.business.findUnique({
+    where: { id: businessId }
+  })
+
+  // Update invoice with template snapshot and logo/signature
   const updated = await prisma.invoice.update({
     where: { id: invoiceId },
     data: {
       status: 'ISSUED',
       issuedAt: new Date(),
+      logoUrl: business?.logoUrl || invoice.logoUrl || null,
+      signatureUrl: business?.signatureUrl || invoice.signatureUrl || null,
       templateBaseId: templateData?.templateBaseId || null,
       templateConfigSnapshot: templateData?.templateConfigSnapshot || null,
       templateVersion: templateData?.templateVersion || null

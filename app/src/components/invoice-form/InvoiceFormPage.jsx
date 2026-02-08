@@ -266,7 +266,7 @@ export default function InvoiceFormPage({ initialData = {}, onSave }) {
           {/* Copyright */}
           <div className="text-center mt-8 mb-4">
             <p className="text-xs text-textSecondary">
-              &copy; 2026 InvoiceApp. All rights reserved.
+              &copy; 2026 Invoice Baba. All rights reserved.
             </p>
           </div>
         </main>

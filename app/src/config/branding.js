@@ -1,12 +1,12 @@
 // Branding configuration - easily customizable
 export const BRANDING = {
-  name: 'Simple Invoice',
-  tagline: 'Create professional invoices in minutes',
+  name: 'Invoice Baba',
+  tagline: 'Billing Made Easy',
   description: 'Fast, reliable invoicing for businesses of all sizes',
   
   // Contact & Social
-  email: 'support@simpleinvoice.com',
-  twitter: '@simpleinvoice',
+  email: 'support@invoicebaba.com',
+  twitter: '@invoicebaba',
   
   // Features
   features: {
