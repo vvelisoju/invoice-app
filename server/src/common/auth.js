@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { config } from './config.js'
-import { UnauthorizedError } from './errors.js'
+import { UnauthorizedError, ForbiddenError } from './errors.js'
 
 export const generateToken = (payload) => {
   return jwt.sign(payload, config.jwt.secret, {
@@ -29,7 +29,13 @@ export const authMiddleware = async (request, reply) => {
     
     request.user = decoded
     request.businessId = decoded.businessId
+
+    // Block suspended/banned users
+    if (decoded.status === 'SUSPENDED' || decoded.status === 'BANNED') {
+      throw new ForbiddenError('Your account has been suspended')
+    }
   } catch (error) {
+    if (error instanceof ForbiddenError) throw error
     throw new UnauthorizedError(error.message)
   }
 }
@@ -39,9 +45,7 @@ export const authenticate = authMiddleware
 export const authenticateAdmin = async (request, reply) => {
   await authMiddleware(request, reply)
   
-  // Check if user is admin (for now, check a simple flag or specific user IDs)
-  // In production, this would check a role field or admin table
-  if (!request.user?.isAdmin) {
-    throw new UnauthorizedError('Admin access required')
+  if (request.user?.role !== 'SUPER_ADMIN') {
+    throw new ForbiddenError('Super admin access required')
   }
 }

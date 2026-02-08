@@ -232,11 +232,24 @@ export async function verifySubscriptionPayment(businessId, { razorpayOrderId, r
   return updatedSub
 }
 
+export async function getPlanById(planId) {
+  return prisma.plan.findUnique({ where: { id: planId } })
+}
+
 // Admin functions
 export async function listPlans() {
   return prisma.plan.findMany({
     where: { active: true },
     orderBy: { priceMonthly: 'asc' }
+  })
+}
+
+export async function adminListPlans() {
+  return prisma.plan.findMany({
+    orderBy: [{ active: 'desc' }, { priceMonthly: 'asc' }],
+    include: {
+      _count: { select: { businesses: true, subscriptions: true } }
+    }
   })
 }
 
@@ -255,9 +268,32 @@ export async function createPlan(data) {
 }
 
 export async function updatePlan(planId, data) {
+  // Only allow updating specific fields
+  const allowed = {}
+  if (data.displayName !== undefined) allowed.displayName = data.displayName
+  if (data.name !== undefined) allowed.name = data.name
+  if (data.description !== undefined) allowed.description = data.description
+  if (data.entitlements !== undefined) allowed.entitlements = data.entitlements
+  if (data.priceMonthly !== undefined) allowed.priceMonthly = data.priceMonthly
+  if (data.priceYearly !== undefined) allowed.priceYearly = data.priceYearly
+  if (data.active !== undefined) allowed.active = data.active
+
   return prisma.plan.update({
     where: { id: planId },
-    data
+    data: allowed
+  })
+}
+
+export async function deletePlan(planId) {
+  // Check if any businesses are using this plan
+  const count = await prisma.business.count({ where: { planId } })
+  if (count > 0) {
+    throw new ValidationError(`Cannot delete plan: ${count} business(es) are currently using it. Deactivate it instead.`)
+  }
+  // Soft-delete by marking inactive
+  return prisma.plan.update({
+    where: { id: planId },
+    data: { active: false }
   })
 }
 

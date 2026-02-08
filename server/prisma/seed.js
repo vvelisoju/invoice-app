@@ -220,6 +220,39 @@ async function main() {
   console.log('✅ Created base templates:', [cleanTemplate.name, modernRedTemplate.name, classicRedTemplate.name, wexlerTemplate.name, plexerTemplate.name, contemporaryTemplate.name].join(', '))
 
   // =========================================================================
+  // SUPER ADMIN USER
+  // =========================================================================
+
+  const superAdmin = await prisma.user.upsert({
+    where: { phone: '9999999999' },
+    update: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
+    create: {
+      phone: '9999999999',
+      name: 'Super Admin',
+      role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
+      otpVerifiedAt: new Date()
+    }
+  })
+  console.log('✅ Created super admin:', superAdmin.phone, '(role:', superAdmin.role + ')')
+
+  // Seed default platform settings
+  const defaultSettings = [
+    { key: 'platform_name', value: 'Invoice Baba' },
+    { key: 'support_email', value: 'support@invoicebaba.com' },
+    { key: 'new_registrations_enabled', value: true },
+    { key: 'maintenance_mode', value: false },
+  ]
+  for (const setting of defaultSettings) {
+    await prisma.platformSetting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: { key: setting.key, value: setting.value, updatedBy: superAdmin.id }
+    })
+  }
+  console.log('✅ Seeded platform settings')
+
+  // =========================================================================
   // SAMPLE DATA — Test user, business, customers, invoices
   // =========================================================================
 

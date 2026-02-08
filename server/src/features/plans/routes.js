@@ -55,11 +55,27 @@ export default async function planRoutes(fastify) {
         }
       }
     }, handlers.verifyPayment)
+
+    // List subscription invoices for the current business
+    userRoutes.get('/billing-history', {
+      schema: {
+        description: 'Get subscription invoices for the current business',
+        tags: ['plans']
+      }
+    }, handlers.getBillingHistory)
   })
 
   // Admin routes
   fastify.register(async (adminRoutes) => {
     adminRoutes.addHook('onRequest', authenticateAdmin)
+
+    // List all plans (including inactive) for admin
+    adminRoutes.get('/', {
+      schema: {
+        description: 'List all plans including inactive (admin only)',
+        tags: ['admin', 'plans']
+      }
+    }, handlers.adminListPlans)
 
     // Create plan
     adminRoutes.post('/', {
@@ -70,12 +86,14 @@ export default async function planRoutes(fastify) {
           type: 'object',
           properties: {
             name: { type: 'string' },
-            monthlyInvoiceLimit: { type: 'integer' },
-            price: { type: 'number' },
-            currency: { type: 'string' },
-            features: { type: 'object' }
+            displayName: { type: 'string' },
+            description: { type: 'string' },
+            entitlements: { type: 'object' },
+            priceMonthly: { type: ['number', 'null'] },
+            priceYearly: { type: ['number', 'null'] },
+            active: { type: 'boolean' }
           },
-          required: ['name', 'monthlyInvoiceLimit']
+          required: ['name']
         }
       }
     }, handlers.createPlan)
@@ -87,6 +105,14 @@ export default async function planRoutes(fastify) {
         tags: ['admin', 'plans']
       }
     }, handlers.updatePlan)
+
+    // Delete (deactivate) plan
+    adminRoutes.delete('/:id', {
+      schema: {
+        description: 'Deactivate a plan (admin only)',
+        tags: ['admin', 'plans']
+      }
+    }, handlers.deletePlan)
 
     // List businesses
     adminRoutes.get('/businesses', {

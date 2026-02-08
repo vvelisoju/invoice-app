@@ -1,4 +1,5 @@
 import * as planService from './service.js'
+import { generateSubscriptionInvoice, getBusinessSubscriptionInvoices } from '../admin/billingService.js'
 
 // User endpoints
 export async function getUsage(request, reply) {
@@ -20,6 +21,17 @@ export async function createPlan(request, reply) {
 export async function updatePlan(request, reply) {
   const { id } = request.params
   const plan = await planService.updatePlan(id, request.body)
+  return { data: plan }
+}
+
+export async function adminListPlans(request, reply) {
+  const plans = await planService.adminListPlans()
+  return { data: plans }
+}
+
+export async function deletePlan(request, reply) {
+  const { id } = request.params
+  const plan = await planService.deletePlan(id)
   return { data: plan }
 }
 
@@ -49,5 +61,32 @@ export async function createOrder(request, reply) {
 
 export async function verifyPayment(request, reply) {
   const result = await planService.verifySubscriptionPayment(request.businessId, request.body)
+
+  // Generate subscription invoice after successful payment
+  try {
+    const plan = await planService.getPlanById(request.body.planId)
+    const isYearly = result.renewAt && (new Date(result.renewAt).getTime() - new Date(result.startDate).getTime()) > 180 * 86400000
+    await generateSubscriptionInvoice({
+      businessId: request.businessId,
+      subscriptionId: result.id,
+      planId: request.body.planId,
+      planName: plan?.displayName || plan?.name || 'Plan',
+      billingPeriod: isYearly ? 'yearly' : 'monthly',
+      amount: result.amount,
+      razorpayOrderId: result.razorpayOrderId,
+      razorpayPaymentId: result.razorpayPaymentId,
+      periodStart: result.startDate,
+      periodEnd: result.renewAt,
+    })
+  } catch (err) {
+    // Don't fail the payment verification if invoice generation fails
+    console.error('[Billing] Failed to generate subscription invoice:', err.message)
+  }
+
   return { data: result }
+}
+
+export async function getBillingHistory(request, reply) {
+  const invoices = await getBusinessSubscriptionInvoices(request.businessId)
+  return { data: invoices }
 }

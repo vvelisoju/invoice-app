@@ -14,20 +14,36 @@ datasource db {
 // AUTH & USER MANAGEMENT
 // ============================================================================
 
+enum UserRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 model User {
-  id        String   @id @default(uuid())
-  phone     String   @unique
+  id        String     @id @default(uuid())
+  phone     String     @unique
   name      String?
   email     String?
+  role      UserRole   @default(USER)
+  status    UserStatus @default(ACTIVE)
   otpVerifiedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  businesses Business[]
-  otpRequests OtpRequest[]
+  businesses    Business[]
+  otpRequests   OtpRequest[]
+  deviceTokens  DeviceToken[]
+  notifications NotificationRead[]
 
   @@index([phone])
+  @@index([role])
 }
 
 model OtpRequest {
@@ -50,10 +66,17 @@ model OtpRequest {
 // BUSINESS & SETTINGS
 // ============================================================================
 
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 model Business {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   ownerUserId String
   name        String
+  status      BusinessStatus @default(ACTIVE)
   stateCode   String?  // India state code for GST
   gstEnabled  Boolean  @default(false)
   gstin       String?  // GST Identification Number
@@ -102,9 +125,11 @@ model Business {
   templateConfigs      BusinessTemplateConfig[]
   taxRates             TaxRate[]
   usageCounters        UsageCounter[]
+  subscriptionInvoices SubscriptionInvoice[]
 
   @@index([ownerUserId])
   @@index([planId])
+  @@index([status])
   @@index([updatedAt])
 }
 
@@ -465,4 +490,137 @@ model AuditLog {
   @@index([businessId, createdAt])
   @@index([entityType, entityId])
   @@index([userId, createdAt])
+}
+
+// ============================================================================
+// SUBSCRIPTION INVOICES (Platform billing invoices for paid users)
+// ============================================================================
+
+enum SubscriptionInvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model SubscriptionInvoice {
+  id             String   @id @default(uuid())
+  invoiceNumber  String   @unique       // e.g., "IB-SUB-2026-0001"
+  businessId     String
+  subscriptionId String?
+  planId         String
+
+  // Seller = Invoice Baba (platform)
+  sellerName     String   @default("Invoice Baba")
+  sellerGstin    String?
+  sellerAddress  String?
+
+  // Buyer = Business user
+  buyerName      String
+  buyerGstin     String?
+  buyerAddress   String?
+  buyerEmail     String?
+  buyerPhone     String?
+
+  // Billing
+  billingPeriod  String                 // "monthly" | "yearly"
+  periodStart    DateTime
+  periodEnd      DateTime
+
+  // Amounts
+  subtotal       Decimal  @db.Decimal(10, 2)
+  taxRate        Decimal? @db.Decimal(5, 2)
+  taxMode        TaxMode? @default(NONE)
+  taxBreakup     Json?                  // { cgst, sgst, igst amounts }
+  taxTotal       Decimal  @default(0) @db.Decimal(10, 2)
+  total          Decimal  @db.Decimal(10, 2)
+  currency       String   @default("INR")
+
+  // Payment
+  status         SubscriptionInvoiceStatus @default(PENDING)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  paidAt         DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business       Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// DEVICE TOKENS (FCM push notifications)
+// ============================================================================
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique           // FCM device token
+  platform  String                     // "web" | "android" | "ios"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================================================
+// NOTIFICATIONS (In-app + push notification log)
+// ============================================================================
+
+model Notification {
+  id            String   @id @default(uuid())
+  templateKey   String?                // references a predefined template
+  title         String
+  body          String
+  type          String                 // PUSH | IN_APP | BOTH
+  targetType    String                 // ALL | PLAN | BUSINESS | USER
+  targetId      String?                // planId or businessId or userId
+  data          Json?                  // deep-link URL, action metadata
+  sentBy        String?                // admin userId (null = system)
+  sentAt        DateTime @default(now())
+
+  // Delivery stats
+  totalTargets  Int      @default(0)
+  delivered     Int      @default(0)
+  failed        Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  reads NotificationRead[]
+
+  @@index([targetType, targetId])
+  @@index([sentAt])
+}
+
+model NotificationRead {
+  id             String   @id @default(uuid())
+  notificationId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+}
+
+// ============================================================================
+// PLATFORM SETTINGS (Super admin configurable)
+// ============================================================================
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
 }

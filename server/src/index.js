@@ -17,6 +17,7 @@ import templateRoutes from './features/templates/routes.js'
 import syncRoutes from './features/sync/routes.js'
 import planRoutes from './features/plans/routes.js'
 import taxRateRoutes from './features/tax-rates/routes.js'
+import adminRoutes from './features/admin/routes.js'
 
 const fastify = Fastify({
   logger: logger
@@ -60,6 +61,7 @@ await fastify.register(templateRoutes, { prefix: '/templates' })
 await fastify.register(syncRoutes, { prefix: '/sync' })
 await fastify.register(planRoutes, { prefix: '/plans' })
 await fastify.register(taxRateRoutes, { prefix: '/tax-rates' })
+await fastify.register(adminRoutes, { prefix: '/admin' })
 
 fastify.get('/health', async () => {
   try {

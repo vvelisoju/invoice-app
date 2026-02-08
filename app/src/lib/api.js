@@ -152,7 +152,8 @@ export const plansApi = {
   list: () => api.get('/plans'),
   getUsage: () => api.get('/plans/usage'),
   createOrder: (data) => api.post('/plans/create-order', data),
-  verifyPayment: (data) => api.post('/plans/verify-payment', data)
+  verifyPayment: (data) => api.post('/plans/verify-payment', data),
+  getBillingHistory: () => api.get('/plans/billing-history'),
 }
 
 // Tax Rates API
@@ -161,4 +162,44 @@ export const taxRateApi = {
   create: (data) => api.post('/tax-rates', data),
   update: (id, data) => api.patch(`/tax-rates/${id}`, data),
   delete: (id) => api.delete(`/tax-rates/${id}`)
+}
+
+// Admin API (Super Admin only)
+export const adminApi = {
+  // Dashboard
+  getDashboardStats: (params) => api.get('/admin/dashboard', { params }),
+
+  // Business Management
+  listBusinesses: (params) => api.get('/admin/businesses', { params }),
+  getBusinessDetails: (id) => api.get(`/admin/businesses/${id}`),
+  updateBusinessStatus: (id, status) => api.patch(`/admin/businesses/${id}/status`, { status }),
+  updateBusinessPlan: (id, planId) => api.patch(`/admin/businesses/${id}/plan`, { planId }),
+
+  // User Management
+  listUsers: (params) => api.get('/admin/users', { params }),
+  getUserDetails: (id) => api.get(`/admin/users/${id}`),
+  updateUserRole: (id, role) => api.patch(`/admin/users/${id}/role`, { role }),
+  updateUserStatus: (id, status) => api.patch(`/admin/users/${id}/status`, { status }),
+
+  // Impersonation
+  impersonateBusiness: (businessId) => api.post('/admin/impersonate', { businessId }),
+
+  // Platform Settings
+  getPlatformSettings: () => api.get('/admin/settings'),
+  updatePlatformSetting: (key, value) => api.put('/admin/settings', { key, value }),
+
+  // Audit Logs
+  listAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
+
+  // Plans (admin operations from existing plans routes)
+  listPlans: () => api.get('/plans/admin'),
+  createPlan: (data) => api.post('/plans/admin', data),
+  updatePlan: (id, data) => api.patch(`/plans/admin/${id}`, data),
+  deletePlan: (id) => api.delete(`/plans/admin/${id}`),
+  assignPlan: (businessId, planId) => api.post('/plans/admin/assign', { businessId, planId }),
+
+  // Billing
+  getBillingProfile: () => api.get('/admin/billing/profile'),
+  listSubscriptionInvoices: (params) => api.get('/admin/billing/invoices', { params }),
+  getSubscriptionInvoice: (id) => api.get(`/admin/billing/invoices/${id}`),
 }

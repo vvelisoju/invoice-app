@@ -23,6 +23,18 @@ import CustomerListPage from './features/customers/CustomerListPage'
 import ProductListPage from './features/products/ProductListPage'
 import PlansPage from './features/plans/PlansPage'
 
+// Admin pages
+import AdminLayout from './features/admin/AdminLayout'
+import AdminDashboardPage from './features/admin/AdminDashboardPage'
+import AdminBusinessListPage from './features/admin/AdminBusinessListPage'
+import AdminBusinessDetailPage from './features/admin/AdminBusinessDetailPage'
+import AdminUserListPage from './features/admin/AdminUserListPage'
+import AdminUserDetailPage from './features/admin/AdminUserDetailPage'
+import AdminPlanListPage from './features/admin/AdminPlanListPage'
+import AdminSettingsPage from './features/admin/AdminSettingsPage'
+import AdminAuditLogPage from './features/admin/AdminAuditLogPage'
+import AdminBillingPage from './features/admin/AdminBillingPage'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -58,8 +70,32 @@ function AuthenticatedApp() {
   )
 }
 
+function AdminApp() {
+  return (
+    <AdminLayout>
+      <Switch>
+        <Route exact path="/admin" component={AdminDashboardPage} />
+        <Route exact path="/admin/businesses" component={AdminBusinessListPage} />
+        <Route exact path="/admin/businesses/:id" component={AdminBusinessDetailPage} />
+        <Route exact path="/admin/users" component={AdminUserListPage} />
+        <Route exact path="/admin/users/:id" component={AdminUserDetailPage} />
+        <Route exact path="/admin/plans" component={AdminPlanListPage} />
+        <Route exact path="/admin/billing" component={AdminBillingPage} />
+        <Route exact path="/admin/settings" component={AdminSettingsPage} />
+        <Route exact path="/admin/audit-logs" component={AdminAuditLogPage} />
+        <Route exact path="/">
+          <Redirect to="/admin" />
+        </Route>
+        <Redirect to="/admin" />
+      </Switch>
+    </AdminLayout>
+  )
+}
+
 function App() {
   const token = useAuthStore((state) => state.token)
+  const user = useAuthStore((state) => state.user)
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -76,6 +112,8 @@ function App() {
             <Route exact path="/auth/verify" component={VerifyOTPPage} />
             <Redirect to="/" />
           </Switch>
+        ) : isSuperAdmin ? (
+          <AdminApp />
         ) : (
           <AuthenticatedApp />
         )}

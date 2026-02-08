@@ -3,11 +3,13 @@ import { persist } from 'zustand/middleware'
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       business: null,
       token: null,
       isAuthenticated: false,
+
+      isSuperAdmin: () => get().user?.role === 'SUPER_ADMIN',
 
       setAuth: (token, user, business) => {
         localStorage.setItem('auth_token', token)

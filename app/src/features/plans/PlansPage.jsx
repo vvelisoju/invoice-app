@@ -9,8 +9,12 @@ import {
   FileText,
   Shield,
   ArrowLeft,
-  AlertTriangle
+  AlertTriangle,
+  Receipt,
+  Eye,
+  X
 } from 'lucide-react'
+import Portal from '../../components/Portal'
 import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
 
@@ -52,6 +56,184 @@ function loadRazorpayScript() {
     script.onerror = () => resolve(false)
     document.body.appendChild(script)
   })
+}
+
+// ── Billing History Section ─────────────────────────────────────────
+function BillingHistorySection() {
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: ['plans', 'billing-history'],
+    queryFn: async () => {
+      const res = await plansApi.getBillingHistory()
+      return res.data.data || res.data || []
+    }
+  })
+
+  const formatCurrency = (amount) => {
+    if (!amount && amount !== 0) return '₹0.00'
+    return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—'
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const statusColor = {
+    PAID: 'text-green-600 bg-green-50 border-green-200',
+    PENDING: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    FAILED: 'text-red-600 bg-red-50 border-red-200',
+    REFUNDED: 'text-gray-600 bg-gray-50 border-gray-200',
+    CANCELLED: 'text-gray-500 bg-gray-50 border-gray-200',
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
+      <div className="flex items-center gap-2 mb-3 md:mb-4">
+        <Receipt className="w-4 h-4 text-textSecondary" />
+        <h3 className="text-xs md:text-sm font-semibold text-textPrimary uppercase tracking-wider">Billing History</h3>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-6">
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+        </div>
+      ) : invoices.length === 0 ? (
+        <div className="text-center py-6">
+          <Receipt className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-xs text-textSecondary">No invoices yet</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">Invoices will appear here after you subscribe to a plan</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {invoices.map(inv => (
+            <button
+              key={inv.id}
+              onClick={() => setSelectedInvoice(inv)}
+              className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs font-mono font-medium text-textPrimary">{inv.invoiceNumber}</span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${statusColor[inv.status] || statusColor.PENDING}`}>
+                    {inv.status}
+                  </span>
+                </div>
+                <p className="text-[11px] text-textSecondary">
+                  {formatDate(inv.createdAt)} · <span className="capitalize">{inv.billingPeriod || '—'}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm font-bold text-textPrimary">{formatCurrency(inv.total)}</span>
+                <Eye className="w-3.5 h-3.5 text-gray-400" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Invoice Detail Modal */}
+      {selectedInvoice && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedInvoice(null)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
+              <div className="p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-textPrimary">Invoice Details</h3>
+                    <p className="text-xs text-textSecondary font-mono mt-0.5">{selectedInvoice.invoiceNumber}</p>
+                  </div>
+                  <button onClick={() => setSelectedInvoice(null)} className="p-1 rounded-lg hover:bg-gray-100">
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-gray-400 text-[10px]">Date</p>
+                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.createdAt)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-gray-400 text-[10px]">Period</p>
+                    <p className="font-semibold text-textPrimary capitalize">{selectedInvoice.billingPeriod || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-gray-400 text-[10px]">From</p>
+                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.periodStart)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-gray-400 text-[10px]">To</p>
+                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.periodEnd)}</p>
+                  </div>
+                </div>
+
+                {/* Seller */}
+                <div className="text-xs">
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">From</p>
+                  <p className="font-semibold text-textPrimary">{selectedInvoice.sellerName}</p>
+                  {selectedInvoice.sellerGstin && <p className="text-textSecondary">GSTIN: {selectedInvoice.sellerGstin}</p>}
+                  {selectedInvoice.sellerAddress && <p className="text-textSecondary">{selectedInvoice.sellerAddress}</p>}
+                </div>
+
+                {/* Amounts */}
+                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-textSecondary text-xs">Subtotal</span>
+                    <span className="font-medium text-textPrimary text-xs">{formatCurrency(selectedInvoice.subtotal)}</span>
+                  </div>
+                  {selectedInvoice.taxBreakup?.cgstAmount != null && (
+                    <>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-textSecondary">CGST ({selectedInvoice.taxBreakup.cgstRate}%)</span>
+                        <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.cgstAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-textSecondary">SGST ({selectedInvoice.taxBreakup.sgstRate}%)</span>
+                        <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.sgstAmount)}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedInvoice.taxBreakup?.igstAmount != null && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-textSecondary">IGST ({selectedInvoice.taxBreakup.igstRate}%)</span>
+                      <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.igstAmount)}</span>
+                    </div>
+                  )}
+                  {Number(selectedInvoice.taxTotal) > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-textSecondary">Tax</span>
+                      <span className="font-medium text-textPrimary">{formatCurrency(selectedInvoice.taxTotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-gray-100 pt-2">
+                    <span className="font-semibold text-textPrimary text-sm">Total</span>
+                    <span className="font-bold text-textPrimary">{formatCurrency(selectedInvoice.total)}</span>
+                  </div>
+                </div>
+
+                {/* Payment ref */}
+                {selectedInvoice.razorpayPaymentId && (
+                  <div className="bg-gray-50 rounded-lg p-2.5 text-[11px] text-textSecondary">
+                    <span className="text-gray-400">Payment ID:</span> {selectedInvoice.razorpayPaymentId}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setSelectedInvoice(null)}
+                  className="w-full py-2 text-sm font-medium text-textSecondary bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+    </div>
+  )
 }
 
 export default function PlansPage() {
@@ -420,6 +602,9 @@ export default function PlansPage() {
               })}
             </div>
           </div>
+
+          {/* Billing History */}
+          <BillingHistorySection />
 
           {/* FAQ — compact */}
           <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">

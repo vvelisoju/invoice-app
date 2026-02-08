@@ -146,26 +146,36 @@ export const verifyOTP = async (prisma, phone, otp) => {
     data: { otpVerifiedAt: new Date() }
   })
 
-  // Check if user has a business, if not create one
-  let business = await prisma.business.findFirst({
-    where: { ownerUserId: user.id }
-  })
-
-  if (!business) {
-    // Auto-create business workspace
-    business = await prisma.business.create({
-      data: {
-        ownerUserId: user.id,
-        name: `Business ${phone.slice(-4)}` // Temporary name
-      }
-    })
+  // Block suspended/banned users at login
+  if (user.status === 'SUSPENDED' || user.status === 'BANNED') {
+    throw new UnauthorizedError('Your account has been suspended. Contact support.')
   }
 
-  // Generate JWT token
+  // Super admins don't need a business workspace
+  let business = null
+  if (user.role !== 'SUPER_ADMIN') {
+    business = await prisma.business.findFirst({
+      where: { ownerUserId: user.id }
+    })
+
+    if (!business) {
+      // Auto-create business workspace
+      business = await prisma.business.create({
+        data: {
+          ownerUserId: user.id,
+          name: `Business ${phone.slice(-4)}` // Temporary name
+        }
+      })
+    }
+  }
+
+  // Generate JWT token with role and status
   const token = generateToken({
     userId: user.id,
     phone: user.phone,
-    businessId: business.id
+    businessId: business?.id || null,
+    role: user.role,
+    status: user.status
   })
 
   return {
@@ -173,12 +183,14 @@ export const verifyOTP = async (prisma, phone, otp) => {
     user: {
       id: user.id,
       phone: user.phone,
+      role: user.role,
+      status: user.status,
       otpVerifiedAt: user.otpVerifiedAt
     },
-    business: {
+    business: business ? {
       id: business.id,
       name: business.name
-    }
+    } : null
   }
 }
 
@@ -302,7 +314,7 @@ export const confirmPhoneChange = async (prisma, userId, newPhone, otp) => {
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { phone: newPhone },
-    select: { id: true, phone: true, name: true, email: true, otpVerifiedAt: true, createdAt: true }
+    select: { id: true, phone: true, name: true, email: true, role: true, status: true, otpVerifiedAt: true, createdAt: true }
   })
 
   // Generate new token with updated phone
@@ -310,7 +322,9 @@ export const confirmPhoneChange = async (prisma, userId, newPhone, otp) => {
   const token = generateToken({
     userId: updated.id,
     phone: updated.phone,
-    businessId: business?.id
+    businessId: business?.id || null,
+    role: updated.role,
+    status: updated.status
   })
 
   return { user: updated, token }
