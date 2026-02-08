@@ -37,9 +37,9 @@ api.interceptors.response.use(
       const isSafeEndpoint = authSafeEndpoints.some(ep => url.includes(ep))
       if (!isSafeEndpoint && !isRedirectingTo401) {
         isRedirectingTo401 = true
-        // Clear both localStorage token AND Zustand persisted auth store
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('auth-storage')
+        // Clear all browser storage to prevent stale data leaking between sessions
+        localStorage.clear()
+        sessionStorage.clear()
         window.location.href = '/auth/phone'
       }
     }

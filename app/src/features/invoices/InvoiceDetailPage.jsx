@@ -25,6 +25,7 @@ import { invoiceApi, templateApi, businessApi } from '../../lib/api'
 import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
+import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -104,7 +105,10 @@ export default function InvoiceDetailPage() {
       try {
         const config = invoice.templateConfigSnapshot?.customConfig || templateConfig?.customConfig || null
         const templateId = selectedTemplateId || 'clean'
-        const blob = await generatePDF(invoice, config, templateId)
+        // Resolve document type config and attach to invoice for PDF templates
+        const docTypeConfig = getDocTypeConfig(invoice.documentType || 'invoice', businessProfile?.documentTypeConfig)
+        const invoiceWithDocType = { ...invoice, docTypeConfig }
+        const blob = await generatePDF(invoiceWithDocType, config, templateId)
         if (cancelled) return
         setPdfBlob(blob)
         const url = URL.createObjectURL(blob)
@@ -289,7 +293,7 @@ export default function InvoiceDetailPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm md:text-base font-bold text-textPrimary truncate">
-                  Invoice #{invoice.invoiceNumber}
+                  {(DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label} #{invoice.invoiceNumber}
                 </h1>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${status.bg} ${status.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />

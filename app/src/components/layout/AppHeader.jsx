@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
@@ -24,6 +25,7 @@ function SettingsMenuItem({ icon, label, onClick, danger = false }) {
 export default function AppHeader({ onMenuToggle }) {
   const history = useHistory()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const business = useAuthStore((state) => state.business)
   const logout = useAuthStore((state) => state.logout)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -34,6 +36,7 @@ export default function AppHeader({ onMenuToggle }) {
   const isSettingsActive = activeTabKey === 'settings'
 
   const handleLogout = () => {
+    queryClient.clear()
     logout()
     history.replace('/auth/phone')
   }

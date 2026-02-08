@@ -12,12 +12,18 @@ import {
 } from '../../components/data-table'
 
 const DOC_TYPE_BADGE = {
-  INVOICE: { label: 'Invoice', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  QUOTE: { label: 'Quote', className: 'bg-gray-50 text-gray-700 border-gray-200' },
-  RECEIPT: { label: 'Cash Receipt', className: 'bg-green-50 text-green-700 border-green-200' },
-  CREDIT_NOTE: { label: 'Credit Note', className: 'bg-purple-50 text-purple-700 border-purple-200' },
-  DELIVERY_NOTE: { label: 'Delivery Note', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  PURCHASE_ORDER: { label: 'Purchase Order', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  invoice: { label: 'Invoice', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  tax_invoice: { label: 'Tax Invoice', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  proforma: { label: 'Proforma', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  receipt: { label: 'Receipt', className: 'bg-green-50 text-green-700 border-green-200' },
+  sales_receipt: { label: 'Sales Receipt', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  cash_receipt: { label: 'Cash Receipt', className: 'bg-teal-50 text-teal-700 border-teal-200' },
+  quote: { label: 'Quote', className: 'bg-gray-50 text-gray-700 border-gray-200' },
+  estimate: { label: 'Estimate', className: 'bg-slate-50 text-slate-700 border-slate-200' },
+  credit_memo: { label: 'Credit Memo', className: 'bg-purple-50 text-purple-700 border-purple-200' },
+  credit_note: { label: 'Credit Note', className: 'bg-violet-50 text-violet-700 border-violet-200' },
+  purchase_order: { label: 'Purchase Order', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  delivery_note: { label: 'Delivery Note', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
 }
 
 const STATUS_FILTERS = [
@@ -29,9 +35,18 @@ const STATUS_FILTERS = [
 ]
 
 const DOC_TYPE_OPTIONS = [
-  { key: 'INVOICE', label: 'Invoice' },
-  { key: 'QUOTE', label: 'Quote' },
-  { key: 'RECEIPT', label: 'Cash Receipt' },
+  { key: 'invoice', label: 'Invoice' },
+  { key: 'tax_invoice', label: 'Tax Invoice' },
+  { key: 'proforma', label: 'Proforma' },
+  { key: 'receipt', label: 'Receipt' },
+  { key: 'sales_receipt', label: 'Sales Receipt' },
+  { key: 'cash_receipt', label: 'Cash Receipt' },
+  { key: 'quote', label: 'Quote' },
+  { key: 'estimate', label: 'Estimate' },
+  { key: 'credit_memo', label: 'Credit Memo' },
+  { key: 'credit_note', label: 'Credit Note' },
+  { key: 'purchase_order', label: 'Purchase Order' },
+  { key: 'delivery_note', label: 'Delivery Note' },
 ]
 
 const TABLE_COLUMNS = [
@@ -46,7 +61,11 @@ const TABLE_COLUMNS = [
 export default function InvoiceListPage() {
   const history = useHistory()
   const [statusFilter, setStatusFilter] = useState('all')
-  const [docTypeFilters, setDocTypeFilters] = useState({ INVOICE: true, QUOTE: true, RECEIPT: true })
+  const [docTypeFilters, setDocTypeFilters] = useState(() => {
+    const initial = {}
+    DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = true })
+    return initial
+  })
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -101,7 +120,7 @@ export default function InvoiceListPage() {
   // Filter by doc type checkboxes
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
-      const type = inv.documentType || 'INVOICE'
+      const type = inv.documentType || 'invoice'
       return docTypeFilters[type] !== false
     })
   }, [invoices, docTypeFilters])
@@ -136,8 +155,8 @@ export default function InvoiceListPage() {
   }
 
   const getDocBadge = (invoice) => {
-    const type = invoice.documentType || 'INVOICE'
-    return DOC_TYPE_BADGE[type] || DOC_TYPE_BADGE.INVOICE
+    const type = invoice.documentType || 'invoice'
+    return DOC_TYPE_BADGE[type] || DOC_TYPE_BADGE.invoice
   }
 
   const isPaid = (invoice) => invoice.status === 'PAID'
@@ -148,7 +167,7 @@ export default function InvoiceListPage() {
     const headers = ['Customer', 'Document Type', 'Number', 'Date', 'Subtotal', 'Tax', 'Total', 'Status']
     const rows = filteredInvoices.map(inv => [
       `"${(inv.customer?.name || '').replace(/"/g, '""')}"`,
-      (DOC_TYPE_BADGE[inv.documentType || 'INVOICE']?.label || inv.documentType),
+      (DOC_TYPE_BADGE[inv.documentType || 'invoice']?.label || inv.documentType),
       inv.invoiceNumber || '',
       formatDate(inv.date),
       (parseFloat(inv.subtotal) || 0).toFixed(2),

@@ -83,6 +83,7 @@ model Business {
   defaultTerms       String?
   defaultTaxRate     Decimal? @db.Decimal(5, 2)
   enabledInvoiceTypes Json?  // JSON array of enabled invoice type keys for sidebar
+  documentTypeConfig  Json?  // Business-level label/field overrides per document type
   
   // Plan & subscription
   planId         String?
@@ -202,6 +203,7 @@ model Invoice {
   businessId    String
   customerId    String?
   invoiceNumber String
+  documentType  String        @default("invoice") // e.g. invoice, quote, receipt, etc.
   date          DateTime      @default(now())
   dueDate       DateTime?
   status        InvoiceStatus @default(DRAFT)

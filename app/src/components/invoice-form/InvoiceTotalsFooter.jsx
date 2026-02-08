@@ -163,8 +163,11 @@ export default function InvoiceTotalsFooter({
   formatCurrency,
   signatureUrl,
   signatureName,
-  onSignatureClick
+  onSignatureClick,
+  docTypeConfig
 }) {
+  const showTerms = docTypeConfig?.fields?.showTerms !== false
+  const showSignature = docTypeConfig?.fields?.showSignature !== false
   // Compute per-tax-rate breakdown from line items
   const taxBreakdown = useMemo(() => {
     const breakdown = {}
@@ -192,19 +195,23 @@ export default function InvoiceTotalsFooter({
     <div className="pt-4 md:pt-6 border-t border-border">
       {/* Desktop: 2-column grid (Terms left, Totals+Signature right) */}
       <div className="hidden md:grid md:grid-cols-2 gap-10">
-        <TermsSection terms={terms} onTermsChange={onTermsChange} />
+        {showTerms ? (
+          <TermsSection terms={terms} onTermsChange={onTermsChange} />
+        ) : <div />}
         <div className="flex flex-col justify-between">
           <TotalsBlock
             subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
             taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
             totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
           />
-          <div className="mt-6">
-            <SignatureSection
-              signatureUrl={signatureUrl} signatureName={signatureName}
-              onSignatureClick={onSignatureClick} collapsed={false} onToggle={() => {}}
-            />
-          </div>
+          {showSignature && (
+            <div className="mt-6">
+              <SignatureSection
+                signatureUrl={signatureUrl} signatureName={signatureName}
+                onSignatureClick={onSignatureClick} collapsed={false} onToggle={() => {}}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -215,11 +222,15 @@ export default function InvoiceTotalsFooter({
           taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
           totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
         />
-        <SignatureSection
-          signatureUrl={signatureUrl} signatureName={signatureName}
-          onSignatureClick={onSignatureClick} collapsed={sigCollapsed} onToggle={() => setSigCollapsed(!sigCollapsed)}
-        />
-        <TermsSection terms={terms} onTermsChange={onTermsChange} />
+        {showSignature && (
+          <SignatureSection
+            signatureUrl={signatureUrl} signatureName={signatureName}
+            onSignatureClick={onSignatureClick} collapsed={sigCollapsed} onToggle={() => setSigCollapsed(!sigCollapsed)}
+          />
+        )}
+        {showTerms && (
+          <TermsSection terms={terms} onTermsChange={onTermsChange} />
+        )}
       </div>
     </div>
   )

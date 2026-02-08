@@ -1,8 +1,32 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { DOCUMENT_TYPE_DEFAULTS } from '../../../../config/documentTypeDefaults'
 
 // ============================================================================
 // Shared Helpers
 // ============================================================================
+
+// Resolve document type labels, heading, and field visibility for PDF rendering.
+// Falls back to invoice defaults if no config is attached.
+const getDocLabels = (invoice) => {
+  const cfg = invoice.docTypeConfig || DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice
+  return {
+    heading: cfg.heading || 'INVOICE',
+    fromLabel: cfg.labels?.fromSection || 'From',
+    toLabel: cfg.labels?.toSection || 'Bill To',
+    numberLabel: cfg.labels?.numberField || 'Invoice #',
+    dateLabel: cfg.labels?.dateField || 'Invoice Date',
+    showShipTo: cfg.fields?.showShipTo !== false,
+    showDueDate: cfg.fields?.showDueDate !== false,
+    showLogo: cfg.fields?.showLogo !== false,
+    showTerms: cfg.fields?.showTerms !== false,
+    showSignature: cfg.fields?.showSignature !== false,
+    showNotes: cfg.fields?.showNotes !== false,
+    showTax: cfg.fields?.showTax !== false,
+    showQty: cfg.fields?.showQty !== false,
+    showUnitPrice: cfg.fields?.showUnitPrice !== false,
+    lineItemsLayout: cfg.fields?.lineItemsLayout || 'full',
+  }
+}
 
 const formatCurrency = (amount) => {
   const num = Number(amount) || 0
@@ -109,15 +133,17 @@ const cleanStyles = StyleSheet.create({
 })
 
 export function CleanTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={cleanStyles.page}>
         <View style={cleanStyles.header}>
           <View>
-            {getLogoUrl(invoice) && (
+            {doc.showLogo && getLogoUrl(invoice) && (
               <Image src={getLogoUrl(invoice)} style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 6 }} />
             )}
-            <Text style={cleanStyles.title}>INVOICE</Text>
+            <Text style={cleanStyles.title}>{doc.heading}</Text>
             <AddressBlock
               lines={getFromAddress(invoice)}
               nameStyle={{ marginTop: 8, fontSize: 12 }}
@@ -126,12 +152,12 @@ export function CleanTemplate({ invoice }) {
           </View>
           <View style={cleanStyles.invoiceInfo}>
             <Text style={cleanStyles.invoiceNumber}>#{invoice.invoiceNumber}</Text>
-            <Text>Date: {formatDate(invoice.date)}</Text>
-            {invoice.dueDate && <Text>Due: {formatDate(invoice.dueDate)}</Text>}
+            <Text>{doc.dateLabel}: {formatDate(invoice.date)}</Text>
+            {doc.showDueDate && invoice.dueDate && <Text>Due: {formatDate(invoice.dueDate)}</Text>}
           </View>
         </View>
         <View style={cleanStyles.section}>
-          <Text style={cleanStyles.sectionTitle}>Bill To</Text>
+          <Text style={cleanStyles.sectionTitle}>{doc.toLabel}</Text>
           <AddressBlock
             lines={getBillTo(invoice)}
             nameStyle={{ fontSize: 12, fontWeight: 'bold' }}
@@ -140,17 +166,17 @@ export function CleanTemplate({ invoice }) {
         </View>
         <View style={cleanStyles.table}>
           <View style={cleanStyles.tableHeader}>
-            <Text style={cleanStyles.colName}>Description</Text>
-            <Text style={cleanStyles.colQty}>Qty</Text>
-            <Text style={cleanStyles.colRate}>Rate</Text>
+            <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>Description</Text>
+            {!isBasic && <Text style={cleanStyles.colQty}>Qty</Text>}
+            {!isBasic && <Text style={cleanStyles.colRate}>Rate</Text>}
             <Text style={cleanStyles.colTotal}>Amount</Text>
           </View>
           {invoice.lineItems?.map((item, i) => (
             <View key={i} style={cleanStyles.tableRow}>
-              <Text style={cleanStyles.colName}>{item.name}</Text>
-              <Text style={cleanStyles.colQty}>{item.quantity}</Text>
-              <Text style={cleanStyles.colRate}>{formatCurrency(item.rate)}</Text>
-              <Text style={cleanStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+              <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>{item.name}</Text>
+              {!isBasic && <Text style={cleanStyles.colQty}>{item.quantity}</Text>}
+              {!isBasic && <Text style={cleanStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+              <Text style={cleanStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
             </View>
           ))}
         </View>
@@ -165,7 +191,7 @@ export function CleanTemplate({ invoice }) {
               <Text style={cleanStyles.totalValue}>-{formatCurrency(invoice.discountTotal)}</Text>
             </View>
           )}
-          {invoice.taxTotal > 0 && (
+          {doc.showTax && invoice.taxTotal > 0 && (
             <View style={cleanStyles.totalRow}>
               <Text style={cleanStyles.totalLabel}>Tax{invoice.taxRate ? ` (${invoice.taxRate}%)` : ''}</Text>
               <Text style={cleanStyles.totalValue}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -176,19 +202,19 @@ export function CleanTemplate({ invoice }) {
             <Text style={cleanStyles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
           </View>
         </View>
-        {invoice.notes && (
+        {doc.showNotes && invoice.notes && (
           <View style={cleanStyles.notes}>
             <Text style={cleanStyles.notesTitle}>Notes</Text>
             <Text style={cleanStyles.notesText}>{invoice.notes}</Text>
           </View>
         )}
-        {invoice.terms && (
+        {doc.showTerms && invoice.terms && (
           <View style={[cleanStyles.notes, { marginTop: 10 }]}>
             <Text style={cleanStyles.notesTitle}>Terms & Conditions</Text>
             <Text style={cleanStyles.notesText}>{invoice.terms}</Text>
           </View>
         )}
-        <BankAndSignature invoice={invoice} color="#333" />
+        {doc.showSignature && <BankAndSignature invoice={invoice} color="#333" />}
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>
     </Document>
@@ -262,6 +288,8 @@ const modernRedStyles = StyleSheet.create({
 })
 
 export function ModernRedTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={modernRedStyles.page}>
@@ -269,10 +297,10 @@ export function ModernRedTemplate({ invoice }) {
         <View style={modernRedStyles.content}>
           <View style={modernRedStyles.headerRow}>
             <View>
-              {getLogoUrl(invoice) && (
+              {doc.showLogo && getLogoUrl(invoice) && (
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
-              <Text style={modernRedStyles.title}>INVOICE</Text>
+              <Text style={modernRedStyles.title}>{doc.heading}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
                 nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
@@ -281,14 +309,14 @@ export function ModernRedTemplate({ invoice }) {
             </View>
             <View style={modernRedStyles.invoiceMetaBox}>
               <View style={modernRedStyles.metaRow}>
-                <Text style={modernRedStyles.metaLabel}>Invoice #</Text>
+                <Text style={modernRedStyles.metaLabel}>{doc.numberLabel}</Text>
                 <Text style={modernRedStyles.metaValue}>{invoice.invoiceNumber}</Text>
               </View>
               <View style={modernRedStyles.metaRow}>
-                <Text style={modernRedStyles.metaLabel}>Date</Text>
+                <Text style={modernRedStyles.metaLabel}>{doc.dateLabel}</Text>
                 <Text style={modernRedStyles.metaValue}>{formatDate(invoice.date)}</Text>
               </View>
-              {invoice.dueDate && (
+              {doc.showDueDate && invoice.dueDate && (
                 <View style={modernRedStyles.metaRow}>
                   <Text style={modernRedStyles.metaLabel}>Due Date</Text>
                   <Text style={modernRedStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
@@ -299,35 +327,37 @@ export function ModernRedTemplate({ invoice }) {
           <View style={modernRedStyles.divider} />
           <View style={modernRedStyles.addressRow}>
             <View style={modernRedStyles.addressBlock}>
-              <Text style={modernRedStyles.addressLabel}>Bill To</Text>
+              <Text style={modernRedStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
                 nameStyle={modernRedStyles.addressName}
                 detailStyle={modernRedStyles.addressDetail}
               />
             </View>
-            <View style={modernRedStyles.addressBlock}>
-              <Text style={modernRedStyles.addressLabel}>Ship To</Text>
-              <AddressBlock
-                lines={getShipTo(invoice)}
-                nameStyle={modernRedStyles.addressName}
-                detailStyle={modernRedStyles.addressDetail}
-              />
-            </View>
+            {doc.showShipTo && (
+              <View style={modernRedStyles.addressBlock}>
+                <Text style={modernRedStyles.addressLabel}>Ship To</Text>
+                <AddressBlock
+                  lines={getShipTo(invoice)}
+                  nameStyle={modernRedStyles.addressName}
+                  detailStyle={modernRedStyles.addressDetail}
+                />
+              </View>
+            )}
           </View>
           <View style={modernRedStyles.table}>
             <View style={modernRedStyles.tableHeader}>
-              <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colName]}>Description</Text>
-              <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colQty]}>Qty</Text>
-              <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colRate]}>Unit Price</Text>
+              <Text style={[modernRedStyles.tableHeaderText, isBasic ? { flex: 4 } : modernRedStyles.colName]}>Description</Text>
+              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colQty]}>Qty</Text>}
+              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colRate]}>Unit Price</Text>}
               <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colTotal]}>Amount</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={i % 2 === 1 ? modernRedStyles.tableRowAlt : modernRedStyles.tableRow}>
-                <Text style={modernRedStyles.colName}>{item.name}</Text>
-                <Text style={modernRedStyles.colQty}>{item.quantity}</Text>
-                <Text style={modernRedStyles.colRate}>{formatCurrency(item.rate)}</Text>
-                <Text style={modernRedStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+                <Text style={isBasic ? { flex: 4 } : modernRedStyles.colName}>{item.name}</Text>
+                {!isBasic && <Text style={modernRedStyles.colQty}>{item.quantity}</Text>}
+                {!isBasic && <Text style={modernRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                <Text style={modernRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
           </View>
@@ -342,7 +372,7 @@ export function ModernRedTemplate({ invoice }) {
                 <Text style={modernRedStyles.totalValue}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {invoice.taxTotal > 0 && (
+            {doc.showTax && invoice.taxTotal > 0 && (
               <View style={modernRedStyles.totalRow}>
                 <Text style={modernRedStyles.totalLabel}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
                 <Text style={modernRedStyles.totalValue}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -353,19 +383,19 @@ export function ModernRedTemplate({ invoice }) {
               <Text style={modernRedStyles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
             </View>
           </View>
-          {invoice.terms && (
+          {doc.showTerms && invoice.terms && (
             <View style={{ marginTop: 25 }}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#DC2626', marginBottom: 4 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
-          {invoice.notes && (
+          {doc.showNotes && invoice.notes && (
             <View style={{ marginTop: 10 }}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#DC2626', marginBottom: 4 }}>Notes</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.notes}</Text>
             </View>
           )}
-          <BankAndSignature invoice={invoice} color="#DC2626" />
+          {doc.showSignature && <BankAndSignature invoice={invoice} color="#DC2626" />}
         </View>
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>
@@ -401,6 +431,8 @@ const classicRedStyles = StyleSheet.create({
 })
 
 export function ClassicRedTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={classicRedStyles.page}>
@@ -408,7 +440,7 @@ export function ClassicRedTemplate({ invoice }) {
         <View style={classicRedStyles.content}>
           <View style={classicRedStyles.headerRow}>
             <View style={{ flex: 1 }}>
-              {getLogoUrl(invoice) && (
+              {doc.showLogo && getLogoUrl(invoice) && (
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
               <AddressBlock
@@ -418,16 +450,16 @@ export function ClassicRedTemplate({ invoice }) {
               />
             </View>
             <View>
-              <Text style={classicRedStyles.invoiceTitle}>INVOICE</Text>
+              <Text style={classicRedStyles.invoiceTitle}>{doc.heading}</Text>
               <View style={classicRedStyles.metaRow}>
-                <Text style={classicRedStyles.metaLabel}>Invoice #</Text>
+                <Text style={classicRedStyles.metaLabel}>{doc.numberLabel}</Text>
                 <Text style={classicRedStyles.metaValue}>{invoice.invoiceNumber}</Text>
               </View>
               <View style={classicRedStyles.metaRow}>
-                <Text style={classicRedStyles.metaLabel}>Date</Text>
+                <Text style={classicRedStyles.metaLabel}>{doc.dateLabel}</Text>
                 <Text style={classicRedStyles.metaValue}>{formatDate(invoice.date)}</Text>
               </View>
-              {invoice.dueDate && (
+              {doc.showDueDate && invoice.dueDate && (
                 <View style={classicRedStyles.metaRow}>
                   <Text style={classicRedStyles.metaLabel}>Due Date</Text>
                   <Text style={classicRedStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
@@ -437,37 +469,39 @@ export function ClassicRedTemplate({ invoice }) {
           </View>
           <View style={classicRedStyles.addressRow}>
             <View style={classicRedStyles.addressBlock}>
-              <Text style={classicRedStyles.addressLabel}>Bill To</Text>
+              <Text style={classicRedStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
                 nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            <View style={classicRedStyles.addressBlock}>
-              <Text style={classicRedStyles.addressLabel}>Ship To</Text>
-              <AddressBlock
-                lines={getShipTo(invoice)}
-                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
-              />
-            </View>
+            {doc.showShipTo && (
+              <View style={classicRedStyles.addressBlock}>
+                <Text style={classicRedStyles.addressLabel}>Ship To</Text>
+                <AddressBlock
+                  lines={getShipTo(invoice)}
+                  nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                />
+              </View>
+            )}
           </View>
           <View style={classicRedStyles.table}>
             <View style={classicRedStyles.tableHeader}>
               <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colSno]}>#</Text>
-              <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colName]}>Description</Text>
-              <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colQty]}>Qty</Text>
-              <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colRate]}>Unit Price</Text>
+              <Text style={[classicRedStyles.tableHeaderText, isBasic ? { flex: 4 } : classicRedStyles.colName]}>Description</Text>
+              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colQty]}>Qty</Text>}
+              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colRate]}>Unit Price</Text>}
               <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colTotal]}>Amount</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={classicRedStyles.tableRow}>
                 <Text style={classicRedStyles.colSno}>{i + 1}</Text>
-                <Text style={classicRedStyles.colName}>{item.name}</Text>
-                <Text style={classicRedStyles.colQty}>{item.quantity}</Text>
-                <Text style={classicRedStyles.colRate}>{formatCurrency(item.rate)}</Text>
-                <Text style={classicRedStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+                <Text style={isBasic ? { flex: 4 } : classicRedStyles.colName}>{item.name}</Text>
+                {!isBasic && <Text style={classicRedStyles.colQty}>{item.quantity}</Text>}
+                {!isBasic && <Text style={classicRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                <Text style={classicRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
           </View>
@@ -482,7 +516,7 @@ export function ClassicRedTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {invoice.taxTotal > 0 && (
+            {doc.showTax && invoice.taxTotal > 0 && (
               <View style={classicRedStyles.totalRow}>
                 <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -493,13 +527,13 @@ export function ClassicRedTemplate({ invoice }) {
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>{formatCurrency(invoice.total)}</Text>
             </View>
           </View>
-          {invoice.terms && (
+          {doc.showTerms && invoice.terms && (
             <View style={{ marginTop: 25 }}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#047857', marginBottom: 4 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
-          <BankAndSignature invoice={invoice} color="#047857" />
+          {doc.showSignature && <BankAndSignature invoice={invoice} color="#047857" />}
         </View>
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>
@@ -533,26 +567,28 @@ const wexlerStyles = StyleSheet.create({
 })
 
 export function WexlerTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={wexlerStyles.page}>
         <View style={wexlerStyles.accentBar}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {getLogoUrl(invoice) && (
+            {doc.showLogo && getLogoUrl(invoice) && (
               <Image src={getLogoUrl(invoice)} style={{ width: 55, height: 55, objectFit: 'contain' }} />
             )}
-            <Text style={wexlerStyles.accentTitle}>INVOICE</Text>
+            <Text style={wexlerStyles.accentTitle}>{doc.heading}</Text>
           </View>
           <View style={wexlerStyles.accentMeta}>
-            <Text style={wexlerStyles.accentMetaText}>Invoice # {invoice.invoiceNumber}</Text>
+            <Text style={wexlerStyles.accentMetaText}>{doc.numberLabel} {invoice.invoiceNumber}</Text>
             <Text style={wexlerStyles.accentMetaValue}>{formatDate(invoice.date)}</Text>
-            {invoice.dueDate && <Text style={wexlerStyles.accentMetaText}>Due: {formatDate(invoice.dueDate)}</Text>}
+            {doc.showDueDate && invoice.dueDate && <Text style={wexlerStyles.accentMetaText}>Due: {formatDate(invoice.dueDate)}</Text>}
           </View>
         </View>
         <View style={wexlerStyles.content}>
           <View style={wexlerStyles.addressRow}>
             <View style={wexlerStyles.addressBlock}>
-              <Text style={wexlerStyles.addressLabel}>From</Text>
+              <Text style={wexlerStyles.addressLabel}>{doc.fromLabel}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
                 nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
@@ -560,37 +596,39 @@ export function WexlerTemplate({ invoice }) {
               />
             </View>
             <View style={wexlerStyles.addressBlock}>
-              <Text style={wexlerStyles.addressLabel}>Bill To</Text>
+              <Text style={wexlerStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
                 nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            <View style={wexlerStyles.addressBlock}>
-              <Text style={wexlerStyles.addressLabel}>Ship To</Text>
-              <AddressBlock
-                lines={getShipTo(invoice)}
-                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
-              />
-            </View>
+            {doc.showShipTo && (
+              <View style={wexlerStyles.addressBlock}>
+                <Text style={wexlerStyles.addressLabel}>Ship To</Text>
+                <AddressBlock
+                  lines={getShipTo(invoice)}
+                  nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                />
+              </View>
+            )}
           </View>
           <View style={wexlerStyles.table}>
             <View style={wexlerStyles.tableHeader}>
               <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colSno]}>#</Text>
-              <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colName]}>Description</Text>
-              <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colQty]}>Qty</Text>
-              <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colRate]}>Unit Price</Text>
+              <Text style={[wexlerStyles.tableHeaderText, isBasic ? { flex: 4 } : wexlerStyles.colName]}>Description</Text>
+              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colQty]}>Qty</Text>}
+              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colRate]}>Unit Price</Text>}
               <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colTotal]}>Amount</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={wexlerStyles.tableRow}>
                 <Text style={wexlerStyles.colSno}>{i + 1}</Text>
-                <Text style={wexlerStyles.colName}>{item.name}</Text>
-                <Text style={wexlerStyles.colQty}>{item.quantity}</Text>
-                <Text style={wexlerStyles.colRate}>{formatCurrency(item.rate)}</Text>
-                <Text style={wexlerStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+                <Text style={isBasic ? { flex: 4 } : wexlerStyles.colName}>{item.name}</Text>
+                {!isBasic && <Text style={wexlerStyles.colQty}>{item.quantity}</Text>}
+                {!isBasic && <Text style={wexlerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                <Text style={wexlerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
           </View>
@@ -605,7 +643,7 @@ export function WexlerTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {invoice.taxTotal > 0 && (
+            {doc.showTax && invoice.taxTotal > 0 && (
               <View style={wexlerStyles.totalRow}>
                 <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -616,13 +654,13 @@ export function WexlerTemplate({ invoice }) {
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(invoice.total)}</Text>
             </View>
           </View>
-          {invoice.terms && (
+          {doc.showTerms && invoice.terms && (
             <View style={{ marginTop: 25 }}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#1E3A5F', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
-          <BankAndSignature invoice={invoice} color="#1E3A5F" />
+          {doc.showSignature && <BankAndSignature invoice={invoice} color="#1E3A5F" />}
         </View>
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>
@@ -660,6 +698,8 @@ const plexerStyles = StyleSheet.create({
 })
 
 export function PlexerTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={plexerStyles.page}>
@@ -667,10 +707,10 @@ export function PlexerTemplate({ invoice }) {
         <View style={plexerStyles.content}>
           <View style={plexerStyles.headerRow}>
             <View>
-              {getLogoUrl(invoice) && (
+              {doc.showLogo && getLogoUrl(invoice) && (
                 <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
               )}
-              <Text style={plexerStyles.title}>INVOICE</Text>
+              <Text style={plexerStyles.title}>{doc.heading}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
                 nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
@@ -679,14 +719,14 @@ export function PlexerTemplate({ invoice }) {
             </View>
             <View style={plexerStyles.metaBox}>
               <View style={plexerStyles.metaRow}>
-                <Text style={plexerStyles.metaLabel}>Invoice Number</Text>
+                <Text style={plexerStyles.metaLabel}>{doc.numberLabel}</Text>
                 <Text style={plexerStyles.metaValue}>{invoice.invoiceNumber}</Text>
               </View>
               <View style={plexerStyles.metaRow}>
-                <Text style={plexerStyles.metaLabel}>Invoice Date</Text>
+                <Text style={plexerStyles.metaLabel}>{doc.dateLabel}</Text>
                 <Text style={plexerStyles.metaValue}>{formatDate(invoice.date)}</Text>
               </View>
-              {invoice.dueDate && (
+              {doc.showDueDate && invoice.dueDate && (
                 <View style={plexerStyles.metaRow}>
                   <Text style={plexerStyles.metaLabel}>Due Date</Text>
                   <Text style={plexerStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
@@ -697,37 +737,39 @@ export function PlexerTemplate({ invoice }) {
           <View style={plexerStyles.separator} />
           <View style={plexerStyles.addressRow}>
             <View style={plexerStyles.addressBlock}>
-              <Text style={plexerStyles.addressLabel}>Bill To</Text>
+              <Text style={plexerStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
                 nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            <View style={plexerStyles.addressBlock}>
-              <Text style={plexerStyles.addressLabel}>Ship To</Text>
-              <AddressBlock
-                lines={getShipTo(invoice)}
-                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
-              />
-            </View>
+            {doc.showShipTo && (
+              <View style={plexerStyles.addressBlock}>
+                <Text style={plexerStyles.addressLabel}>Ship To</Text>
+                <AddressBlock
+                  lines={getShipTo(invoice)}
+                  nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
+                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                />
+              </View>
+            )}
           </View>
           <View style={plexerStyles.table}>
             <View style={plexerStyles.tableHeader}>
               <Text style={[plexerStyles.tableHeaderText, plexerStyles.colSno]}>#</Text>
-              <Text style={[plexerStyles.tableHeaderText, plexerStyles.colName]}>Description</Text>
-              <Text style={[plexerStyles.tableHeaderText, plexerStyles.colQty]}>Qty</Text>
-              <Text style={[plexerStyles.tableHeaderText, plexerStyles.colRate]}>Unit Price</Text>
+              <Text style={[plexerStyles.tableHeaderText, isBasic ? { flex: 4 } : plexerStyles.colName]}>Description</Text>
+              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colQty]}>Qty</Text>}
+              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colRate]}>Unit Price</Text>}
               <Text style={[plexerStyles.tableHeaderText, plexerStyles.colTotal]}>Amount</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={plexerStyles.tableRow}>
                 <Text style={plexerStyles.colSno}>{i + 1}</Text>
-                <Text style={plexerStyles.colName}>{item.name}</Text>
-                <Text style={plexerStyles.colQty}>{item.quantity}</Text>
-                <Text style={plexerStyles.colRate}>{formatCurrency(item.rate)}</Text>
-                <Text style={plexerStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+                <Text style={isBasic ? { flex: 4 } : plexerStyles.colName}>{item.name}</Text>
+                {!isBasic && <Text style={plexerStyles.colQty}>{item.quantity}</Text>}
+                {!isBasic && <Text style={plexerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                <Text style={plexerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
           </View>
@@ -742,7 +784,7 @@ export function PlexerTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {invoice.taxTotal > 0 && (
+            {doc.showTax && invoice.taxTotal > 0 && (
               <View style={plexerStyles.totalRow}>
                 <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -753,13 +795,13 @@ export function PlexerTemplate({ invoice }) {
               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>{formatCurrency(invoice.total)}</Text>
             </View>
           </View>
-          {invoice.terms && (
+          {doc.showTerms && invoice.terms && (
             <View style={{ marginTop: 25 }}>
               <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
-          <BankAndSignature invoice={invoice} color="#374151" />
+          {doc.showSignature && <BankAndSignature invoice={invoice} color="#374151" />}
         </View>
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>
@@ -798,16 +840,18 @@ const contemporaryStyles = StyleSheet.create({
 })
 
 export function ContemporaryTemplate({ invoice }) {
+  const doc = getDocLabels(invoice)
+  const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   return (
     <Document>
       <Page size="A4" style={contemporaryStyles.page}>
         <View style={contemporaryStyles.headerBg}>
           <View style={contemporaryStyles.headerRow}>
             <View>
-              {getLogoUrl(invoice) && (
+              {doc.showLogo && getLogoUrl(invoice) && (
                 <Image src={getLogoUrl(invoice)} style={{ width: 85, height: 85, objectFit: 'contain', marginBottom: 6 }} />
               )}
-              <Text style={contemporaryStyles.title}>INVOICE</Text>
+              <Text style={contemporaryStyles.title}>{doc.heading}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
                 nameStyle={contemporaryStyles.businessInfo}
@@ -815,18 +859,18 @@ export function ContemporaryTemplate({ invoice }) {
               />
             </View>
             <View style={contemporaryStyles.metaRight}>
-              <Text style={contemporaryStyles.metaLabel}>Invoice #</Text>
+              <Text style={contemporaryStyles.metaLabel}>{doc.numberLabel}</Text>
               <Text style={contemporaryStyles.metaValue}>{invoice.invoiceNumber}</Text>
-              <Text style={contemporaryStyles.metaLabel}>Invoice Date</Text>
+              <Text style={contemporaryStyles.metaLabel}>{doc.dateLabel}</Text>
               <Text style={contemporaryStyles.metaValue}>{formatDate(invoice.date)}</Text>
-              {invoice.dueDate && (
+              {doc.showDueDate && invoice.dueDate && (
                 <>
                   <Text style={contemporaryStyles.metaLabel}>Due Date</Text>
                   <Text style={contemporaryStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
                 </>
               )}
               <View style={contemporaryStyles.totalBadge}>
-                <Text style={contemporaryStyles.totalBadgeLabel}>Invoice Total</Text>
+                <Text style={contemporaryStyles.totalBadgeLabel}>{doc.heading} Total</Text>
                 <Text style={contemporaryStyles.totalBadgeValue}>{formatCurrency(invoice.total)}</Text>
               </View>
             </View>
@@ -835,35 +879,37 @@ export function ContemporaryTemplate({ invoice }) {
         <View style={contemporaryStyles.content}>
           <View style={contemporaryStyles.addressRow}>
             <View style={contemporaryStyles.addressBlock}>
-              <Text style={contemporaryStyles.addressLabel}>Bill To</Text>
+              <Text style={contemporaryStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
                 nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            <View style={contemporaryStyles.addressBlock}>
-              <Text style={contemporaryStyles.addressLabel}>Ship To</Text>
-              <AddressBlock
-                lines={getShipTo(invoice)}
-                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
-              />
-            </View>
+            {doc.showShipTo && (
+              <View style={contemporaryStyles.addressBlock}>
+                <Text style={contemporaryStyles.addressLabel}>Ship To</Text>
+                <AddressBlock
+                  lines={getShipTo(invoice)}
+                  nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                />
+              </View>
+            )}
           </View>
           <View style={contemporaryStyles.table}>
             <View style={contemporaryStyles.tableHeader}>
-              <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colName]}>Description</Text>
-              <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colQty]}>Qty</Text>
-              <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colRate]}>Unit Price</Text>
+              <Text style={[contemporaryStyles.tableHeaderText, isBasic ? { flex: 4 } : contemporaryStyles.colName]}>Description</Text>
+              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colQty]}>Qty</Text>}
+              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colRate]}>Unit Price</Text>}
               <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colTotal]}>Amount</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={contemporaryStyles.tableRow}>
-                <Text style={contemporaryStyles.colName}>{item.name}</Text>
-                <Text style={contemporaryStyles.colQty}>{item.quantity}</Text>
-                <Text style={contemporaryStyles.colRate}>{formatCurrency(item.rate)}</Text>
-                <Text style={contemporaryStyles.colTotal}>{formatCurrency(item.lineTotal)}</Text>
+                <Text style={isBasic ? { flex: 4 } : contemporaryStyles.colName}>{item.name}</Text>
+                {!isBasic && <Text style={contemporaryStyles.colQty}>{item.quantity}</Text>}
+                {!isBasic && <Text style={contemporaryStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                <Text style={contemporaryStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
           </View>
@@ -878,7 +924,7 @@ export function ContemporaryTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {invoice.taxTotal > 0 && (
+            {doc.showTax && invoice.taxTotal > 0 && (
               <View style={contemporaryStyles.totalRow}>
                 <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
@@ -889,13 +935,13 @@ export function ContemporaryTemplate({ invoice }) {
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(invoice.total)}</Text>
             </View>
           </View>
-          {invoice.terms && (
+          {doc.showTerms && invoice.terms && (
             <View style={{ marginTop: 25 }}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#E11D48', marginBottom: 4 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
-          <BankAndSignature invoice={invoice} color="#E11D48" />
+          {doc.showSignature && <BankAndSignature invoice={invoice} color="#E11D48" />}
         </View>
         <BrandedFooter showBranding={invoice.showBranding !== false} />
       </Page>

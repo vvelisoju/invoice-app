@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown } from 'lucide-react'
 import { plansApi, businessApi } from '../../lib/api'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES, headerTabs, getActiveTabKey } from './navigationConfig'
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore'
 export default function AppSidebar({ mobile = false, onClose }) {
   const history = useHistory()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
   const business = useAuthStore((state) => state.business)
   const activeTabKey = getActiveTabKey(location.pathname)
@@ -72,13 +73,20 @@ export default function AppSidebar({ mobile = false, onClose }) {
           <nav className="px-2 space-y-0.5">
             {enabledTypes.map((type) => {
               const Icon = type.icon
+              const isOnNewPage = location.pathname === '/invoices/new'
+              const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
+              const isActive = isOnNewPage && urlType === type.key
               return (
                 <button
                   key={type.key}
                   onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-textSecondary hover:text-primary hover:bg-primary/5 transition-all group"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                    isActive
+                      ? 'text-primary bg-primary/8 font-semibold'
+                      : 'text-textSecondary hover:text-primary hover:bg-primary/5'
+                  }`}
                 >
-                  <Icon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors shrink-0" />
+                  <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
                   <span>{type.label}</span>
                 </button>
               )
@@ -229,13 +237,20 @@ export default function AppSidebar({ mobile = false, onClose }) {
             <nav className="space-y-0.5">
               {enabledTypes.map((type) => {
                 const Icon = type.icon
+                const isOnNewPage = location.pathname === '/invoices/new'
+                const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
+                const isActiveType = isOnNewPage && urlType === type.key
                 return (
                   <button
                     key={type.key}
                     onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:text-primary active:bg-primary/5 transition-all"
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                      isActiveType
+                        ? 'text-primary bg-primary/8 font-semibold'
+                        : 'text-textSecondary active:text-primary active:bg-primary/5'
+                    }`}
                   >
-                    <Icon className="w-5 h-5 text-gray-400 shrink-0" />
+                    <Icon className={`w-5 h-5 shrink-0 ${isActiveType ? 'text-primary' : 'text-gray-400'}`} />
                     <span>{type.label}</span>
                   </button>
                 )
@@ -263,7 +278,7 @@ export default function AppSidebar({ mobile = false, onClose }) {
                 <span>Business Settings</span>
               </button>
               <button
-                onClick={() => { logout(); history.replace('/auth/phone'); if (onClose) onClose() }}
+                onClick={() => { queryClient.clear(); logout(); history.replace('/auth/phone'); if (onClose) onClose() }}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-red-600 active:bg-red-50 transition-all"
               >
                 <LogOut className="w-5 h-5 shrink-0" />

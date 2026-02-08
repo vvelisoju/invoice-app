@@ -93,6 +93,7 @@ export const createInvoice = async (prisma, businessId, data) => {
       businessId,
       customerId: data.customerId || null,
       invoiceNumber,
+      documentType: data.documentType || 'invoice',
       date: data.date ? new Date(data.date) : new Date(),
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       status: initialStatus,
@@ -156,7 +157,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
   if (data.dueDate) data.dueDate = new Date(data.dueDate).toISOString()
 
   // Extract fields that aren't direct Prisma update fields
-  const { customerId, customerStateCode, lineItems: rawLineItems, fromAddress, billTo, shipTo, ...restData } = data
+  const { customerId, customerStateCode, lineItems: rawLineItems, fromAddress, billTo, shipTo, documentType, ...restData } = data
 
   // Recalculate totals if line items changed
   let updateData = { ...restData }
@@ -229,6 +230,8 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
       ),
       // Map customerStateCode to the actual Prisma field
       ...(customerStateCode !== undefined && { placeOfSupplyStateCode: customerStateCode }),
+      // Document type
+      ...(documentType !== undefined && { documentType }),
       // Address snapshots (editable per-invoice)
       ...(fromAddress !== undefined && { fromAddress }),
       ...(billTo !== undefined && { billTo }),

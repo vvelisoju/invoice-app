@@ -114,7 +114,7 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full bg-transparent border-none p-0 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none"
+        className="w-full bg-transparent border border-border/60 rounded-lg px-3 py-1.5 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 focus:border-primary/40 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none transition-colors"
       />
 
       {showSuggestions && value?.length >= 1 && (
@@ -602,8 +602,12 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
   )
 }
 
-export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct }) {
-  const isAdvanced = formMode === 'advanced'
+export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct, docTypeConfig }) {
+  const layout = docTypeConfig?.fields?.lineItemsLayout || 'full'
+  // When config layout is 'basic', force basic mode regardless of formMode
+  // When config layout is 'full', respect formMode toggle
+  const isAdvanced = layout === 'full' ? formMode === 'advanced' : false
+  const showTax = docTypeConfig?.fields?.showTax !== false
   const [showSavedItems, setShowSavedItems] = useState(false)
 
   const { data: taxRates = [] } = useQuery({

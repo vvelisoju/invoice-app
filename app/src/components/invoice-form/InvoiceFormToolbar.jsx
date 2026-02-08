@@ -1,13 +1,15 @@
-import { Save, Eye, Loader2, ChevronDown } from 'lucide-react'
-import { ALL_INVOICE_TYPES } from '../layout/navigationConfig'
+import { Save, Eye, Loader2 } from 'lucide-react'
 
 export default function InvoiceFormToolbar({
   formMode, onFormModeChange, onPreview, onSave, isSaving,
-  invoiceTitle, onInvoiceTitleChange, showTitleDropdown, onToggleTitleDropdown, onCloseTitleDropdown
+  invoiceTitle,
+  docTypeConfig
 }) {
+  const saveLabel = docTypeConfig?.labels?.saveButton || 'Save Invoice'
+  const forceBasic = docTypeConfig?.fields?.lineItemsLayout === 'basic' || docTypeConfig?.fields?.lineItemsLayout === 'simple'
   return (
     <div className="px-3 md:px-8 py-3 md:py-4 border-b border-border flex justify-between items-center bg-white rounded-t-xl sticky top-0 z-10 gap-2">
-      {/* Left: Basic/Advanced toggle + Invoice Title */}
+      {/* Left: Basic/Advanced toggle + Document type label */}
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <div className="flex gap-1 bg-bgPrimary p-1 rounded-lg shrink-0">
           <button
@@ -21,47 +23,25 @@ export default function InvoiceFormToolbar({
             Basic
           </button>
           <button
-            onClick={() => onFormModeChange('advanced')}
+            onClick={() => !forceBasic && onFormModeChange('advanced')}
+            disabled={forceBasic}
             className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-md transition-colors ${
-              formMode === 'advanced'
-                ? 'bg-white text-textPrimary shadow-sm border border-gray-100'
-                : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'
+              forceBasic
+                ? 'text-textSecondary/40 cursor-not-allowed'
+                : formMode === 'advanced'
+                  ? 'bg-white text-textPrimary shadow-sm border border-gray-100'
+                  : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'
             }`}
           >
             Advanced
           </button>
         </div>
 
-        {/* Invoice Title Selector */}
-        {invoiceTitle && onInvoiceTitleChange && (
-          <div className="relative min-w-0">
-            <button
-              onClick={onToggleTitleDropdown}
-              onBlur={() => setTimeout(() => onCloseTitleDropdown?.(), 150)}
-              className="text-base md:text-lg font-bold text-textPrimary tracking-tight flex items-center gap-1.5 active:text-primary md:hover:text-primary transition-colors group truncate"
-            >
-              <span className="truncate">{invoiceTitle}</span>
-              <ChevronDown className="w-4 h-4 text-textSecondary/40 group-hover:text-primary transition-colors shrink-0" />
-            </button>
-            {showTitleDropdown && (
-              <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[200px] max-h-[320px] overflow-y-auto">
-                {ALL_INVOICE_TYPES.map((type) => (
-                  <button
-                    key={type.key}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { onInvoiceTitleChange(type.label); onCloseTitleDropdown?.() }}
-                    className={`w-full px-4 py-2.5 text-left text-sm transition-colors border-b border-border/30 last:border-b-0 ${
-                      invoiceTitle === type.label
-                        ? 'bg-blue-50 text-primary font-semibold'
-                        : 'text-textPrimary hover:bg-gray-50 font-medium'
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Document type label (read-only, driven by sidebar selection) */}
+        {invoiceTitle && (
+          <span className="text-base md:text-lg font-bold text-textPrimary tracking-tight truncate">
+            {invoiceTitle}
+          </span>
         )}
       </div>
 
@@ -85,7 +65,7 @@ export default function InvoiceFormToolbar({
           ) : (
             <Save className="w-4 h-4" />
           )}
-          <span className="hidden sm:inline">Save Invoice</span>
+          <span className="hidden sm:inline">{saveLabel}</span>
           <span className="sm:hidden">Save</span>
         </button>
       </div>

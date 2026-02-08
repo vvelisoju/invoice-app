@@ -11,6 +11,7 @@ import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
+import { getDocTypeConfig } from '../../config/documentTypeDefaults'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
 import ImageUploadModal from '../../components/settings/ImageUploadModal'
 
@@ -36,7 +37,6 @@ export default function NewInvoicePage() {
   const [createProductName, setCreateProductName] = useState('')
   const [createProductLineIndex, setCreateProductLineIndex] = useState(null)
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
-  const [showTitleDropdown, setShowTitleDropdown] = useState(false)
   const [showPlanLimit, setShowPlanLimit] = useState(false)
   const [planLimitData, setPlanLimitData] = useState(null)
   const [showBusinessSettings, setShowBusinessSettings] = useState(false)
@@ -50,6 +50,12 @@ export default function NewInvoicePage() {
     setFormMode(mode)
     try { localStorage.setItem(FORM_MODE_KEY, mode) } catch {}
   }
+
+  // Derive document type key from URL param
+  const documentTypeKey = (() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('type') || 'invoice'
+  })()
 
   // Read ?type= query param and set invoice title on mount / URL change
   useEffect(() => {
@@ -71,6 +77,17 @@ export default function NewInvoicePage() {
     staleTime: 0,
     refetchOnMount: 'always'
   })
+
+  // Compute resolved config (defaults merged with business overrides)
+  const docTypeConfig = getDocTypeConfig(documentTypeKey, businessProfile?.documentTypeConfig)
+
+  // Force basic mode when document type config requires simple/basic layout
+  const forceBasic = docTypeConfig?.fields?.lineItemsLayout === 'basic' || docTypeConfig?.fields?.lineItemsLayout === 'simple'
+  useEffect(() => {
+    if (forceBasic && formMode !== 'basic') {
+      setFormMode('basic')
+    }
+  }, [forceBasic])
 
   const {
     invoice,
@@ -179,6 +196,7 @@ export default function NewInvoicePage() {
 
       const payload = {
         customerId: invoice.customerId || null,
+        documentType: documentTypeKey,
         date: invoice.date,
         dueDate: invoice.dueDate || null,
         lineItems: validLineItems,
@@ -296,10 +314,7 @@ export default function NewInvoicePage() {
           onSave={handleSave}
           isSaving={saveMutation.isPending}
           invoiceTitle={invoiceTitle}
-          onInvoiceTitleChange={setInvoiceTitle}
-          showTitleDropdown={showTitleDropdown}
-          onToggleTitleDropdown={() => setShowTitleDropdown(!showTitleDropdown)}
-          onCloseTitleDropdown={() => setShowTitleDropdown(false)}
+          docTypeConfig={docTypeConfig}
         />
 
         {/* Error */}
@@ -340,6 +355,7 @@ export default function NewInvoicePage() {
             onDueDateChange={(val) => updateField('dueDate', val)}
             onLogoClick={() => setShowLogoUpload(true)}
             onEditSettings={() => setShowBusinessSettings(true)}
+            docTypeConfig={docTypeConfig}
           />
 
           {/* Line Items Section */}
@@ -357,6 +373,7 @@ export default function NewInvoicePage() {
               setCreateProductName(name || '')
               setShowCreateProduct(true)
             }}
+            docTypeConfig={docTypeConfig}
           />
 
           {/* Totals Footer: Terms, Subtotal, Total, Signature */}
@@ -367,6 +384,7 @@ export default function NewInvoicePage() {
             taxTotal={invoice.taxTotal}
             total={invoice.total}
             terms={invoice.terms || ''}
+            docTypeConfig={docTypeConfig}
             onTermsChange={(val) => {
               updateField('terms', val)
               // Debounced sync to business defaultTerms
@@ -390,13 +408,13 @@ export default function NewInvoicePage() {
           onClick={handleSave}
           className="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer mt-auto safe-bottom"
         >
-          <button className="font-semibold text-sm flex items-center gap-2" disabled={saveMutation.isPending}>
+          <button className="font-semibold text-sm flex items-center justify-center gap-2 w-full" disabled={saveMutation.isPending}>
             {saveMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {isEditMode ? 'Update Invoice' : 'Save Invoice'}
+            {isEditMode ? `Update ${docTypeConfig.label}` : docTypeConfig.labels.saveButton}
           </button>
         </div>
       </div>

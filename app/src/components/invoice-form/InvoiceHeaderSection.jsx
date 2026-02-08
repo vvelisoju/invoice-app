@@ -25,8 +25,11 @@ export default function InvoiceHeaderSection({
   dueDate,
   onDueDateChange,
   onLogoClick,
-  onEditSettings
+  onEditSettings,
+  docTypeConfig
 }) {
+  const labels = docTypeConfig?.labels || {}
+  const fields = docTypeConfig?.fields || {}
   const isAdvanced = formMode === 'advanced'
   const [fromCollapsed, setFromCollapsed] = useState(true)
   const [metaCollapsed, setMetaCollapsed] = useState(true)
@@ -247,7 +250,7 @@ export default function InvoiceHeaderSection({
               onClick={() => setFromCollapsed(!fromCollapsed)}
               className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide md:pointer-events-none"
             >
-              <Building className="w-3.5 h-3.5 text-primary/70" /> From
+              <Building className="w-3.5 h-3.5 text-primary/70" /> {labels.fromSection || 'From'}
               {fromCollapsed ? (
                 <ChevronDown className="w-3.5 h-3.5 text-primary/50 md:hidden" />
               ) : (
@@ -292,7 +295,7 @@ export default function InvoiceHeaderSection({
         {/* Bill To Section — Customer Typeahead Textarea */}
         <div className="group relative transition-all">
           <label className="flex items-center gap-2 text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">
-            <User className="w-3.5 h-3.5 text-orange-500/70" /> Bill To
+            <User className="w-3.5 h-3.5 text-orange-500/70" /> {labels.toSection || 'Bill To'}
           </label>
           <div className="relative">
             <div className="relative">
@@ -392,7 +395,7 @@ export default function InvoiceHeaderSection({
         </div>
 
         {/* Ship To Section (Advanced only) — with customer typeahead */}
-        {isAdvanced && (
+        {isAdvanced && fields.showShipTo !== false && (
           <div className="group relative transition-all">
             <label className="flex items-center gap-2 text-xs font-semibold text-teal-600 uppercase tracking-wide mb-2">
               <Truck className="w-3.5 h-3.5 text-teal-500/70" /> Ship To
@@ -527,14 +530,16 @@ export default function InvoiceHeaderSection({
 
         {/* Logo Upload / Display — hidden on mobile when collapsed */}
         <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
-          <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
+          {fields.showLogo !== false && (
+            <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
+          )}
         </div>
 
         {/* Invoice Meta — hidden on mobile when collapsed */}
         <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
           <div className="bg-bgPrimary/30 rounded-xl p-4 md:p-5 border border-transparent active:border-border md:hover:border-border transition-all space-y-3 md:space-y-4">
             <div>
-              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Invoice #</label>
+              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">{labels.numberField || 'Invoice #'}</label>
               <div className="relative">
                 <input
                   type="text"
@@ -548,7 +553,7 @@ export default function InvoiceHeaderSection({
             </div>
             <div>
               <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">
-                {isAdvanced ? 'Invoice Date' : 'Date'}
+                {isAdvanced ? (labels.dateField || 'Invoice Date') : 'Date'}
               </label>
               <input
                 type="date"
@@ -561,6 +566,7 @@ export default function InvoiceHeaderSection({
             {/* Advanced Fields: P.O.# & Due Date */}
             {isAdvanced && (
               <>
+                {fields.showPoNumber !== false && (
                 <div>
                   <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">P.O.#</label>
                   <input
@@ -571,6 +577,8 @@ export default function InvoiceHeaderSection({
                     className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
+                )}
+                {fields.showDueDate !== false && (
                 <div>
                   <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Due Date</label>
                   <input
@@ -580,6 +588,7 @@ export default function InvoiceHeaderSection({
                     className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
+                )}
               </>
             )}
           </div>

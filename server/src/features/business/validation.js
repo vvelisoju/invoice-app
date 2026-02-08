@@ -44,5 +44,12 @@ export const updateBusinessSchema = z.object({
   enabledInvoiceTypes: z.preprocess(
     (val) => (val === null || val === undefined) ? undefined : val,
     z.array(z.string()).min(1, 'At least one document type must be selected').optional()
+  ),
+  documentTypeConfig: z.preprocess(
+    (val) => (val === null || val === undefined) ? undefined : val,
+    z.record(z.string(), z.object({
+      labels: z.record(z.string(), z.string()).optional(),
+      fields: z.record(z.string(), z.any()).optional()
+    })).optional()
   )
 }).strip()

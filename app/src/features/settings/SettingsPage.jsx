@@ -11,6 +11,7 @@ import {
   Save,
   Loader2,
   Shield,
+  Lock,
   CheckCircle2,
   Plus,
   Trash2,
@@ -32,6 +33,7 @@ import { useAuthStore } from '../../store/authStore'
 import { PageToolbar } from '../../components/data-table'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../invoices/utils/templates/registry'
+import { DOCUMENT_TYPE_DEFAULTS } from '../../config/documentTypeDefaults'
 import BusinessInfoForm, { FieldInput, FieldTextarea, FieldToggle } from '../../components/settings/BusinessInfoForm'
 
 const SETTINGS_TABS = [
@@ -41,6 +43,107 @@ const SETTINGS_TABS = [
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
   { key: 'account', label: 'Account', mobileLabel: 'Account', icon: User },
 ]
+
+function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
+  const [expandedType, setExpandedType] = useState(null)
+
+  const handleLabelChange = (typeKey, labelKey, value) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = current[typeKey] || {}
+    const labels = { ...(typeOverrides.labels || {}), [labelKey]: value }
+    // Remove empty overrides
+    if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.labels?.[labelKey]) {
+      delete labels[labelKey]
+    }
+    const updated = { ...current, [typeKey]: { ...typeOverrides, labels } }
+    // Clean up empty type entries
+    if (Object.keys(updated[typeKey].labels || {}).length === 0) {
+      delete updated[typeKey].labels
+    }
+    if (Object.keys(updated[typeKey] || {}).length === 0) {
+      delete updated[typeKey]
+    }
+    onChange(updated)
+  }
+
+  const getOverride = (typeKey, labelKey) => {
+    return documentTypeConfig?.[typeKey]?.labels?.[labelKey] || ''
+  }
+
+  const enabledDefaults = ALL_INVOICE_TYPES
+    .filter(t => enabledTypes.includes(t.key))
+    .map(t => ({ ...t, defaults: DOCUMENT_TYPE_DEFAULTS[t.key] }))
+    .filter(t => t.defaults)
+
+  return (
+    <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+          <Pencil className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Labels</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Customize field labels for each document type</p>
+        </div>
+      </div>
+      <div className="p-3 md:p-4 space-y-2">
+        {enabledDefaults.map((type) => {
+          const isExpanded = expandedType === type.key
+          const Icon = type.icon
+          const hasOverrides = documentTypeConfig?.[type.key]?.labels && Object.keys(documentTypeConfig[type.key].labels).length > 0
+          return (
+            <div key={type.key} className="border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setExpandedType(isExpanded ? null : type.key)}
+                className="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 md:hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-textPrimary">{type.label}</span>
+                  {hasOverrides && (
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase">Customized</span>
+                  )}
+                </div>
+                {isExpanded ? (
+                  <ChevronRight className="w-4 h-4 text-textSecondary rotate-90 transition-transform" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-textSecondary transition-transform" />
+                )}
+              </button>
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                      { key: 'fromSection', label: 'From Label' },
+                      { key: 'toSection', label: 'To Label' },
+                      { key: 'numberField', label: 'Number Label' },
+                      { key: 'dateField', label: 'Date Label' },
+                      { key: 'saveButton', label: 'Save Button' },
+                    ].map((field) => (
+                      <div key={field.key}>
+                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
+                        <input
+                          type="text"
+                          value={getOverride(type.key, field.key)}
+                          onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                          placeholder={type.defaults.labels[field.key]}
+                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-textSecondary mt-2">
+                    Leave blank to use defaults. Changes apply to new documents.
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function InvoiceTypesSection({ enabledTypes, onChange }) {
   const toggleType = (key) => {
@@ -955,6 +1058,7 @@ export default function SettingsPage() {
   }
 
   const handleLogout = () => {
+    queryClient.clear()
     logout()
     history.replace('/auth/phone')
   }
@@ -1097,36 +1201,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* GST Settings Tab */}
-          {activeTab === 'gst' && (
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-                  <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">GST Configuration</h3>
-                  <p className="text-[11px] md:text-xs text-textSecondary">Tax registration and default rates</p>
-                </div>
-              </div>
-              <div className="p-4 md:p-6 space-y-4 md:space-y-5">
-                <FieldToggle
-                  label="Enable GST"
-                  description="Show GST fields on invoices and calculate tax automatically"
-                  checked={formData.gstEnabled || false}
-                  onChange={(v) => handleChange('gstEnabled', v)}
-                />
-                {formData.gstEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5 pt-2">
-                    <FieldInput label="GSTIN" value={formData.gstin} onChange={(v) => handleChange('gstin', v?.toUpperCase())} placeholder="15-digit GSTIN" maxLength={15} description="Your 15-digit GST Identification Number" />
-                    <FieldInput label="State Code" value={formData.stateCode} onChange={(v) => handleChange('stateCode', v)} placeholder="e.g., 36" maxLength={2} description="2-digit state code for GST" />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tax Rates Management — visible in GST tab */}
+          {/* GST Settings Tab — Tax Rates Management */}
           {activeTab === 'gst' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
               <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
@@ -1355,12 +1430,52 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <InvoiceTypesSection
-                enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
-                onChange={(types) => handleChange('enabledInvoiceTypes', types)}
-              />
-
               <TemplateSection />
+
+              {/* Advanced Invoice Settings — paid plan only */}
+              {formData.planId ? (
+                <div className="space-y-3 md:space-y-6">
+                  <div className="flex items-center gap-2 pt-2">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-[11px] font-bold text-textSecondary uppercase tracking-widest">Advanced Settings</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <InvoiceTypesSection
+                    enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
+                    onChange={(types) => handleChange('enabledInvoiceTypes', types)}
+                  />
+                  <DocumentTypeLabelSection
+                    enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
+                    documentTypeConfig={formData.documentTypeConfig || null}
+                    onChange={(config) => handleChange('documentTypeConfig', config)}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                      <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Advanced Invoice Settings</h3>
+                      <p className="text-[11px] md:text-xs text-textSecondary">Document types, custom labels & more</p>
+                    </div>
+                  </div>
+                  <div className="p-4 md:p-6 text-center">
+                    <Lock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-textPrimary mb-1">Upgrade to unlock</p>
+                    <p className="text-xs text-textSecondary mb-4 max-w-sm mx-auto">
+                      Customize document types, field labels, and more with a paid plan.
+                    </p>
+                    <a
+                      href="/plans"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors"
+                    >
+                      View Plans
+                    </a>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

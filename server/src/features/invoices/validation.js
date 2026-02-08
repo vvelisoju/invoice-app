@@ -12,6 +12,7 @@ export const createInvoiceSchema = z.object({
   id: z.string().uuid().optional(),
   customerId: z.string().uuid().optional().nullable(),
   invoiceNumber: z.string().optional(),
+  documentType: z.string().max(50).optional().default('invoice'),
   date: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional().nullable(),
   lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
@@ -27,6 +28,7 @@ export const createInvoiceSchema = z.object({
 
 export const updateInvoiceSchema = z.object({
   customerId: z.string().uuid().optional().nullable(),
+  documentType: z.string().max(50).optional(),
   date: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional().nullable(),
   lineItems: z.array(lineItemSchema).optional(),
