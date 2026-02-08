@@ -237,7 +237,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 
@@ -270,7 +270,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 
@@ -303,7 +303,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 
@@ -336,7 +336,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 
@@ -369,7 +369,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 
@@ -402,7 +402,7 @@ export const DOCUMENT_TYPE_DEFAULTS = {
       showSignature: true,
       showNotes: true,
       showPaymentMethod: false,
-      lineItemsLayout: 'basic',
+      lineItemsLayout: 'full',
     },
   },
 }

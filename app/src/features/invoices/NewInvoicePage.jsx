@@ -267,14 +267,28 @@ export default function NewInvoicePage() {
   }
 
   // Always apply invoice number from server for new invoices (not edit mode)
+  // Uses per-document-type prefix/nextNumber from documentTypeConfig, falling back to business defaults
   useEffect(() => {
     if (isEditMode) return
     if (!businessProfile) return
-    if (businessProfile.invoicePrefix != null && businessProfile.nextInvoiceNumber != null) {
-      const nextNum = String(businessProfile.nextInvoiceNumber).padStart(4, '0')
-      updateField('invoiceNumber', `${businessProfile.invoicePrefix}${nextNum}`)
+
+    const docConfig = businessProfile.documentTypeConfig || {}
+    const typeConfig = docConfig[documentTypeKey] || {}
+
+    let prefix, nextNum
+    if (documentTypeKey === 'invoice' && typeConfig.prefix === undefined && typeConfig.nextNumber === undefined) {
+      // Legacy: use business-level invoicePrefix + nextInvoiceNumber for plain invoices
+      prefix = businessProfile.invoicePrefix
+      nextNum = businessProfile.nextInvoiceNumber
+    } else {
+      prefix = typeConfig.prefix || docTypeConfig.prefix || businessProfile.invoicePrefix
+      nextNum = typeConfig.nextNumber || 1
     }
-  }, [businessProfile, isEditMode])
+
+    if (prefix != null && nextNum != null) {
+      updateField('invoiceNumber', `${prefix}${String(nextNum).padStart(4, '0')}`)
+    }
+  }, [businessProfile, isEditMode, documentTypeKey])
 
   // Apply default terms only once on initial load (not on refetches from debounced save)
   useEffect(() => {

@@ -2,6 +2,13 @@ import { v4 as uuidv4 } from 'uuid'
 import { NotFoundError, ValidationError, ForbiddenError } from '../../common/errors.js'
 import { checkCanIssueInvoice, incrementUsageCounter } from '../plans/service.js'
 
+// Default prefixes per document type (server-side mirror of client defaults)
+const DOC_TYPE_DEFAULT_PREFIX = {
+  invoice: 'INV-', tax_invoice: 'TINV-', proforma: 'PI-', receipt: 'RCT-',
+  sales_receipt: 'SR-', cash_receipt: 'CR-', quote: 'QT-', estimate: 'EST-',
+  credit_memo: 'CM-', credit_note: 'CN-', purchase_order: 'PO-', delivery_note: 'DN-',
+}
+
 export const createInvoice = async (prisma, businessId, data) => {
   const business = await prisma.business.findUnique({
     where: { id: businessId }
@@ -11,16 +18,43 @@ export const createInvoice = async (prisma, businessId, data) => {
     throw new NotFoundError('Business not found')
   }
 
+  // Resolve per-document-type prefix and next number
+  const docType = data.documentType || 'invoice'
+  const docConfig = business.documentTypeConfig || {}
+  const typeConfig = docConfig[docType] || {}
+
   // Generate invoice number if not provided
   let invoiceNumber = data.invoiceNumber
   if (!invoiceNumber) {
-    invoiceNumber = `${business.invoicePrefix}${String(business.nextInvoiceNumber).padStart(4, '0')}`
-    
-    // Increment next invoice number
-    await prisma.business.update({
-      where: { id: businessId },
-      data: { nextInvoiceNumber: { increment: 1 } }
-    })
+    // Use per-doc-type config if available, else fall back to business defaults (for 'invoice' type) or doc-type default prefix
+    let prefix, nextNum
+    if (docType === 'invoice' && typeConfig.prefix === undefined && typeConfig.nextNumber === undefined) {
+      // Legacy: use business-level invoicePrefix + nextInvoiceNumber for plain invoices
+      prefix = business.invoicePrefix
+      nextNum = business.nextInvoiceNumber
+    } else {
+      prefix = typeConfig.prefix || DOC_TYPE_DEFAULT_PREFIX[docType] || business.invoicePrefix
+      nextNum = typeConfig.nextNumber || 1
+    }
+
+    invoiceNumber = `${prefix}${String(nextNum).padStart(4, '0')}`
+
+    // Increment the appropriate next number counter
+    if (docType === 'invoice' && typeConfig.prefix === undefined && typeConfig.nextNumber === undefined) {
+      // Legacy path: increment business-level counter
+      await prisma.business.update({
+        where: { id: businessId },
+        data: { nextInvoiceNumber: { increment: 1 } }
+      })
+    } else {
+      // Per-doc-type path: increment nextNumber inside documentTypeConfig JSON
+      const updatedDocConfig = { ...docConfig }
+      updatedDocConfig[docType] = { ...(updatedDocConfig[docType] || {}), nextNumber: (nextNum) + 1 }
+      await prisma.business.update({
+        where: { id: businessId },
+        data: { documentTypeConfig: updatedDocConfig }
+      })
+    }
   }
 
   // Check for duplicate invoice number

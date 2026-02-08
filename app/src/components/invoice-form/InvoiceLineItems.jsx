@@ -610,6 +610,15 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
   const showTax = docTypeConfig?.fields?.showTax !== false
   const [showSavedItems, setShowSavedItems] = useState(false)
 
+  // Configurable line-item column labels
+  const colLabels = {
+    description: docTypeConfig?.labels?.descriptionCol || 'Description',
+    unitPrice: docTypeConfig?.labels?.unitPriceCol || 'Unit Price',
+    qty: docTypeConfig?.labels?.qtyCol || 'Qty',
+    amount: docTypeConfig?.labels?.amountCol || 'Amount',
+    tax: docTypeConfig?.labels?.taxCol || 'Tax',
+  }
+
   const { data: taxRates = [] } = useQuery({
     queryKey: ['taxRates'],
     queryFn: async () => {
@@ -624,31 +633,31 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
       {isAdvanced ? (
         <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
           <div className="col-span-5">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Description</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.description}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Unit Price</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.unitPrice}</span>
           </div>
           <div className="col-span-1">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Qty</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.qty}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Amount</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.amount}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Tax</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.tax}</span>
           </div>
         </div>
       ) : (
         <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-border mb-2">
           <div className="col-span-7">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Description</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.description}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Amount</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.amount}</span>
           </div>
           <div className="col-span-3">
-            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">Tax</span>
+            <span className="text-[11px] font-bold text-textSecondary uppercase tracking-wider">{colLabels.tax}</span>
           </div>
         </div>
       )}

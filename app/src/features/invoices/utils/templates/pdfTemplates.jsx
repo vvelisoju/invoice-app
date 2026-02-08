@@ -15,6 +15,12 @@ const getDocLabels = (invoice) => {
     toLabel: cfg.labels?.toSection || 'Bill To',
     numberLabel: cfg.labels?.numberField || 'Invoice #',
     dateLabel: cfg.labels?.dateField || 'Invoice Date',
+    // Line-item column labels
+    descriptionCol: cfg.labels?.descriptionCol || 'Description',
+    unitPriceCol: cfg.labels?.unitPriceCol || 'Unit Price',
+    qtyCol: cfg.labels?.qtyCol || 'Qty',
+    amountCol: cfg.labels?.amountCol || 'Amount',
+    taxCol: cfg.labels?.taxCol || 'Tax',
     showShipTo: cfg.fields?.showShipTo !== false,
     showDueDate: cfg.fields?.showDueDate !== false,
     showLogo: cfg.fields?.showLogo !== false,
@@ -166,10 +172,10 @@ export function CleanTemplate({ invoice }) {
         </View>
         <View style={cleanStyles.table}>
           <View style={cleanStyles.tableHeader}>
-            <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>Description</Text>
-            {!isBasic && <Text style={cleanStyles.colQty}>Qty</Text>}
-            {!isBasic && <Text style={cleanStyles.colRate}>Rate</Text>}
-            <Text style={cleanStyles.colTotal}>Amount</Text>
+            <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>{doc.descriptionCol}</Text>
+            {!isBasic && <Text style={cleanStyles.colQty}>{doc.qtyCol}</Text>}
+            {!isBasic && <Text style={cleanStyles.colRate}>{doc.unitPriceCol}</Text>}
+            <Text style={cleanStyles.colTotal}>{doc.amountCol}</Text>
           </View>
           {invoice.lineItems?.map((item, i) => (
             <View key={i} style={cleanStyles.tableRow}>
@@ -347,10 +353,10 @@ export function ModernRedTemplate({ invoice }) {
           </View>
           <View style={modernRedStyles.table}>
             <View style={modernRedStyles.tableHeader}>
-              <Text style={[modernRedStyles.tableHeaderText, isBasic ? { flex: 4 } : modernRedStyles.colName]}>Description</Text>
-              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colQty]}>Qty</Text>}
-              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colRate]}>Unit Price</Text>}
-              <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colTotal]}>Amount</Text>
+              <Text style={[modernRedStyles.tableHeaderText, isBasic ? { flex: 4 } : modernRedStyles.colName]}>{doc.descriptionCol}</Text>
+              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colQty]}>{doc.qtyCol}</Text>}
+              {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={i % 2 === 1 ? modernRedStyles.tableRowAlt : modernRedStyles.tableRow}>
@@ -490,10 +496,10 @@ export function ClassicRedTemplate({ invoice }) {
           <View style={classicRedStyles.table}>
             <View style={classicRedStyles.tableHeader}>
               <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colSno]}>#</Text>
-              <Text style={[classicRedStyles.tableHeaderText, isBasic ? { flex: 4 } : classicRedStyles.colName]}>Description</Text>
-              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colQty]}>Qty</Text>}
-              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colRate]}>Unit Price</Text>}
-              <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colTotal]}>Amount</Text>
+              <Text style={[classicRedStyles.tableHeaderText, isBasic ? { flex: 4 } : classicRedStyles.colName]}>{doc.descriptionCol}</Text>
+              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colQty]}>{doc.qtyCol}</Text>}
+              {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={classicRedStyles.tableRow}>
@@ -617,10 +623,10 @@ export function WexlerTemplate({ invoice }) {
           <View style={wexlerStyles.table}>
             <View style={wexlerStyles.tableHeader}>
               <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colSno]}>#</Text>
-              <Text style={[wexlerStyles.tableHeaderText, isBasic ? { flex: 4 } : wexlerStyles.colName]}>Description</Text>
-              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colQty]}>Qty</Text>}
-              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colRate]}>Unit Price</Text>}
-              <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colTotal]}>Amount</Text>
+              <Text style={[wexlerStyles.tableHeaderText, isBasic ? { flex: 4 } : wexlerStyles.colName]}>{doc.descriptionCol}</Text>
+              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colQty]}>{doc.qtyCol}</Text>}
+              {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={wexlerStyles.tableRow}>
@@ -758,10 +764,10 @@ export function PlexerTemplate({ invoice }) {
           <View style={plexerStyles.table}>
             <View style={plexerStyles.tableHeader}>
               <Text style={[plexerStyles.tableHeaderText, plexerStyles.colSno]}>#</Text>
-              <Text style={[plexerStyles.tableHeaderText, isBasic ? { flex: 4 } : plexerStyles.colName]}>Description</Text>
-              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colQty]}>Qty</Text>}
-              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colRate]}>Unit Price</Text>}
-              <Text style={[plexerStyles.tableHeaderText, plexerStyles.colTotal]}>Amount</Text>
+              <Text style={[plexerStyles.tableHeaderText, isBasic ? { flex: 4 } : plexerStyles.colName]}>{doc.descriptionCol}</Text>
+              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colQty]}>{doc.qtyCol}</Text>}
+              {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              <Text style={[plexerStyles.tableHeaderText, plexerStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={plexerStyles.tableRow}>
@@ -899,10 +905,10 @@ export function ContemporaryTemplate({ invoice }) {
           </View>
           <View style={contemporaryStyles.table}>
             <View style={contemporaryStyles.tableHeader}>
-              <Text style={[contemporaryStyles.tableHeaderText, isBasic ? { flex: 4 } : contemporaryStyles.colName]}>Description</Text>
-              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colQty]}>Qty</Text>}
-              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colRate]}>Unit Price</Text>}
-              <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colTotal]}>Amount</Text>
+              <Text style={[contemporaryStyles.tableHeaderText, isBasic ? { flex: 4 } : contemporaryStyles.colName]}>{doc.descriptionCol}</Text>
+              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colQty]}>{doc.qtyCol}</Text>}
+              {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={contemporaryStyles.tableRow}>

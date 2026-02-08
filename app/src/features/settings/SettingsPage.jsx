@@ -66,8 +66,37 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
     onChange(updated)
   }
 
+  const handleTopLevelChange = (typeKey, field, value) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = { ...(current[typeKey] || {}) }
+    if (field === 'nextNumber') {
+      const num = parseInt(value, 10)
+      if (!value || isNaN(num)) {
+        delete typeOverrides.nextNumber
+      } else {
+        typeOverrides.nextNumber = num
+      }
+    } else if (field === 'prefix') {
+      if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.prefix) {
+        delete typeOverrides.prefix
+      } else {
+        typeOverrides.prefix = value
+      }
+    }
+    const updated = { ...current, [typeKey]: typeOverrides }
+    if (Object.keys(updated[typeKey] || {}).length === 0) {
+      delete updated[typeKey]
+    }
+    onChange(updated)
+  }
+
   const getOverride = (typeKey, labelKey) => {
     return documentTypeConfig?.[typeKey]?.labels?.[labelKey] || ''
+  }
+
+  const getTopLevel = (typeKey, field) => {
+    const val = documentTypeConfig?.[typeKey]?.[field]
+    return val !== undefined && val !== null ? String(val) : ''
   }
 
   const enabledDefaults = ALL_INVOICE_TYPES
@@ -83,14 +112,14 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
         </div>
         <div>
           <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Labels</h3>
-          <p className="text-[11px] md:text-xs text-textSecondary">Customize field labels for each document type</p>
+          <p className="text-[11px] md:text-xs text-textSecondary">Customize field labels, numbering & line item columns for each document type</p>
         </div>
       </div>
       <div className="p-3 md:p-4 space-y-2">
         {enabledDefaults.map((type) => {
           const isExpanded = expandedType === type.key
           const Icon = type.icon
-          const hasOverrides = documentTypeConfig?.[type.key]?.labels && Object.keys(documentTypeConfig[type.key].labels).length > 0
+          const hasOverrides = documentTypeConfig?.[type.key] && Object.keys(documentTypeConfig[type.key]).length > 0
           return (
             <div key={type.key} className="border border-border rounded-lg overflow-hidden">
               <button
@@ -111,28 +140,87 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
                 )}
               </button>
               {isExpanded && (
-                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {[
-                      { key: 'fromSection', label: 'From Label' },
-                      { key: 'toSection', label: 'To Label' },
-                      { key: 'numberField', label: 'Number Label' },
-                      { key: 'dateField', label: 'Date Label' },
-                      { key: 'saveButton', label: 'Save Button' },
-                    ].map((field) => (
-                      <div key={field.key}>
-                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50 space-y-4">
+                  {/* Numbering */}
+                  <div>
+                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Numbering</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Prefix</label>
                         <input
                           type="text"
-                          value={getOverride(type.key, field.key)}
-                          onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
-                          placeholder={type.defaults.labels[field.key]}
+                          value={getTopLevel(type.key, 'prefix')}
+                          onChange={(e) => handleTopLevelChange(type.key, 'prefix', e.target.value)}
+                          placeholder={type.defaults.prefix || 'INV-'}
+                          maxLength={10}
                           className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                         />
                       </div>
-                    ))}
+                      <div>
+                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Next Number</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={getTopLevel(type.key, 'nextNumber')}
+                          onChange={(e) => handleTopLevelChange(type.key, 'nextNumber', e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-textSecondary mt-2">
+
+                  {/* Section Labels */}
+                  <div>
+                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Section Labels</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {[
+                        { key: 'fromSection', label: 'From Label' },
+                        { key: 'toSection', label: 'To Label' },
+                        { key: 'numberField', label: 'Number Label' },
+                        { key: 'dateField', label: 'Date Label' },
+                        { key: 'saveButton', label: 'Save Button' },
+                      ].map((field) => (
+                        <div key={field.key}>
+                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
+                          <input
+                            type="text"
+                            value={getOverride(type.key, field.key)}
+                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                            placeholder={type.defaults.labels[field.key]}
+                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Line Item Labels */}
+                  <div>
+                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Line Item Labels</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { key: 'descriptionCol', label: 'Description' },
+                        { key: 'unitPriceCol', label: 'Unit Price' },
+                        { key: 'qtyCol', label: 'Quantity' },
+                        { key: 'amountCol', label: 'Amount' },
+                        { key: 'taxCol', label: 'Tax' },
+                      ].map((field) => (
+                        <div key={field.key}>
+                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
+                          <input
+                            type="text"
+                            value={getOverride(type.key, field.key)}
+                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                            placeholder={type.defaults.labels[field.key]}
+                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-textSecondary">
                     Leave blank to use defaults. Changes apply to new documents.
                   </p>
                 </div>
