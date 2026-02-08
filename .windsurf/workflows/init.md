@@ -2,273 +2,315 @@
 description: Initialize project context - understand architecture for development session
 ---
 
-# Invoice App - Project Initialization Workflow
+# Invoice App — Session Init
 
-Run this workflow at the start of each development session to understand the project architecture and context.
+Run this at the start of every Cascade session. Read the files listed in each step, then internalize the architecture summary that follows.
 
-## Step 1: Understand Project Overview
+---
 
-Read the following core documentation files:
+## Step 1: Read Core Documentation
 
-- **PRD**: `d:\CodeVelWorkspce-New\Invoice-app\PRD-V1.md` - Product requirements and business logic
-- **Technical Architecture**: `d:\CodeVelWorkspce-New\Invoice-app\TECHNICAL-ARCHITECTURE-V1.md` - System design and technology decisions
-- **Features**: `d:\CodeVelWorkspce-New\Invoice-app\FEATURES.md` - Detailed feature specifications
-- **Testing Guide**: `d:\CodeVelWorkspce-New\Invoice-app\TESTING-GUIDE.md` - Testing strategy and standards
+Read these files (skim for context, don't memorize line-by-line):
 
-**Key Project Context:**
-- **Domain**: Indian GST-compliant invoicing app
-- **Architecture**: Offline-first mobile app (React + Ionic + Capacitor)
-- **Auth**: Phone OTP-based authentication
-- **Database**: PostgreSQL with Prisma ORM + IndexedDB for offline storage
-- **PDF Generation**: Client-side using @react-pdf/renderer with template customization
+1. `d:\CodeVelWorkspce-New\Invoice-app\PRD-V1.md` — Product requirements, user personas, business rules
+2. `d:\CodeVelWorkspce-New\Invoice-app\TECHNICAL-ARCHITECTURE-V1.md` — System design decisions
+3. `d:\CodeVelWorkspce-New\Invoice-app\FEATURES.md` — Detailed feature specs
+4. `d:\CodeVelWorkspce-New\Invoice-app\PHASE-1-PROGRESS.md` — Current development status & what's done/pending
 
-## Step 2: Understand Frontend Architecture
+---
 
-**Location**: `d:\CodeVelWorkspce-New\Invoice-app\app\`
+## Step 2: Read Key Frontend Files
 
-### Frontend Tech Stack
-- **Framework**: React 18 + Vite
-- **UI**: Ionic React (mobile-first components)
-- **Routing**: React Router v5 + Ionic React Router
-- **State Management**: 
-  - Zustand (global state: auth, sync status)
-  - TanStack Query (server state, caching)
-- **Forms**: React Hook Form + Zod validation
-- **Offline Storage**: Dexie (IndexedDB wrapper)
-- **Mobile**: Capacitor (iOS/Android native capabilities)
+Read these files to understand the frontend architecture:
 
-### Frontend Folder Structure
+1. `d:\CodeVelWorkspce-New\Invoice-app\app\package.json` — Dependencies & scripts
+2. `d:\CodeVelWorkspce-New\Invoice-app\app\src\App.jsx` — Routing, auth gate, page imports
+3. `d:\CodeVelWorkspce-New\Invoice-app\app\src\store\authStore.js` — Auth state (Zustand + persist)
+4. `d:\CodeVelWorkspce-New\Invoice-app\app\src\lib\api.js` — Axios client, all API modules (auth, invoice, customer, product, business, reports, template, sync, plans, taxRate)
+5. `d:\CodeVelWorkspce-New\Invoice-app\app\src\components\layout\AppLayout.jsx` — Shell layout (desktop sidebar + mobile bottom nav)
+6. `d:\CodeVelWorkspce-New\Invoice-app\app\src\components\layout\navigationConfig.js` — Header tabs, invoice types, sidebar config
+7. `d:\CodeVelWorkspce-New\Invoice-app\app\src\index.css` — TailwindCSS v4 theme tokens, safe-area utilities, mobile CSS
+8. `d:\CodeVelWorkspce-New\Invoice-app\app\src\config\branding.js` — App branding constants
+9. `d:\CodeVelWorkspce-New\Invoice-app\app\capacitor.config.json` — Capacitor native config
+
+---
+
+## Step 3: Read Key Backend Files
+
+Read these files to understand the backend architecture:
+
+1. `d:\CodeVelWorkspce-New\Invoice-app\server\package.json` — Dependencies & scripts
+2. `d:\CodeVelWorkspce-New\Invoice-app\server\src\index.js` — Fastify server setup, plugin registration, all route imports
+3. `d:\CodeVelWorkspce-New\Invoice-app\server\src\common\config.js` — Environment config (DB, JWT, SMS, GCS, Razorpay)
+4. `d:\CodeVelWorkspce-New\Invoice-app\server\src\common\errors.js` — Error handler
+5. `d:\CodeVelWorkspce-New\Invoice-app\server\src\common\auth.js` — JWT auth middleware
+6. `d:\CodeVelWorkspce-New\Invoice-app\server\src\common\storage.js` — Google Cloud Storage helper (logo uploads)
+
+---
+
+## Step 4: Read Database Schema
+
+Read this file completely — it is the source of truth for all data models:
+
+1. `d:\CodeVelWorkspce-New\Invoice-app\server\prisma\schema.prisma` — All models, enums, relations, indexes
+
+---
+
+## Architecture Summary (Internalize After Reading)
+
+### Project Identity
+- **Product**: "Simple Invoice" — Indian GST-compliant invoicing app
+- **Target**: Small businesses in India needing professional invoices
+- **Monorepo**: `app/` (frontend) + `server/` (backend) at project root
+
+### Frontend Stack
+| Layer | Technology |
+|---|---|
+| **Framework** | React 18 + Vite 5 |
+| **Styling** | TailwindCSS v4 (`@import "tailwindcss"` + `@theme` block in `index.css`) |
+| **Icons** | Lucide React |
+| **Routing** | React Router v5 (`react-router-dom` v5.3.4) |
+| **State** | Zustand 4 (auth, sync) + TanStack Query 5 (server data) |
+| **Forms** | React Hook Form 7 + Zod 3 |
+| **HTTP** | Axios (centralized in `lib/api.js`) |
+| **Offline DB** | Dexie 4 (IndexedDB wrapper) |
+| **PDF** | `@react-pdf/renderer` 3 (client-side generation) |
+| **Mobile** | Capacitor 5 (iOS/Android) |
+| **Date** | date-fns 3 |
+
+### Frontend Folder Map
 ```
 app/src/
-├── features/          # Feature modules (auth, invoices, customers, etc.)
-│   ├── auth/         # Phone OTP authentication
-│   ├── invoices/     # Invoice CRUD, PDF generation
-│   ├── home/         # Dashboard
-│   ├── settings/     # Business settings
-│   ├── templates/    # Template customization
-│   └── reports/      # Reports and analytics
-├── components/       # Shared UI components
-├── store/           # Zustand stores (authStore, etc.)
-├── lib/             # API client and utilities
-├── db/              # IndexedDB schema (Dexie)
-├── services/        # Business logic services
-└── offline/         # Sync engine and outbox pattern
+├── App.jsx                    # Root: auth gate → LandingPage/AuthenticatedApp
+├── main.jsx                   # React DOM entry
+├── index.css                  # TailwindCSS v4 theme + global styles
+├── ErrorBoundary.jsx          # Global error boundary
+├── config/
+│   └── branding.js            # App name, tagline, feature flags
+├── store/
+│   ├── authStore.js           # Zustand: user, business, token (persisted)
+│   └── syncStore.js           # Zustand: sync status tracking
+├── lib/
+│   └── api.js                 # Axios instance + all API modules
+├── db/
+│   └── index.js               # Dexie IndexedDB schema
+├── services/
+│   └── syncService.js         # Offline sync engine (outbox pattern)
+├── offline/
+│   └── db.js                  # Offline DB helpers
+├── pages/
+│   ├── LandingPage.jsx        # Public marketing page
+│   └── DemoPage.jsx           # Interactive demo
+├── features/
+│   ├── auth/                  # PhonePage, VerifyOTPPage
+│   ├── home/                  # HomePage (dashboard)
+│   ├── invoices/              # InvoiceListPage, InvoiceDetailPage, NewInvoicePage, InvoicePDFPage
+│   │   ├── components/        # CustomerTypeahead, ProductTypeahead, LineItemRow, TemplateSelectModal, TotalsSummary
+│   │   ├── hooks/             # useInvoiceForm (form logic)
+│   │   └── utils/templates/   # pdfTemplates.jsx (48KB — all PDF template components), registry.js
+│   ├── customers/             # CustomerListPage, CustomerDetailPage
+│   ├── products/              # ProductListPage, ProductDetailPage
+│   ├── settings/              # SettingsPage (business profile, bank, signature)
+│   ├── templates/             # TemplateSelectPage, TemplateEditorPage
+│   ├── reports/               # ReportsPage (summary, GST, trends)
+│   └── plans/                 # PlansPage (subscription management)
+├── components/
+│   ├── layout/                # AppLayout, AppHeader, AppSidebar, PageHeader, navigationConfig
+│   ├── invoice-form/          # InvoiceFormPage, InvoiceHeaderSection, InvoiceLineItems, InvoiceTotalsFooter, etc.
+│   ├── invoice/               # AdvancedInvoiceForm, BasicInvoiceForm, TaxModal
+│   ├── data-table/            # DataTable (card-based mobile), PageToolbar, StatusFilterPills, CheckboxFilter, TableSummary
+│   ├── landing/               # HeroSection, FeaturesSection, PricingSection, TemplatesSection, FAQSection, etc.
+│   ├── customers/             # CreateCustomerModal
+│   ├── demo/                  # RegistrationModal
+│   ├── AppModal.jsx           # Reusable modal component
+│   ├── PlanLimitModal.jsx     # Plan limit exceeded modal
+│   ├── PlanUsageCard.jsx      # Usage display card
+│   ├── SyncStatusBar.jsx      # Offline sync indicator
+│   └── UpgradePrompt.jsx      # Upgrade CTA component
 ```
 
-### Key Frontend Files to Review
-- `app/src/App.jsx` - Main app routing and authentication flow
-- `app/src/store/authStore.js` - Authentication state management
-- `app/src/lib/api.js` - API client configuration
-- `app/src/db/` - Offline database schema
-- `app/package.json` - Dependencies and scripts
+### Frontend Routes
+**Public (unauthenticated):**
+- `/` → LandingPage
+- `/demo` → DemoPage
+- `/auth/phone` → PhonePage
+- `/auth/verify` → VerifyOTPPage
 
-### Frontend Development Commands
-```bash
-cd app
-npm run dev          # Start development server (Vite)
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run format       # Format code with Prettier
-```
+**Authenticated (wrapped in AppLayout):**
+- `/home` → HomePage (dashboard)
+- `/invoices` → InvoiceListPage
+- `/invoices/new` → NewInvoicePage
+- `/invoices/:id` → InvoiceDetailPage
+- `/customers` → CustomerListPage
+- `/products` → ProductListPage
+- `/settings` → SettingsPage
+- `/plans` → PlansPage
+- `/reports` → ReportsPage
+- `/templates` → TemplateSelectPage
+- `/templates/editor` → TemplateEditorPage
 
-## Step 3: Understand Backend Architecture
+### Backend Stack
+| Layer | Technology |
+|---|---|
+| **Runtime** | Node.js (ES modules) |
+| **Framework** | Fastify 4 |
+| **ORM** | Prisma 5 + PostgreSQL |
+| **Auth** | JWT (jsonwebtoken) — 7-day expiry |
+| **Validation** | Zod 3 |
+| **Logging** | Pino + pino-pretty |
+| **Security** | @fastify/helmet, @fastify/cors, @fastify/rate-limit (100/min) |
+| **File Upload** | @fastify/multipart (5MB limit) |
+| **Storage** | Google Cloud Storage (logo uploads) |
+| **SMS** | SpringEdge (OTP in production), console (dev) |
+| **Payments** | Razorpay (plan subscriptions) |
 
-**Location**: `d:\CodeVelWorkspce-New\Invoice-app\server\`
-
-### Backend Tech Stack
-- **Runtime**: Node.js (ES modules)
-- **Framework**: Fastify (high-performance HTTP server)
-- **ORM**: Prisma (PostgreSQL)
-- **Validation**: Zod schemas
-- **Auth**: JWT tokens (access + refresh)
-- **Logging**: Pino (structured logging)
-- **Security**: Helmet, CORS, Rate limiting
-
-### Backend Folder Structure
+### Backend Folder Map
 ```
 server/src/
-├── features/         # Feature modules (modular architecture)
-│   ├── auth/        # OTP generation, verification, JWT
-│   ├── business/    # Business settings and GST config
-│   ├── customers/   # Customer management
-│   ├── products/    # Products/services catalog
-│   ├── invoices/    # Invoice CRUD, issuance, calculations
-│   ├── templates/   # Base templates + business configs
-│   ├── plans/       # Plan enforcement and usage tracking
-│   ├── reports/     # Analytics and reports
-│   └── sync/        # Offline sync and idempotency
-├── common/          # Shared utilities
-│   ├── config.js    # Environment configuration
-│   ├── errors.js    # Error handling
-│   ├── logger.js    # Pino logger setup
-│   └── utils.js     # Helper functions
-└── index.js         # Server entry point
+├── index.js                   # Fastify setup, plugin registration, route mounting
+├── common/
+│   ├── config.js              # dotenv config (DB, JWT, SMS, GCS, Razorpay)
+│   ├── auth.js                # JWT verification middleware
+│   ├── errors.js              # Centralized error handler
+│   ├── logger.js              # Pino logger
+│   ├── prisma.js              # Prisma client singleton
+│   ├── storage.js             # GCS upload/delete helpers
+│   └── razorpay.js            # Razorpay client instance
+├── features/
+│   ├── auth/                  # routes, handlers, service, validation — Phone OTP + JWT
+│   ├── business/              # routes, handlers, service, validation — Business profile, logo upload
+│   ├── customers/             # routes, handlers, service, validation — CRUD
+│   ├── products/              # routes, handlers, service, validation — CRUD + units
+│   ├── invoices/              # routes, handlers, service, validation — CRUD, issue, status
+│   ├── tax-rates/             # routes, handlers, service, validation — Per-business tax rates
+│   ├── templates/             # routes, handlers, service — Base templates + business configs
+│   ├── plans/                 # routes, handlers, service — Plans, subscriptions, Razorpay
+│   ├── reports/               # routes, handlers, service — Summary, GST, trends
+│   └── sync/                  # routes, handlers, service — Delta sync, full sync, batch mutations
 ```
 
-### Key Backend Patterns
-- **Controllers**: Thin layer handling HTTP requests/responses
-- **Services**: Business logic and orchestration
-- **Repositories**: Data access via Prisma
-- **Middleware**: Auth, rate limiting, error handling
-- **Idempotency**: Support for offline sync with idempotency keys
+**Each feature module follows**: `routes.js` → `handlers.js` → `service.js` (+ optional `validation.js`)
 
-### Backend Development Commands
-```bash
-cd server
-npm run dev          # Start with hot reload (--watch)
-npm run start        # Production start
-npm run db:generate  # Generate Prisma client
-npm run db:migrate   # Run database migrations
-npm run db:studio    # Open Prisma Studio (DB GUI)
-npm run db:seed      # Seed database with initial data
-npm run lint         # Run ESLint
-npm run test         # Run tests with Vitest
-```
+### Backend Route Prefixes
+| Module | Prefix | Notes |
+|---|---|---|
+| auth | `/auth/*` | No prefix in register |
+| invoices | `/invoices/*` | No prefix in register |
+| customers | `/customers/*` | No prefix in register |
+| products | `/products/*` | No prefix in register |
+| business | `/business` | Prefixed |
+| reports | `/reports` | Prefixed |
+| templates | `/templates` | Prefixed |
+| sync | `/sync` | Prefixed |
+| plans | `/plans` | Prefixed |
+| tax-rates | `/tax-rates` | Prefixed |
+| health | `/health` | Inline in index.js |
 
-## Step 4: Understand Database Schema
+### Database Models (Prisma)
+| Group | Models |
+|---|---|
+| **Auth** | `User` (phone-based), `OtpRequest` |
+| **Business** | `Business` (profile, GST, bank, signature, invoice defaults, enabledInvoiceTypes) |
+| **Catalog** | `Customer`, `ProductService`, `TaxRate` |
+| **Invoicing** | `Invoice` (status: DRAFT→ISSUED→PAID/CANCELLED/VOID), `InvoiceLineItem` |
+| **Templates** | `BaseTemplate` (configSchema + renderConfig), `BusinessTemplateConfig` (per-business overrides) |
+| **Plans** | `Plan` (entitlements JSON), `Subscription` (Razorpay), `UsageCounter` (monthly limits) |
+| **Sync** | `IdempotencyKey` |
+| **Audit** | `AuditLog` |
 
-**Location**: `d:\CodeVelWorkspce-New\Invoice-app\server\prisma\schema.prisma`
+**Key enums**: `InvoiceStatus` (DRAFT, ISSUED, PAID, CANCELLED, VOID), `TaxMode` (NONE, IGST, CGST_SGST), `SubscriptionStatus` (ACTIVE, PAST_DUE, CANCELLED, EXPIRED)
 
-### Core Database Models
-
-**Authentication & Users**
-- `User` - Phone-based user accounts
-- `OtpRequest` - OTP generation and verification tracking
-
-**Business Domain**
-- `Business` - Business profile, GST settings, invoice defaults
-- `Customer` - Customer records with GST details
-- `ProductService` - Products/services catalog
-
-**Invoicing Core**
-- `Invoice` - Invoice header (status, amounts, GST breakup)
-- `InvoiceLineItem` - Invoice line items
-- **Invoice Status**: DRAFT → ISSUED → PAID/CANCELLED/VOID
-- **Tax Modes**: NONE, IGST, CGST_SGST (invoice-level GST)
-
-**Templates**
-- `BaseTemplate` - System-wide template definitions (admin-managed)
-- `BusinessTemplateConfig` - Per-business template customizations
-
-**Plans & Usage**
-- `Plan` - Subscription plans with entitlements (JSON)
-- `Subscription` - Business subscription tracking
-- `UsageCounter` - Monthly usage limits (invoices, customers, products)
-
-**Sync & Audit**
-- `IdempotencyKey` - Offline sync deduplication
-- `AuditLog` - Change tracking for compliance
-
-### Database Migrations
-- Migrations are in `server/prisma/migrations/`
-- Always run `npm run db:migrate` after pulling schema changes
-- Use `npm run db:studio` to inspect data visually
-
-## Step 5: Understand Key Business Rules
-
-### GST Tax Logic (Invoice-Level)
-- **IGST**: Inter-state transactions (business state ≠ customer state)
-- **CGST + SGST**: Intra-state transactions (business state = customer state)
-- Tax rate splits: IGST = full rate, CGST = SGST = rate/2
-- Place of supply determines tax mode
+### GST Tax Logic
+- **Invoice-level tax** (not line-item level in V1)
+- **IGST**: Business state ≠ customer state → full rate as IGST
+- **CGST+SGST**: Business state = customer state → rate/2 each
+- `placeOfSupplyStateCode` on Invoice determines tax mode
+- Tax breakup stored as JSON in `Invoice.taxBreakup`
 
 ### Invoice Lifecycle
-1. **DRAFT**: Editable, stored locally (offline-first)
-2. **ISSUED**: Immutable, template snapshot created, PDF generated
-3. **PAID/CANCELLED/VOID**: Status updates only
+1. **DRAFT** — Editable, no invoice number lock
+2. **ISSUED** — Immutable, template config snapshotted into `templateConfigSnapshot`, `issuedAt` set
+3. **PAID / CANCELLED / VOID** — Status-only transitions
 
-### Plan Enforcement
-- Free plan has monthly invoice limits (enforced at issuance)
-- Usage counters track: invoices issued, customers, products
-- Limits checked before generating PDF
+### Invoice Types
+12 configurable types per business (stored in `Business.enabledInvoiceTypes` JSON):
+`invoice`, `tax_invoice`, `proforma`, `receipt`, `sales_receipt`, `cash_receipt`, `quote`, `estimate`, `credit_memo`, `credit_note`, `purchase_order`, `delivery_note`
 
-### Offline-First Sync
-- Client writes to IndexedDB immediately
-- Outbox pattern queues mutations
-- Sync engine pushes changes with idempotency keys
-- Server is authoritative for invoice numbers and issuance
+### Template System
+- **Two-layer**: `BaseTemplate` (admin-defined schema + render config) → `BusinessTemplateConfig` (per-business customization)
+- **Snapshotting**: On invoice issuance, config frozen in `Invoice.templateConfigSnapshot`
+- **Client-side PDF**: `@react-pdf/renderer` components in `features/invoices/utils/templates/pdfTemplates.jsx`
+- **Template registry**: `features/invoices/utils/templates/registry.js`
 
-## Step 6: Understand Template System
+### Offline-First Architecture
+- **Client writes** to Dexie (IndexedDB) immediately
+- **Outbox pattern** in `services/syncService.js` queues mutations
+- **Sync engine** pushes changes with idempotency keys
+- **Server authoritative** for invoice numbers and issuance
+- **Sync store** (`store/syncStore.js`) tracks sync status
 
-### Two-Layer Architecture
-1. **BaseTemplate**: System-defined templates (admin-controlled)
-   - Contains `configSchema` (what can be customized)
-   - Contains `renderConfig` (client-side rendering rules)
-   
-2. **BusinessTemplateConfig**: Per-business customizations
-   - Validated against BaseTemplate's configSchema
-   - Includes: colors, logo, layout options, field visibility
+### Mobile-First UI Patterns
+- **Layout**: Desktop = Header + Sidebar + Content; Mobile = Header + Content + Bottom Nav (5 items)
+- **Responsive**: `md:` breakpoint for desktop, mobile-first defaults
+- **Touch**: 44px min tap targets, `active:` instead of `hover:`, `tap-target-auto` escape class
+- **Safe areas**: CSS `env(safe-area-inset-*)` utilities (`.safe-top`, `.safe-bottom`, `.safe-x`)
+- **DataTable**: Card-based layout on mobile via `renderMobileCard` prop
+- **Scrollbars**: Hidden on mobile, thin on desktop
+- **Capacitor**: StatusBar overlay, Keyboard resize, iOS contentInset
 
-### Template Snapshotting
-- When invoice is ISSUED, template config is frozen in `Invoice.templateConfigSnapshot`
-- Ensures historical invoices render consistently even if template changes
+### Design Tokens (TailwindCSS v4)
+Defined in `index.css` `@theme` block:
+- **Primary**: `#2563EB` (blue-600), hover `#1D4ED8`
+- **Backgrounds**: `bgPrimary: #F9FAFB`, `bgSecondary: #FFFFFF`
+- **Text**: `textPrimary: #111827`, `textSecondary: #6B7280`
+- **Border**: `#E5E7EB`, light `#F3F4F6`
+- **Font**: Inter, sans-serif
+- **Shadows**: `soft`, `card`
 
-### Client-Side PDF Generation
-- Uses `@react-pdf/renderer` (React components → PDF)
-- Template config + invoice data → PDF document
-- No server-side PDF storage (generated on-demand)
+### Environment Variables
+**Frontend** (`app/.env`): `VITE_API_URL` (default: `http://localhost:3000`)
 
-## Step 7: Review Current Development Status
+**Backend** (`server/.env`): `DATABASE_URL`, `JWT_SECRET` (required), plus optional: `PORT`, `CORS_ORIGIN`, `SMS_PROVIDER`, `SPRING_EDGE_API_KEY_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `GCS_BUCKET`, `GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY`
 
-Check these files for project progress:
-- `PHASE-1-PROGRESS.md` - Current development phase status
-- `CLIENT-SIDE-PDF-GUIDE.md` - PDF generation implementation guide
+### Development Commands
 
-## Step 8: Environment Setup Verification
+**Frontend** (cwd: `app/`):
+- `npm run dev` — Vite dev server (default port 5173)
+- `npm run build` — Production build to `dist/`
+- `npm run lint` — ESLint
+- `npm run format` — Prettier
 
-### Frontend Environment
-Check `app/.env`:
-```
-VITE_API_URL=http://localhost:3001
-```
+**Backend** (cwd: `server/`):
+- `npm run dev` — Node.js with `--watch` flag
+- `npm run start` — Production start
+- `npm run db:generate` — Generate Prisma client
+- `npm run db:migrate` — Run migrations
+- `npm run db:studio` — Prisma Studio GUI
+- `npm run db:seed` — Seed initial data (plans, templates)
+- `npm run test` — Vitest
 
-### Backend Environment
-Check `server/.env`:
-```
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-OTP_PROVIDER=...
-```
+### Code Conventions
+- **Indentation**: 2 spaces
+- **Modules**: ES modules (`"type": "module"` in both package.json)
+- **Styling**: TailwindCSS utility classes, no CSS-in-JS
+- **Icons**: Lucide React (not Ionicons for app UI)
+- **Modals**: Use `AppModal.jsx` wrapper
+- **State**: Zustand for auth/sync, TanStack Query for server data, React Hook Form for forms
+- **API calls**: Always through `lib/api.js` modules, never raw axios
+- **Backend pattern**: routes → handlers → service (thin handlers, business logic in services)
+- **Validation**: Zod schemas in both frontend (forms) and backend (request validation)
+- **Error handling**: Frontend shows toast/modal; Backend uses structured errors via `common/errors.js`
 
-## Important Development Guidelines
-
-### Code Style
-- Use 2-space indentation
-- Follow ESLint rules
-- Run Prettier before committing
-- No console.logs in production code (use logger)
-
-### State Management Rules
-- **Auth state**: Zustand authStore
-- **Server data**: TanStack Query (caching, refetching)
-- **Form state**: React Hook Form
-- **Offline data**: Dexie (IndexedDB)
-
-### API Communication
-- All API calls go through `app/src/lib/api.js`
-- Use TanStack Query mutations for writes
-- Handle offline scenarios gracefully
-- Include idempotency keys for sync operations
-
-### Error Handling
-- Frontend: Show user-friendly toast messages (IonToast)
-- Backend: Use structured error responses
-- Log errors with context (request ID, user ID, business ID)
-
-### Testing Strategy
-- Unit tests: Business logic and utilities
-- Integration tests: API endpoints with test DB
-- E2E tests: Critical user flows (Playwright)
+---
 
 ## Workflow Complete
 
-You now have full context of:
-✅ Project architecture and technology stack
-✅ Frontend structure (React + Ionic + offline-first)
-✅ Backend structure (Fastify + Prisma + PostgreSQL)
-✅ Database schema and relationships
-✅ Business rules (GST, invoicing, plans)
-✅ Template system and PDF generation
-✅ Development commands and environment setup
+After reading the files above, you have full context of:
+- Project architecture, tech stack, and folder structure
+- All frontend routes, components, and state management
+- All backend API modules and database models
+- Business rules (GST, invoicing, plans, templates)
+- Mobile-first UI patterns and design tokens
+- Development commands and environment setup
 
-**Ready to start development!** Always refer back to this context when making changes to ensure consistency with the architecture.
+**Ready for development.**
