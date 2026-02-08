@@ -35,6 +35,7 @@ function AuthenticatedApp() {
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/invoices" component={InvoiceListPage} />
         <Route exact path="/invoices/new" component={NewInvoicePage} />
+        <Route exact path="/invoices/:id/edit" component={NewInvoicePage} />
         <Route exact path="/invoices/:id/pdf" render={({ match }) => <Redirect to={`/invoices/${match.params.id}`} />} />
         <Route exact path="/invoices/:id" component={InvoiceDetailPage} />
         <Route exact path="/customers" component={CustomerListPage} />

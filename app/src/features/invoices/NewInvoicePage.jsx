@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useHistory, useLocation } from 'react-router-dom'
+import { useHistory, useLocation, useParams } from 'react-router-dom'
 import { Save, Loader2, ChevronDown } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useInvoiceForm } from './hooks/useInvoiceForm'
 import { useAuthStore } from '../../store/authStore'
@@ -18,9 +19,13 @@ const FORM_MODE_KEY = 'invoice_form_mode'
 export default function NewInvoicePage() {
   const history = useHistory()
   const location = useLocation()
+  const { id: editId } = useParams()
   const queryClient = useQueryClient()
   const business = useAuthStore((state) => state.business)
+  const isEditMode = !!editId
+  const cloneData = location.state?.clone || null
   const [error, setError] = useState('')
+  const [editLoaded, setEditLoaded] = useState(false)
   const [formMode, setFormMode] = useState(() => {
     try { return localStorage.getItem(FORM_MODE_KEY) || 'basic' } catch { return 'basic' }
   })
@@ -79,10 +84,80 @@ export default function NewInvoicePage() {
     setCustomer,
     setProductForLineItem,
     saveToLocal,
-    resetForm
+    resetForm,
+    setInvoiceData
   } = useInvoiceForm()
 
-  const createMutation = useMutation({
+  // Load existing invoice for edit mode
+  const { data: existingInvoice, isLoading: isLoadingEdit } = useQuery({
+    queryKey: ['invoice', editId],
+    queryFn: async () => {
+      const response = await invoiceApi.get(editId)
+      return response.data
+    },
+    enabled: isEditMode
+  })
+
+  // Populate form with existing invoice data (edit mode)
+  useEffect(() => {
+    if (!isEditMode || !existingInvoice || editLoaded) return
+    const inv = existingInvoice
+    setInvoiceData({
+      customerId: inv.customerId,
+      customerName: inv.customer?.name || '',
+      customerPhone: inv.customer?.phone || '',
+      customerStateCode: inv.customerStateCode || null,
+      shipTo: inv.shipTo || '',
+      invoiceNumber: inv.invoiceNumber || '',
+      date: inv.date ? inv.date.split('T')[0] : new Date().toISOString().split('T')[0],
+      dueDate: inv.dueDate ? inv.dueDate.split('T')[0] : null,
+      poNumber: inv.poNumber || '',
+      lineItems: (inv.lineItems || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        rate: item.rate,
+        lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        productServiceId: item.productServiceId || null
+      })),
+      discountTotal: inv.discountTotal || 0,
+      taxRate: inv.taxRate || null,
+      notes: inv.notes || '',
+      terms: inv.terms || ''
+    })
+    if (inv.customer) {
+      setSelectedCustomer(inv.customer)
+    }
+    setEditLoaded(true)
+    defaultsAppliedRef.current = true
+  }, [isEditMode, existingInvoice, editLoaded])
+
+  // Populate form with clone data
+  useEffect(() => {
+    if (!cloneData || isEditMode) return
+    setInvoiceData({
+      customerId: cloneData.customerId,
+      customerName: cloneData.customerName || '',
+      customerPhone: cloneData.customerPhone || '',
+      customerStateCode: cloneData.customerStateCode || null,
+      shipTo: cloneData.shipTo || '',
+      lineItems: (cloneData.lineItems || []).map(item => ({
+        id: uuidv4(),
+        name: item.name,
+        quantity: item.quantity,
+        rate: item.rate,
+        lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        productServiceId: item.productServiceId || null
+      })),
+      discountTotal: cloneData.discountTotal || 0,
+      taxRate: cloneData.taxRate || null,
+      notes: cloneData.notes || '',
+      terms: cloneData.terms || ''
+    })
+    defaultsAppliedRef.current = true
+  }, [cloneData, isEditMode])
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       // Filter to only valid line items (name + rate > 0)
       const validLineItems = invoice.lineItems
@@ -98,7 +173,7 @@ export default function NewInvoicePage() {
         throw new Error('Please add at least one item with a name and rate')
       }
 
-      const response = await invoiceApi.create({
+      const payload = {
         customerId: invoice.customerId || null,
         date: invoice.date,
         dueDate: invoice.dueDate || null,
@@ -108,19 +183,33 @@ export default function NewInvoicePage() {
         customerStateCode: invoice.customerStateCode || null,
         notes: invoice.notes || null,
         terms: invoice.terms || null
-      })
-      return response.data
+      }
+
+      if (isEditMode) {
+        const response = await invoiceApi.update(editId, payload)
+        return response.data
+      } else {
+        const response = await invoiceApi.create(payload)
+        return response.data
+      }
     },
     onSuccess: (data) => {
-      // Reset form state for next invoice
-      resetForm()
-      setSelectedCustomer(null)
-      setError('')
-      defaultsAppliedRef.current = false
-      // Refetch business profile to get updated nextInvoiceNumber
-      queryClient.invalidateQueries({ queryKey: ['business'] })
-      // Navigate to the created invoice
-      history.push(`/invoices/${data.id}`)
+      if (isEditMode) {
+        // Invalidate and go back to detail page
+        queryClient.invalidateQueries({ queryKey: ['invoice', editId] })
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
+        history.push(`/invoices/${editId}`)
+      } else {
+        // Reset form state for next invoice
+        resetForm()
+        setSelectedCustomer(null)
+        setError('')
+        defaultsAppliedRef.current = false
+        // Refetch business profile to get updated nextInvoiceNumber
+        queryClient.invalidateQueries({ queryKey: ['business'] })
+        // Navigate to the created invoice
+        history.push(`/invoices/${data.id}`)
+      }
     },
     onError: (err) => {
       const errorData = err.response?.data?.error
@@ -129,7 +218,7 @@ export default function NewInvoicePage() {
         setShowPlanLimit(true)
         return
       }
-      setError(errorData?.message || err.message || 'Failed to create invoice')
+      setError(errorData?.message || err.message || (isEditMode ? 'Failed to update invoice' : 'Failed to create invoice'))
     }
   })
 
@@ -140,7 +229,7 @@ export default function NewInvoicePage() {
       setError('Please add at least one item with a name and rate')
       return
     }
-    createMutation.mutate()
+    saveMutation.mutate()
   }
 
   const formatCurrency = (value) => {
@@ -152,14 +241,15 @@ export default function NewInvoicePage() {
     }).format(value || 0)
   }
 
-  // Always apply invoice number from server (auto-incremented, server is source of truth)
+  // Always apply invoice number from server for new invoices (not edit mode)
   useEffect(() => {
+    if (isEditMode) return
     if (!businessProfile) return
     if (businessProfile.invoicePrefix != null && businessProfile.nextInvoiceNumber != null) {
       const nextNum = String(businessProfile.nextInvoiceNumber).padStart(4, '0')
       updateField('invoiceNumber', `${businessProfile.invoicePrefix}${nextNum}`)
     }
-  }, [businessProfile])
+  }, [businessProfile, isEditMode])
 
   // Apply default terms only once on initial load (not on refetches from debounced save)
   useEffect(() => {
@@ -194,7 +284,7 @@ export default function NewInvoicePage() {
           formMode={formMode}
           onFormModeChange={handleFormModeChange}
           onSave={handleSave}
-          isSaving={createMutation.isPending}
+          isSaving={saveMutation.isPending}
           invoiceTitle={invoiceTitle}
           onInvoiceTitleChange={setInvoiceTitle}
           showTitleDropdown={showTitleDropdown}
@@ -290,13 +380,13 @@ export default function NewInvoicePage() {
           onClick={handleSave}
           className="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer mt-auto safe-bottom"
         >
-          <button className="font-semibold text-sm flex items-center gap-2" disabled={createMutation.isPending}>
-            {createMutation.isPending ? (
+          <button className="font-semibold text-sm flex items-center gap-2" disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Save className="w-4 h-4" />
             )}
-            Save Invoice
+            {isEditMode ? 'Update Invoice' : 'Save Invoice'}
           </button>
         </div>
       </div>

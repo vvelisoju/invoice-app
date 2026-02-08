@@ -265,6 +265,26 @@ export function useInvoiceForm(invoiceId = null) {
     }
   }, [isDirty, saveToLocal])
 
+  // Set full invoice data (for edit mode / clone)
+  const setInvoiceData = useCallback((data) => {
+    setInvoice(prev => {
+      const updated = {
+        ...prev,
+        ...data,
+        updatedAt: new Date().toISOString()
+      }
+      // Recalculate totals
+      const totals = calculateTotals(
+        data.lineItems || prev.lineItems,
+        data.discountTotal !== undefined ? data.discountTotal : prev.discountTotal,
+        data.taxRate !== undefined ? data.taxRate : prev.taxRate
+      )
+      Object.assign(updated, totals)
+      return updated
+    })
+    setIsDirty(false)
+  }, [calculateTotals])
+
   // Reset form, clear sessionStorage draft and IndexedDB draft
   const resetForm = useCallback(async () => {
     const oldId = invoice.id
@@ -293,6 +313,7 @@ export function useInvoiceForm(invoiceId = null) {
     setCustomer,
     setProductForLineItem,
     saveToLocal,
-    resetForm
+    resetForm,
+    setInvoiceData
   }
 }

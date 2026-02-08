@@ -17,6 +17,8 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   phone     String   @unique
+  name      String?
+  email     String?
   otpVerifiedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,6 +72,9 @@ model Business {
   // Signature (optional, for invoice templates)
   signatureUrl   String?
   signatureName  String?  // e.g., "Authorized Signatory"
+  
+  // Invoice workflow
+  enableStatusWorkflow Boolean @default(false) // false = save as Paid directly; true = Draft → Issued → Paid
   
   // Invoice defaults
   invoicePrefix      String  @default("INV-")

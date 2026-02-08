@@ -21,7 +21,7 @@ import {
   Palette
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { invoiceApi, templateApi } from '../../lib/api'
+import { invoiceApi, templateApi, businessApi } from '../../lib/api'
 import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
@@ -49,6 +49,16 @@ export default function InvoiceDetailPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(null)
   const [showPlanLimit, setShowPlanLimit] = useState(false)
   const [planLimitData, setPlanLimitData] = useState(null)
+
+  // Fetch business profile to check enableStatusWorkflow
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    }
+  })
+  const statusWorkflow = businessProfile?.enableStatusWorkflow || false
 
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ['invoice', id],
@@ -181,10 +191,11 @@ export default function InvoiceDetailPage() {
     try {
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
+        const shareText = `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: `Invoice ${invoice.invoiceNumber}`,
-            text: `Please find attached Invoice #${invoice.invoiceNumber}`,
+            text: shareText,
             files: [file]
           })
           return
@@ -207,6 +218,33 @@ export default function InvoiceDetailPage() {
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(window.location.href)
+  }
+
+  const handleCopyAndCreate = () => {
+    if (!invoice) return
+    // Pass invoice data as clone state — NewInvoicePage will populate fields
+    history.push({
+      pathname: '/invoices/new',
+      state: {
+        clone: {
+          customerId: invoice.customerId,
+          customerName: invoice.customer?.name || '',
+          customerPhone: invoice.customer?.phone || '',
+          customerStateCode: invoice.customerStateCode || null,
+          shipTo: invoice.shipTo || '',
+          lineItems: (invoice.lineItems || []).map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            rate: item.rate,
+            productServiceId: item.productServiceId || null
+          })),
+          discountTotal: invoice.discountTotal || 0,
+          taxRate: invoice.taxRate || null,
+          notes: invoice.notes || '',
+          terms: invoice.terms || ''
+        }
+      }
+    })
   }
 
   if (isLoading) {
@@ -262,7 +300,7 @@ export default function InvoiceDetailPage() {
 
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
-            {invoice.status === 'DRAFT' && (
+            {statusWorkflow && invoice.status === 'DRAFT' && (
               <button
                 onClick={() => issueMutation.mutate()}
                 disabled={issueMutation.isPending}
@@ -272,7 +310,7 @@ export default function InvoiceDetailPage() {
                 Issue
               </button>
             )}
-            {invoice.status === 'ISSUED' && (
+            {statusWorkflow && invoice.status === 'ISSUED' && (
               <button
                 onClick={() => { setPendingStatus('PAID'); setShowStatusConfirm(true) }}
                 className="px-3.5 py-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5"
@@ -281,14 +319,6 @@ export default function InvoiceDetailPage() {
                 Mark Paid
               </button>
             )}
-            <button
-              onClick={() => setShowTemplateModal(true)}
-              className="md:px-3 md:py-1.5 text-sm font-medium text-primary hover:bg-blue-50 rounded-lg border border-primary/30 transition-colors flex items-center gap-1.5"
-              title="Select Template"
-            >
-              <Palette className="w-4 h-4" />
-              <span className="hidden lg:inline">Template</span>
-            </button>
             <button
               onClick={handleWhatsAppShare}
               disabled={!pdfBlob}
@@ -336,14 +366,18 @@ export default function InvoiceDetailPage() {
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
                   <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
-                    {invoice.status === 'DRAFT' && (
-                      <button
-                        onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
-                        className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
-                      >
-                        <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
-                      </button>
-                    )}
+                    <button
+                      onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    >
+                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
+                      className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
+                    >
+                      <Palette className="w-4 h-4 text-textSecondary" /> Change Template
+                    </button>
                     <button
                       onClick={() => { setShowMoreActions(false); handleCopyLink() }}
                       className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
@@ -351,12 +385,12 @@ export default function InvoiceDetailPage() {
                       <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
                     </button>
                     <button
-                      onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
+                      onClick={() => { setShowMoreActions(false); handleCopyAndCreate() }}
                       className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
                     >
-                      <Plus className="w-4 h-4 text-textSecondary" /> Create Another
+                      <Plus className="w-4 h-4 text-textSecondary" /> Copy & Create
                     </button>
-                    {invoice.status === 'ISSUED' && (
+                    {statusWorkflow && invoice.status === 'ISSUED' && (
                       <button
                         onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
                         className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
@@ -364,7 +398,7 @@ export default function InvoiceDetailPage() {
                         <Ban className="w-4 h-4" /> Cancel Invoice
                       </button>
                     )}
-                    {invoice.status === 'PAID' && (
+                    {statusWorkflow && invoice.status === 'PAID' && (
                       <button
                         onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
                         className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
@@ -372,7 +406,7 @@ export default function InvoiceDetailPage() {
                         <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                       </button>
                     )}
-                    {invoice.status === 'DRAFT' && (
+                    {statusWorkflow && invoice.status === 'DRAFT' && (
                       <>
                         <div className="border-t border-border my-1" />
                         <button
@@ -393,7 +427,7 @@ export default function InvoiceDetailPage() {
 
       {/* Mobile Action Bar — horizontal scroll, below header */}
       <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
-        {invoice.status === 'DRAFT' && (
+        {statusWorkflow && invoice.status === 'DRAFT' && (
           <button
             onClick={() => issueMutation.mutate()}
             disabled={issueMutation.isPending}
@@ -403,7 +437,7 @@ export default function InvoiceDetailPage() {
             Issue
           </button>
         )}
-        {invoice.status === 'ISSUED' && (
+        {statusWorkflow && invoice.status === 'ISSUED' && (
           <button
             onClick={() => { setPendingStatus('PAID'); setShowStatusConfirm(true) }}
             className="px-3 py-2 text-xs font-semibold text-white bg-green-600 active:bg-green-700 rounded-lg flex items-center gap-1.5 shrink-0"
@@ -412,13 +446,6 @@ export default function InvoiceDetailPage() {
             Mark Paid
           </button>
         )}
-        <button
-          onClick={() => setShowTemplateModal(true)}
-          className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 rounded-lg border border-primary/30 flex items-center gap-1.5 shrink-0"
-        >
-          <Palette className="w-3.5 h-3.5" />
-          Template
-        </button>
         <button
           onClick={handleWhatsAppShare}
           disabled={!pdfBlob}
@@ -443,69 +470,13 @@ export default function InvoiceDetailPage() {
           <Share2 className="w-3.5 h-3.5" />
           Share
         </button>
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setShowMoreActions(!showMoreActions)}
-            className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5"
-          >
-            <MoreVertical className="w-3.5 h-3.5" />
-            More
-          </button>
-          {showMoreActions && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
-              <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-lg z-20 py-1 overflow-hidden">
-                {invoice.status === 'DRAFT' && (
-                  <button
-                    onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
-                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
-                  >
-                    <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
-                  </button>
-                )}
-                <button
-                  onClick={() => { setShowMoreActions(false); handleCopyLink() }}
-                  className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
-                >
-                  <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
-                </button>
-                <button
-                  onClick={() => { setShowMoreActions(false); history.push('/invoices/new') }}
-                  className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
-                >
-                  <Plus className="w-4 h-4 text-textSecondary" /> Create Another
-                </button>
-                {invoice.status === 'ISSUED' && (
-                  <button
-                    onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
-                    className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-2.5"
-                  >
-                    <Ban className="w-4 h-4" /> Cancel Invoice
-                  </button>
-                )}
-                {invoice.status === 'PAID' && (
-                  <button
-                    onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
-                    className="w-full px-4 py-3 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-2.5"
-                  >
-                    <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
-                  </button>
-                )}
-                {invoice.status === 'DRAFT' && (
-                  <>
-                    <div className="border-t border-border my-1" />
-                    <button
-                      onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                      className="w-full px-4 py-3 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-2.5"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete Invoice
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <button
+          onClick={() => setShowMoreActions(!showMoreActions)}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+          More
+        </button>
       </div>
 
       {/* PDF Viewer Area — fills remaining space */}
@@ -537,6 +508,69 @@ export default function InvoiceDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile More Actions — fixed bottom sheet */}
+      {showMoreActions && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={() => setShowMoreActions(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white rounded-t-2xl shadow-2xl pb-safe animate-in slide-in-from-bottom">
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-2" />
+            <div className="px-2 pb-4 max-h-[60vh] overflow-y-auto">
+              <button
+                onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
+                className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
+              >
+                <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+              </button>
+              <button
+                onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
+                className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
+              >
+                <Palette className="w-4 h-4 text-textSecondary" /> Change Template
+              </button>
+              <button
+                onClick={() => { setShowMoreActions(false); handleCopyLink() }}
+                className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
+              >
+                <Copy className="w-4 h-4 text-textSecondary" /> Copy Link
+              </button>
+              <button
+                onClick={() => { setShowMoreActions(false); handleCopyAndCreate() }}
+                className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
+              >
+                <Plus className="w-4 h-4 text-textSecondary" /> Copy & Create
+              </button>
+              {statusWorkflow && invoice.status === 'ISSUED' && (
+                <button
+                  onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
+                  className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
+                >
+                  <Ban className="w-4 h-4" /> Cancel Invoice
+                </button>
+              )}
+              {statusWorkflow && invoice.status === 'PAID' && (
+                <button
+                  onClick={() => { setShowMoreActions(false); setPendingStatus('ISSUED'); setShowStatusConfirm(true) }}
+                  className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
+                >
+                  <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
+                </button>
+              )}
+              {statusWorkflow && invoice.status === 'DRAFT' && (
+                <>
+                  <div className="border-t border-border my-1 mx-4" />
+                  <button
+                    onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                    className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete Invoice
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

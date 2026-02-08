@@ -30,6 +30,9 @@ export const updateBusinessSchema = z.object({
   signatureUrl: z.preprocess(emptyToNull, z.string().max(2000).optional().nullable()),
   signatureName: z.preprocess(emptyToNull, z.string().max(100).optional().nullable()),
 
+  // Invoice workflow
+  enableStatusWorkflow: z.boolean().optional(),
+  
   // Invoice defaults
   invoicePrefix: z.preprocess(emptyToNull, z.string().max(10).optional().nullable()),
   nextInvoiceNumber: z.preprocess(

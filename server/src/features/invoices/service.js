@@ -76,6 +76,16 @@ export const createInvoice = async (prisma, businessId, data) => {
 
   const total = subtotal - discountTotal + taxTotal
 
+  // Determine initial status based on business workflow setting
+  // When enableStatusWorkflow is false (default), invoices are saved as PAID directly
+  // When true, invoices start as DRAFT and go through Issue → Paid flow
+  const initialStatus = business.enableStatusWorkflow ? 'DRAFT' : 'PAID'
+
+  // If saving directly as PAID (no workflow), check plan limits and count usage
+  if (!business.enableStatusWorkflow) {
+    await checkCanIssueInvoice(businessId)
+  }
+
   // Create invoice with line items
   const invoice = await prisma.invoice.create({
     data: {
@@ -85,7 +95,8 @@ export const createInvoice = async (prisma, businessId, data) => {
       invoiceNumber,
       date: data.date ? new Date(data.date) : new Date(),
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
-      status: 'DRAFT',
+      status: initialStatus,
+      issuedAt: !business.enableStatusWorkflow ? new Date() : null,
       subtotal,
       discountTotal,
       taxTotal,
@@ -115,6 +126,11 @@ export const createInvoice = async (prisma, businessId, data) => {
     }
   })
 
+  // Increment usage counter when saving directly as PAID
+  if (!business.enableStatusWorkflow) {
+    await incrementUsageCounter(businessId)
+  }
+
   return invoice
 }
 
@@ -132,12 +148,15 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
     throw new ForbiddenError('Access denied')
   }
 
-  if (invoice.status !== 'DRAFT') {
-    throw new ValidationError('Cannot edit issued invoice')
-  }
+  // Normalize date fields to full ISO-8601 DateTime for Prisma
+  if (data.date) data.date = new Date(data.date).toISOString()
+  if (data.dueDate) data.dueDate = new Date(data.dueDate).toISOString()
+
+  // Extract fields that aren't direct Prisma update fields
+  const { customerId, customerStateCode, lineItems: rawLineItems, ...restData } = data
 
   // Recalculate totals if line items changed
-  let updateData = { ...data }
+  let updateData = { ...restData }
 
   if (data.lineItems) {
     const subtotal = data.lineItems.reduce((sum, item) => {
@@ -200,15 +219,22 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
     where: { id: invoiceId },
     data: {
       ...updateData,
-      ...(data.lineItems && {
+      // Handle customer relation via connect/disconnect
+      ...(customerId
+        ? { customer: { connect: { id: customerId } } }
+        : customerId === null ? { customer: { disconnect: true } } : {}
+      ),
+      // Map customerStateCode to the actual Prisma field
+      ...(customerStateCode !== undefined && { placeOfSupplyStateCode: customerStateCode }),
+      ...(rawLineItems && {
         lineItems: {
-          create: data.lineItems.map(item => ({
+          create: rawLineItems.map(item => ({
             id: item.id || uuidv4(),
             name: item.name,
             quantity: parseFloat(item.quantity),
             rate: parseFloat(item.rate),
             lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
-            productServiceId: item.productServiceId || null
+            ...(item.productServiceId ? { productService: { connect: { id: item.productServiceId } } } : {})
           }))
         }
       })

@@ -1,5 +1,43 @@
-import { PenLine, Pencil } from 'lucide-react'
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { PenLine, Pencil, ChevronDown, ChevronUp } from 'lucide-react'
+
+function TermsSection({ terms, onTermsChange }) {
+  const [collapsed, setCollapsed] = useState(true)
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center gap-2 text-xs font-semibold text-textSecondary uppercase tracking-wide md:pointer-events-none"
+        >
+          <PenLine className="w-3.5 h-3.5 text-textSecondary/70" />
+          Terms & Conditions
+          {collapsed ? (
+            <ChevronDown className="w-3.5 h-3.5 text-textSecondary/50 md:hidden" />
+          ) : (
+            <ChevronUp className="w-3.5 h-3.5 text-textSecondary/50 md:hidden" />
+          )}
+        </button>
+      </div>
+      {/* Collapsed summary on mobile */}
+      {collapsed && terms && (
+        <div className="md:hidden text-xs text-textSecondary truncate px-1">
+          {terms.split('\n')[0]}
+        </div>
+      )}
+      <div className={`${collapsed ? 'hidden md:block' : ''}`}>
+        <textarea
+          placeholder="Payment is due within 15 days..."
+          rows={4}
+          value={terms}
+          onChange={(e) => onTermsChange(e.target.value)}
+          className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function InvoiceTotalsFooter({
   subtotal,
@@ -39,22 +77,8 @@ export default function InvoiceTotalsFooter({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 pt-4 md:pt-6 border-t border-border">
-      {/* Terms & Conditions */}
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <label className="flex items-center gap-2 text-xs font-semibold text-textSecondary uppercase tracking-wide">
-            <PenLine className="w-3.5 h-3.5 text-textSecondary/70" />
-            Terms & Conditions
-          </label>
-        </div>
-        <textarea
-          placeholder="Payment is due within 15 days..."
-          rows={4}
-          value={terms}
-          onChange={(e) => onTermsChange(e.target.value)}
-          className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
-        />
-      </div>
+      {/* Terms & Conditions — collapsible on mobile */}
+      <TermsSection terms={terms} onTermsChange={onTermsChange} />
 
       {/* Totals Calculation */}
       <div className="flex flex-col justify-between">

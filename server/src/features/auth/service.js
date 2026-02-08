@@ -200,3 +200,118 @@ export const getCurrentUser = async (prisma, userId) => {
 
   return user
 }
+
+export const updateUserProfile = async (prisma, userId, data) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user) {
+    throw new UnauthorizedError('User not found')
+  }
+
+  const updateData = {}
+  if (data.name !== undefined) updateData.name = data.name || null
+  if (data.email !== undefined) updateData.email = data.email || null
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    select: { id: true, phone: true, name: true, email: true, otpVerifiedAt: true, createdAt: true }
+  })
+
+  return updated
+}
+
+export const initiatePhoneChange = async (prisma, userId, newPhone) => {
+  // Validate phone format
+  const phoneRegex = /^[6-9]\d{9}$/
+  if (!phoneRegex.test(newPhone)) {
+    throw new ValidationError('Invalid phone number. Must be 10 digits starting with 6-9')
+  }
+
+  // Check if new phone is already in use by another user
+  const existing = await prisma.user.findUnique({ where: { phone: newPhone } })
+  if (existing && existing.id !== userId) {
+    throw new ValidationError('This phone number is already registered to another account')
+  }
+
+  // Check current user exists
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user) {
+    throw new UnauthorizedError('User not found')
+  }
+
+  if (user.phone === newPhone) {
+    throw new ValidationError('New phone number is the same as current')
+  }
+
+  // Generate and send OTP to new phone
+  const otp = generateOTP()
+  const expiresAt = new Date(Date.now() + config.otp.expiryMinutes * 60 * 1000)
+
+  await prisma.otpRequest.create({
+    data: {
+      userId: user.id,
+      phone: newPhone,
+      otp,
+      expiresAt
+    }
+  })
+
+  await sendOTP(newPhone, otp)
+
+  return { message: 'OTP sent to new phone number', expiresIn: config.otp.expiryMinutes * 60 }
+}
+
+export const confirmPhoneChange = async (prisma, userId, newPhone, otp) => {
+  if (!newPhone || !otp) {
+    throw new ValidationError('Phone and OTP are required')
+  }
+
+  const otpRequest = await prisma.otpRequest.findFirst({
+    where: {
+      userId,
+      phone: newPhone,
+      verified: false,
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  if (!otpRequest) {
+    throw new UnauthorizedError('Invalid or expired OTP')
+  }
+
+  if (otpRequest.attempts >= 3) {
+    throw new UnauthorizedError('Too many failed attempts. Please request a new OTP')
+  }
+
+  if (otpRequest.otp !== otp) {
+    await prisma.otpRequest.update({
+      where: { id: otpRequest.id },
+      data: { attempts: { increment: 1 } }
+    })
+    throw new UnauthorizedError('Invalid OTP')
+  }
+
+  // Mark OTP as verified
+  await prisma.otpRequest.update({
+    where: { id: otpRequest.id },
+    data: { verified: true }
+  })
+
+  // Update user phone
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { phone: newPhone },
+    select: { id: true, phone: true, name: true, email: true, otpVerifiedAt: true, createdAt: true }
+  })
+
+  // Generate new token with updated phone
+  const business = await prisma.business.findFirst({ where: { ownerUserId: userId } })
+  const token = generateToken({
+    userId: updated.id,
+    phone: updated.phone,
+    businessId: business?.id
+  })
+
+  return { user: updated, token }
+}

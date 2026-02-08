@@ -22,13 +22,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// Guard to prevent multiple 401 redirects firing at once
+let isRedirectingTo401 = false
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
-      window.location.href = '/auth/phone'
+      // Don't logout on 401 from auth endpoints that intentionally return 401
+      // (e.g. wrong OTP during phone change, invalid OTP during verify)
+      const url = error.config?.url || ''
+      const authSafeEndpoints = ['/auth/confirm-phone-change', '/auth/change-phone', '/auth/verify-otp', '/auth/request-otp']
+      const isSafeEndpoint = authSafeEndpoints.some(ep => url.includes(ep))
+      if (!isSafeEndpoint && !isRedirectingTo401) {
+        isRedirectingTo401 = true
+        // Clear both localStorage token AND Zustand persisted auth store
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth-storage')
+        window.location.href = '/auth/phone'
+      }
     }
     return Promise.reject(error)
   }
@@ -51,6 +64,9 @@ export const authApi = {
   },
   verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
   getCurrentUser: () => api.get('/auth/me'),
+  updateProfile: (data) => api.patch('/auth/profile', data),
+  initiatePhoneChange: (newPhone) => api.post('/auth/change-phone', { newPhone }),
+  confirmPhoneChange: (newPhone, otp) => api.post('/auth/confirm-phone-change', { newPhone, otp }),
   logout: () => api.post('/auth/logout')
 }
 
