@@ -32,6 +32,8 @@ export default function InvoiceHeaderSection({
   const fields = docTypeConfig?.fields || {}
   const isAdvanced = formMode === 'advanced'
   const [fromCollapsed, setFromCollapsed] = useState(true)
+  const [fromText, setFromText] = useState(fromAddress || '')
+  const [showFromSuggestion, setShowFromSuggestion] = useState(false)
   const [metaCollapsed, setMetaCollapsed] = useState(true)
   const [billToText, setBillToText] = useState(billTo || '')
   const [searchTerm, setSearchTerm] = useState('')
@@ -83,6 +85,13 @@ export default function InvoiceHeaderSection({
     if (customer.email) parts.push(customer.email)
     return parts.join('\n')
   }
+
+  // Sync fromText from prop (e.g. when business profile loads, edit mode restores, or settings updated)
+  useEffect(() => {
+    if (fromAddress !== undefined) {
+      setFromText(fromAddress)
+    }
+  }, [fromAddress])
 
   // Sync billToText from prop (e.g. sessionStorage draft restoration)
   useEffect(() => {
@@ -243,7 +252,7 @@ export default function InvoiceHeaderSection({
     <div className="flex flex-col md:flex-row gap-5 md:gap-8 mb-6 md:mb-8">
       {/* Left Column: From, Bill To, Ship To */}
       <div className={`flex-1 ${isAdvanced ? 'space-y-4 md:space-y-5' : 'space-y-4 md:space-y-6'}`}>
-        {/* From Section — collapsible on mobile */}
+        {/* From Section — editable with auto-suggestion */}
         <div className="group relative transition-all">
           <div className="flex items-center justify-between mb-2">
             <button
@@ -267,9 +276,9 @@ export default function InvoiceHeaderSection({
             </button>
           </div>
           {/* Collapsed summary on mobile */}
-          {fromCollapsed && fromAddress && (
+          {fromCollapsed && fromText && (
             <div className="md:hidden text-xs text-textSecondary truncate px-1">
-              {fromAddress.split('\n')[0]}
+              {fromText.split('\n')[0]}
             </div>
           )}
           <div className={`${fromCollapsed ? 'hidden md:block' : ''}`}>
@@ -277,15 +286,68 @@ export default function InvoiceHeaderSection({
               <textarea
                 placeholder="Your Business Name & Address"
                 rows={3}
-                value={fromAddress}
-                readOnly
-                className="w-full p-3 md:p-4 bg-bgPrimary/30 border border-transparent rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none transition-all resize-none text-sm leading-relaxed cursor-default"
+                value={fromText}
+                onChange={(e) => {
+                  setFromText(e.target.value)
+                  onFromAddressChange(e.target.value)
+                  setShowFromSuggestion(true)
+                }}
+                onFocus={() => setShowFromSuggestion(true)}
+                onBlur={() => setTimeout(() => setShowFromSuggestion(false), 200)}
+                className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
               />
-              {fromAddress && (
-                <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-600 text-[10px]">
-                    <Check className="w-3 h-3" />
-                  </span>
+
+              {/* Auto-suggestion dropdown */}
+              {showFromSuggestion && businessProfile?.name && (
+                <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                  {/* Business profile suggestion */}
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      const bp = businessProfile
+                      const parts = [bp.name]
+                      if (bp.address) parts.push(bp.address)
+                      const contactParts = []
+                      if (bp.phone) contactParts.push(bp.phone)
+                      if (bp.email) contactParts.push(bp.email)
+                      if (contactParts.length) parts.push(contactParts.join(' | '))
+                      if (bp.website) parts.push(bp.website)
+                      if (bp.gstEnabled && bp.gstin) parts.push(`GSTIN: ${bp.gstin}`)
+                      const text = parts.join('\n')
+                      setFromText(text)
+                      onFromAddressChange(text)
+                      setShowFromSuggestion(false)
+                    }}
+                    className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                      {businessProfile.name?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-textPrimary truncate">{businessProfile.name}</div>
+                      <div className="text-xs text-textSecondary truncate">
+                        {[businessProfile.phone, businessProfile.email].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Configure Business Settings */}
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setShowFromSuggestion(false)
+                      onEditSettings()
+                    }}
+                    className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors border-t border-border/50"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 text-textSecondary flex items-center justify-center shrink-0">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-textSecondary">Configure Business Settings</div>
+                      <div className="text-xs text-textSecondary/70">Update your business details</div>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>

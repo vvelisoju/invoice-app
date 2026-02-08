@@ -72,6 +72,7 @@ export function getActiveTabKey(pathname) {
   if (pathname.startsWith('/products')) return 'products'
   if (pathname.startsWith('/customers')) return 'customers'
   if (pathname.startsWith('/settings') || pathname.startsWith('/templates') || pathname.startsWith('/plans')) return 'settings'
-  // Default: documents covers /home, /invoices, and everything else
+  if (pathname.startsWith('/home')) return 'home'
+  // Default: documents covers /invoices and everything else
   return 'documents'
 }

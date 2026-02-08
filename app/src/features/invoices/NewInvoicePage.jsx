@@ -290,19 +290,9 @@ export default function NewInvoicePage() {
     }
   }, [businessProfile, isEditMode, documentTypeKey])
 
-  // Apply default terms only once on initial load (not on refetches from debounced save)
-  useEffect(() => {
-    if (!businessProfile || defaultsAppliedRef.current) return
-    if (businessProfile.defaultTerms != null && !invoice.terms) {
-      updateField('terms', businessProfile.defaultTerms)
-    }
-    defaultsAppliedRef.current = true
-  }, [businessProfile])
-
   // Build full FROM address from business profile
-  const computedFromAddress = (() => {
-    const bp = businessProfile
-    if (!bp) return business?.name || ''
+  const computeFromAddress = (bp) => {
+    if (!bp) return ''
     const parts = [bp.name]
     if (bp.address) parts.push(bp.address)
     const contactParts = []
@@ -312,10 +302,24 @@ export default function NewInvoicePage() {
     if (bp.website) parts.push(bp.website)
     if (bp.gstEnabled && bp.gstin) parts.push(`GSTIN: ${bp.gstin}`)
     return parts.join('\n')
-  })()
+  }
 
-  // Use stored fromAddress (edit mode) or computed from business profile
-  const fromAddress = invoice.fromAddress || computedFromAddress
+  // Apply default terms and fromAddress only once on initial load (not on refetches)
+  useEffect(() => {
+    if (!businessProfile || defaultsAppliedRef.current) return
+    if (businessProfile.defaultTerms != null && !invoice.terms) {
+      updateField('terms', businessProfile.defaultTerms)
+    }
+    // Pre-populate fromAddress from business profile for new invoices
+    if (!invoice.fromAddress) {
+      const computed = computeFromAddress(businessProfile)
+      if (computed) updateField('fromAddress', computed)
+    }
+    defaultsAppliedRef.current = true
+  }, [businessProfile])
+
+  // The fromAddress is now always stored at invoice level
+  const fromAddress = invoice.fromAddress || ''
 
   return (
     <div className="p-2 md:p-6 relative">
@@ -344,7 +348,7 @@ export default function NewInvoicePage() {
           <InvoiceHeaderSection
             formMode={formMode}
             fromAddress={fromAddress}
-            onFromAddressChange={() => {}}
+            onFromAddressChange={(val) => updateField('fromAddress', val)}
             businessProfile={businessProfile}
             billTo={invoice.billTo || ''}
             onBillToChange={(val) => updateField('billTo', val)}
@@ -472,10 +476,16 @@ export default function NewInvoicePage() {
       {/* Business Settings Modal */}
       <BusinessSettingsModal
         isOpen={showBusinessSettings}
-        onClose={() => {
+        onClose={async () => {
           setShowBusinessSettings(false)
           // Re-read business settings so terms, invoice number, etc. update
-          queryClient.invalidateQueries({ queryKey: ['business'] })
+          await queryClient.invalidateQueries({ queryKey: ['business'] })
+          // Refresh fromAddress from updated business profile
+          const freshBp = queryClient.getQueryData(['business'])
+          if (freshBp) {
+            const computed = computeFromAddress(freshBp)
+            if (computed) updateField('fromAddress', computed)
+          }
         }}
       />
 
