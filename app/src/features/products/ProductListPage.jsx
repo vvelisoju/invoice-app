@@ -9,6 +9,7 @@ import {
   PageToolbar
 } from '../../components/data-table'
 import ProductAddEditModal from './ProductAddEditModal'
+import Portal from '../../components/Portal'
 
 const AVATAR_COLORS = [
   { bg: 'bg-blue-100', text: 'text-blue-600' },
@@ -497,6 +498,7 @@ export default function ProductListPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
+        <Portal>
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
@@ -532,6 +534,7 @@ export default function ProductListPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

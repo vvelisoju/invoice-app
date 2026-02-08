@@ -3,6 +3,7 @@ import { X, Check, Loader2, Palette } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { templateApi } from '../../../lib/api'
 import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../utils/templates/registry'
+import Portal from '../../../components/Portal'
 
 export default function TemplateSelectModal({ isOpen, onClose, onTemplateChange }) {
   const queryClient = useQueryClient()
@@ -91,6 +92,7 @@ export default function TemplateSelectModal({ isOpen, onClose, onTemplateChange 
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
@@ -264,5 +266,6 @@ export default function TemplateSelectModal({ isOpen, onClose, onTemplateChange 
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import Portal from '../Portal'
 
 /**
  * InvoiceTaxModal — Tailwind-styled modal for adding/editing tax on a line item.
@@ -25,6 +26,7 @@ export default function InvoiceTaxModal({ isOpen, onClose, onAddTax }) {
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={onClose}
@@ -93,5 +95,6 @@ export default function InvoiceTaxModal({ isOpen, onClose, onAddTax }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

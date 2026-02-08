@@ -4,6 +4,10 @@ import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
 
 import LandingPage from './pages/LandingPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
+import ContactPage from './pages/ContactPage'
 import DemoPage from './pages/DemoPage'
 import PhonePage from './features/auth/PhonePage'
 import VerifyOTPPage from './features/auth/VerifyOTPPage'
@@ -63,6 +67,10 @@ function App() {
         {!token ? (
           <Switch>
             <Route exact path="/" component={LandingPage} />
+            <Route exact path="/terms" component={TermsOfServicePage} />
+            <Route exact path="/privacy" component={PrivacyPolicyPage} />
+            <Route exact path="/refund-policy" component={RefundPolicyPage} />
+            <Route exact path="/contact" component={ContactPage} />
             <Route exact path="/demo" component={DemoPage} />
             <Route exact path="/auth/phone" component={PhonePage} />
             <Route exact path="/auth/verify" component={VerifyOTPPage} />

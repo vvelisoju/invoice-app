@@ -26,6 +26,7 @@ import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
+import Portal from '../../components/Portal'
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -517,6 +518,7 @@ export default function InvoiceDetailPage() {
 
       {/* Mobile More Actions — fixed bottom sheet */}
       {showMoreActions && (
+        <Portal>
         <>
           <div className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={() => setShowMoreActions(false)} />
           <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white rounded-t-2xl shadow-2xl pb-safe animate-in slide-in-from-bottom">
@@ -576,10 +578,12 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         </>
+        </Portal>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
+        <Portal>
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
@@ -599,6 +603,7 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Template Select Modal */}
@@ -610,6 +615,7 @@ export default function InvoiceDetailPage() {
 
       {/* Status Change Confirmation Modal */}
       {showStatusConfirm && (
+        <Portal>
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
@@ -643,6 +649,7 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Plan Limit Modal */}

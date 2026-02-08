@@ -8,6 +8,7 @@ import { reportsApi, invoiceApi } from '../../lib/api'
 import { generatePDF } from '../invoices/utils/pdfGenerator'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
+import Portal from '../../components/Portal'
 
 const DOC_TYPE_LABELS = {
   INVOICE: 'Invoice',
@@ -181,6 +182,7 @@ function ExportProgressModal({ isOpen, onClose, title, progress, total, status }
   if (!isOpen) return null
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
@@ -197,6 +199,7 @@ function ExportProgressModal({ isOpen, onClose, title, progress, total, status }
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 

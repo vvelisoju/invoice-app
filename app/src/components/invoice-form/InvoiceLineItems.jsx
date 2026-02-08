@@ -2,6 +2,7 @@ import { X, Plus, List, Loader2, PackagePlus, Percent, Check, Package } from 'lu
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
+import Portal from '../Portal'
 
 function AutoResizeTextarea({ value, onChange, placeholder, className, onFocus, onBlur, onKeyDown, inputRef }) {
   const localRef = useRef(null)
@@ -246,6 +247,7 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
@@ -380,6 +382,7 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 
@@ -540,6 +543,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -599,6 +603,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

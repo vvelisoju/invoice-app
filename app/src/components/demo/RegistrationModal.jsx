@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useHistory } from 'react-router-dom'
 import { BRANDING } from '../../config/branding'
 import './RegistrationModal.css'
+import Portal from '../Portal'
 
 function RegistrationModal({ isOpen, onClose }) {
   const history = useHistory()
@@ -19,6 +20,7 @@ function RegistrationModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-lg max-w-md w-full overflow-hidden registration-modal">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -75,6 +77,7 @@ function RegistrationModal({ isOpen, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

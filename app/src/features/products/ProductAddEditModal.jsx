@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Loader2, PackagePlus, ChevronDown } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
+import Portal from '../../components/Portal'
 
 const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '' }
 
@@ -157,6 +158,7 @@ export default function ProductAddEditModal({
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -337,5 +339,6 @@ export default function ProductAddEditModal({
         </form>
       </div>
     </div>
+    </Portal>
   )
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Loader2, User, Phone, Mail, MapPin, FileText, Hash } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
+import Portal from '../../components/Portal'
 
 const INDIAN_STATES = [
   { code: '01', name: 'Jammu & Kashmir' }, { code: '02', name: 'Himachal Pradesh' },
@@ -94,6 +95,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
@@ -248,5 +250,6 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

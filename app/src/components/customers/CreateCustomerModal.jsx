@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Loader2, UserPlus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
+import Portal from '../Portal'
 
 /**
  * Reusable modal for creating a new customer.
@@ -72,6 +73,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
@@ -207,5 +209,6 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
         </form>
       </div>
     </div>
+    </Portal>
   )
 }

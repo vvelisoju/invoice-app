@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
+import Portal from '../Portal'
 
 function SettingsMenuItem({ icon, label, onClick, danger = false }) {
   const IconComponent = icon
@@ -183,6 +184,7 @@ export default function AppHeader({ onMenuToggle }) {
 
       {/* Mobile Bottom Sheet */}
       {settingsOpen && (
+        <Portal>
         <div className="md:hidden fixed inset-0 z-50" ref={sheetRef}>
           {/* Backdrop */}
           <div
@@ -214,6 +216,7 @@ export default function AppHeader({ onMenuToggle }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </nav>
   )

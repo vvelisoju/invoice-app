@@ -1,4 +1,5 @@
 import { X, Rocket, CheckCircle } from 'lucide-react'
+import Portal from './Portal'
 
 export default function UpgradePrompt({ isOpen, onClose, usage }) {
   if (!isOpen) return null
@@ -8,6 +9,7 @@ export default function UpgradePrompt({ isOpen, onClose, usage }) {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-bgSecondary rounded-2xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -81,5 +83,6 @@ export default function UpgradePrompt({ isOpen, onClose, usage }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

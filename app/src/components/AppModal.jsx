@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
+import Portal from './Portal'
 
 /**
  * Reusable modal — centered on desktop, bottom sheet on mobile.
@@ -26,6 +27,7 @@ export default function AppModal({ isOpen, onClose, title, children, actions, ma
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
@@ -93,5 +95,6 @@ export default function AppModal({ isOpen, onClose, title, children, actions, ma
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

@@ -3,6 +3,7 @@ import { X, Building2, Save, Loader2, CheckCircle2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi } from '../../lib/api'
 import BusinessInfoForm from './BusinessInfoForm'
+import Portal from '../Portal'
 
 export default function BusinessSettingsModal({ isOpen, onClose }) {
   const queryClient = useQueryClient()
@@ -47,6 +48,7 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
@@ -101,5 +103,6 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
