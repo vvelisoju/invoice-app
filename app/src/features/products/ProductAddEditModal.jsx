@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Loader2, PackagePlus, ChevronDown } from 'lucide-react'
+import { X, Loader2, PackagePlus, ChevronDown, Trash2, AlertTriangle } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
 import Portal from '../../components/Portal'
@@ -23,12 +23,14 @@ export default function ProductAddEditModal({
   product = null,
   initialName = '',
   onSuccess,
-  onCreated
+  onCreated,
+  onDelete
 }) {
   const queryClient = useQueryClient()
   const isEdit = !!product
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Unit combobox state
   const [unitInputValue, setUnitInputValue] = useState('')
@@ -61,6 +63,16 @@ export default function ProductAddEditModal({
     ? businessUnits.filter(u => u.toLowerCase().includes(unitInputValue.toLowerCase()))
     : businessUnits
 
+  const deleteMutation = useMutation({
+    mutationFn: () => productApi.delete(product.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      setShowDeleteConfirm(false)
+      onDelete?.()
+      onClose()
+    }
+  })
+
   useEffect(() => {
     if (isOpen) {
       if (product) {
@@ -76,6 +88,8 @@ export default function ProductAddEditModal({
         setUnitInputValue('')
       }
       setErrors({})
+      setShowDeleteConfirm(false)
+      deleteMutation.reset()
     }
   }, [isOpen, product, initialName])
 
@@ -314,27 +328,75 @@ export default function ProductAddEditModal({
           </div>
           */}
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors border border-border"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
-            >
-              {mutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <PackagePlus className="w-4 h-4" />
+          {/* Delete Confirmation */}
+          {showDeleteConfirm && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <p className="text-sm font-medium text-red-700">Delete this product?</p>
+              </div>
+              <p className="text-xs text-red-600 mb-3">This action cannot be undone.</p>
+              {deleteMutation.isError && (
+                <p className="text-xs text-red-600 mb-2">
+                  {deleteMutation.error?.response?.data?.error?.message || 'Cannot delete this product.'}
+                </p>
               )}
-              {isEdit ? 'Save Changes' : 'Add Product'}
-            </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteConfirm(false); deleteMutation.reset() }}
+                  className="flex-1 px-3 py-1.5 text-xs font-medium text-textSecondary bg-white border border-border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                >
+                  {deleteMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {deleteMutation.isPending ? 'Deleting...' : 'Confirm Delete'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              {isEdit && !showDeleteConfirm && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-3 py-2 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors border border-border"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={mutation.isPending}
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+              >
+                {mutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <PackagePlus className="w-4 h-4" />
+                )}
+                {isEdit ? 'Save Changes' : 'Add Product'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

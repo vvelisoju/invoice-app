@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown } from 'lucide-react'
+import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown, Crown, Infinity } from 'lucide-react'
 import { plansApi, businessApi } from '../../lib/api'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES, headerTabs, getActiveTabKey } from './navigationConfig'
 import { useAuthStore } from '../../store/authStore'
@@ -107,25 +107,43 @@ export default function AppSidebar({ mobile = false, onClose }) {
 
         {/* Bottom Plan Card */}
         <div className="mt-auto p-3 border-t border-border">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
-            <div className="flex items-center gap-1.5 mb-1">
-              <FileText className="w-3.5 h-3.5 text-primary" />
-              <p className="text-xs font-semibold text-primary">{plan?.name || 'Free'} Plan</p>
-              {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500' : 'text-yellow-500'}`} />}
+          <div className={`p-3 rounded-xl border transition-all ${
+            isAtLimit ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200' :
+            isNearLimit ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
+            'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Crown className={`w-3.5 h-3.5 ${
+                  isAtLimit ? 'text-red-500' : isNearLimit ? 'text-yellow-600' : 'text-primary'
+                }`} />
+                <p className={`text-xs font-bold ${
+                  isAtLimit ? 'text-red-700' : isNearLimit ? 'text-yellow-700' : 'text-primary'
+                }`}>{plan?.name || 'Free'} Plan</p>
+              </div>
+              {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`} />}
             </div>
-            <p className="text-[10px] text-textSecondary mb-2">
-              {isUnlimited ? `${used} invoices used` : `${used} of ${limit} invoices used`}
-            </p>
+            <div className="flex items-baseline gap-1 mb-1.5">
+              <span className="text-lg font-bold text-textPrimary">{used}</span>
+              {isUnlimited ? (
+                <span className="text-[10px] text-textSecondary flex items-center gap-0.5">/ <Infinity className="w-3 h-3" /></span>
+              ) : (
+                <span className="text-[10px] text-textSecondary">/ {limit} invoices</span>
+              )}
+            </div>
             {!isUnlimited && (
-              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-2">
-                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
+              <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden mb-2.5">
+                <div className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
               </div>
             )}
             <button
               onClick={() => navigate('/plans')}
-              className="text-[10px] font-bold text-primary hover:underline"
+              className={`w-full text-[10px] font-bold py-1.5 rounded-md transition-colors ${
+                isAtLimit ? 'bg-red-500 text-white hover:bg-red-600' :
+                'text-primary hover:bg-primary/10'
+              }`}
             >
-              Manage Subscription
+              {isAtLimit ? 'Upgrade Now' : 'Manage Subscription'}
             </button>
           </div>
         </div>
@@ -291,25 +309,43 @@ export default function AppSidebar({ mobile = false, onClose }) {
 
       {/* Bottom Plan Card */}
       <div className="mt-auto p-3 border-t border-border safe-bottom">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
-          <div className="flex items-center gap-1.5 mb-1">
-            <FileText className="w-3.5 h-3.5 text-primary" />
-            <p className="text-xs font-semibold text-primary">{plan?.name || 'Free'} Plan</p>
-            {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500' : 'text-yellow-500'}`} />}
+        <div className={`p-3 rounded-xl border transition-all ${
+          isAtLimit ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200' :
+          isNearLimit ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
+          'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Crown className={`w-3.5 h-3.5 ${
+                isAtLimit ? 'text-red-500' : isNearLimit ? 'text-yellow-600' : 'text-primary'
+              }`} />
+              <p className={`text-xs font-bold ${
+                isAtLimit ? 'text-red-700' : isNearLimit ? 'text-yellow-700' : 'text-primary'
+              }`}>{plan?.name || 'Free'} Plan</p>
+            </div>
+            {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`} />}
           </div>
-          <p className="text-[10px] text-textSecondary mb-2">
-            {isUnlimited ? `${used} invoices used` : `${used} of ${limit} invoices used`}
-          </p>
+          <div className="flex items-baseline gap-1 mb-1.5">
+            <span className="text-lg font-bold text-textPrimary">{used}</span>
+            {isUnlimited ? (
+              <span className="text-[10px] text-textSecondary flex items-center gap-0.5">/ <Infinity className="w-3 h-3" /></span>
+            ) : (
+              <span className="text-[10px] text-textSecondary">/ {limit} invoices</span>
+            )}
+          </div>
           {!isUnlimited && (
-            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-2">
-              <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
+            <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden mb-2.5">
+              <div className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
             </div>
           )}
           <button
             onClick={() => navigate('/plans')}
-            className="text-[10px] font-bold text-primary active:underline"
+            className={`w-full text-[10px] font-bold py-1.5 rounded-md transition-colors ${
+              isAtLimit ? 'bg-red-500 text-white active:bg-red-600' :
+              'text-primary active:bg-primary/10'
+            }`}
           >
-            Manage Subscription
+            {isAtLimit ? 'Upgrade Now' : 'Manage Subscription'}
           </button>
         </div>
       </div>

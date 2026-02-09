@@ -22,10 +22,10 @@ const AVATAR_COLORS = [
 ]
 
 const STATUS_FILTERS = [
-  { key: 'active', label: 'Active Customers' },
+  { key: 'all', label: 'All Customers' },
+  { key: 'active', label: 'Active' },
   { key: 'outstanding', label: 'Outstanding Balance', badgeColor: 'bg-accentOrange' },
   { key: 'inactive', label: 'Inactive', badgeColor: 'bg-gray-400' },
-  // { key: 'favorites', label: 'Favorites', badgeColor: 'bg-yellow-400' }, // Hidden for future use
 ]
 
 const TABLE_COLUMNS = [
@@ -72,7 +72,7 @@ export default function CustomerListPage() {
   const queryClient = useQueryClient()
 
   // Read sidebar filter from URL query param
-  const urlFilter = new URLSearchParams(location.search).get('filter') || 'active'
+  const urlFilter = new URLSearchParams(location.search).get('filter') || 'all'
   const [statusFilter, setStatusFilter] = useState(urlFilter)
 
   // Sync status filter with URL changes (sidebar clicks)
@@ -80,7 +80,7 @@ export default function CustomerListPage() {
     const params = new URLSearchParams(location.search)
     const f = params.get('filter')
     if (f && f !== statusFilter) setStatusFilter(f)
-    else if (!f && statusFilter !== 'active') setStatusFilter('active')
+    else if (!f && statusFilter !== 'all') setStatusFilter('all')
 
     // Auto-open add modal when ?action=add is in URL
     if (params.get('action') === 'add') {
@@ -92,7 +92,7 @@ export default function CustomerListPage() {
   // When pill filter changes, update URL
   const handleFilterChange = useCallback((key) => {
     setStatusFilter(key)
-    if (key === 'active') {
+    if (key === 'all') {
       history.replace('/customers')
     } else {
       history.replace(`/customers?filter=${key}`)
@@ -158,28 +158,33 @@ export default function CustomerListPage() {
   // Client-side filtering based on statusFilter
   const customers = useMemo(() => {
     switch (statusFilter) {
+      case 'active':
+        // Customers who have at least one invoice
+        return allCustomers.filter(c => c.invoices && c.invoices.length > 0)
       case 'outstanding':
         return allCustomers.filter(c => computeBalance(c) > 0)
       case 'inactive':
         // Customers with no invoices at all
         return allCustomers.filter(c => !c.invoices || c.invoices.length === 0)
-      // case 'favorites':
-      //   // Placeholder — no favorite flag in schema, show none
-      //   return []
       default:
+        // All customers
         return allCustomers
     }
   }, [allCustomers, statusFilter])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    const c = { active: allCustomers.length, outstanding: 0, inactive: 0, favorites: 0 }
+    let active = 0, outstanding = 0, inactive = 0
     allCustomers.forEach((cust) => {
       const balance = computeBalance(cust)
-      if (balance > 0) c.outstanding++
-      if (!cust.invoices || cust.invoices.length === 0) c.inactive++
+      if (balance > 0) outstanding++
+      if (!cust.invoices || cust.invoices.length === 0) {
+        inactive++
+      } else {
+        active++
+      }
     })
-    return c
+    return { all: allCustomers.length, active, outstanding, inactive }
   }, [allCustomers])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
@@ -473,8 +478,8 @@ export default function CustomerListPage() {
             onSelectionChange={handleSelectionChange}
             isLoading={isLoading}
             emptyIcon={<Users className="w-16 h-16 text-gray-300 mb-4" />}
-            emptyTitle={statusFilter !== 'active' ? 'No customers match this filter' : 'No customers yet'}
-            emptyMessage={statusFilter !== 'active' ? 'Try a different filter or add new customers' : 'Add your first customer to get started'}
+            emptyTitle={statusFilter !== 'all' ? 'No customers match this filter' : 'No customers yet'}
+            emptyMessage={statusFilter !== 'all' ? 'Try a different filter or add new customers' : 'Add your first customer to get started'}
             renderMobileCard={(customer) => {
               const initials = getInitials(customer.name)
               const color = getAvatarColor(customer.name)
@@ -490,17 +495,26 @@ export default function CustomerListPage() {
                       {customer.phone ? `+91 ${customer.phone}` : customer.email || 'No contact'}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    {balance > 0 ? (
-                      <span className="font-bold text-sm text-accentOrange">{formatCurrency(balance)}</span>
-                    ) : (
-                      <span className="font-medium text-xs text-textSecondary">{formatCurrency(0)}</span>
-                    )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      {balance > 0 ? (
+                        <span className="font-bold text-sm text-accentOrange">{formatCurrency(balance)}</span>
+                      ) : (
+                        <span className="font-medium text-xs text-textSecondary">{formatCurrency(0)}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary active:bg-primary/20 transition-colors"
+                      title="Create Invoice"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )
             }}
-            loadMore={statusFilter === 'active' ? {
+            loadMore={statusFilter === 'all' ? {
               hasMore: hasNextPage,
               isLoading: isFetchingNextPage,
               onLoadMore: fetchNextPage

@@ -9,22 +9,45 @@ async function getNextInvoiceNumber() {
   const year = new Date().getFullYear()
   const key = `sub_invoice_next_number_${year}`
 
-  // Atomically increment the counter
-  const setting = await prisma.platformSetting.upsert({
-    where: { key },
-    update: {
-      value: { increment: true }
-    },
-    create: {
-      key,
-      value: 1
-    }
-  })
+  // Read current counter (or create if missing)
+  let setting = await prisma.platformSetting.findUnique({ where: { key } })
 
-  // upsert with increment doesn't work on Json fields, so do it manually
-  const current = typeof setting.value === 'number' ? setting.value : 1
+  let current
+  if (!setting) {
+    setting = await prisma.platformSetting.create({
+      data: { key, value: 1 }
+    })
+    current = 1
+  } else if (typeof setting.value !== 'number') {
+    // Counter was corrupted (e.g. stored as JSON object) — repair it
+    // by counting existing invoices for this year
+    const existingCount = await prisma.subscriptionInvoice.count({
+      where: {
+        invoiceNumber: { startsWith: `${year}` }
+      }
+    })
+    // Also try with prefix
+    const prefixSetting = await prisma.platformSetting.findUnique({
+      where: { key: 'sub_invoice_prefix' }
+    })
+    const pfx = prefixSetting?.value || 'IB'
+    const prefixedCount = await prisma.subscriptionInvoice.count({
+      where: {
+        invoiceNumber: { startsWith: `${pfx}-${year}` }
+      }
+    })
+    current = Math.max(existingCount, prefixedCount, 1) + 1
+    // Persist the repaired value
+    await prisma.platformSetting.update({
+      where: { key },
+      data: { value: current }
+    })
+  } else {
+    current = setting.value
+  }
+
+  // Increment counter for next call
   const next = current + 1
-
   await prisma.platformSetting.update({
     where: { key },
     data: { value: next }
@@ -228,8 +251,53 @@ export async function listSubscriptionInvoices(filters = {}) {
 
 /**
  * Get subscription invoices for a specific business (user view).
+ * Also repairs missing invoices for paid subscriptions that failed invoice generation.
  */
 export async function getBusinessSubscriptionInvoices(businessId) {
+  // Find all subscriptions with a completed payment (regardless of current status)
+  const paidSubscriptions = await prisma.subscription.findMany({
+    where: {
+      businessId,
+      razorpayPaymentId: { not: null }
+    }
+  })
+
+  const existingInvoices = await prisma.subscriptionInvoice.findMany({
+    where: { businessId },
+    select: { subscriptionId: true, razorpayPaymentId: true }
+  })
+
+  const invoicedSubIds = new Set(existingInvoices.map(i => i.subscriptionId).filter(Boolean))
+  const invoicedPaymentIds = new Set(existingInvoices.map(i => i.razorpayPaymentId).filter(Boolean))
+
+  for (const sub of paidSubscriptions) {
+    // Skip if invoice already exists for this subscription or payment
+    if (invoicedSubIds.has(sub.id) || invoicedPaymentIds.has(sub.razorpayPaymentId)) continue
+
+    // Generate the missing invoice
+    try {
+      const plan = await prisma.plan.findUnique({ where: { id: sub.planId } })
+      const isYearly = sub.renewAt && sub.startDate &&
+        (new Date(sub.renewAt).getTime() - new Date(sub.startDate).getTime()) > 180 * 86400000
+
+      await generateSubscriptionInvoice({
+        businessId,
+        subscriptionId: sub.id,
+        planId: sub.planId,
+        planName: plan?.displayName || plan?.name || 'Plan',
+        billingPeriod: isYearly ? 'yearly' : 'monthly',
+        amount: sub.amount,
+        razorpayOrderId: sub.razorpayOrderId,
+        razorpayPaymentId: sub.razorpayPaymentId,
+        periodStart: sub.startDate,
+        periodEnd: sub.renewAt,
+      })
+      console.log(`[Billing] Repaired missing invoice for subscription ${sub.id}`)
+    } catch (err) {
+      console.error(`[Billing] Failed to repair invoice for subscription ${sub.id}:`, err.message)
+    }
+  }
+
   return prisma.subscriptionInvoice.findMany({
     where: { businessId },
     orderBy: { createdAt: 'desc' },

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useInvoiceForm } from './hooks/useInvoiceForm'
 import { useAuthStore } from '../../store/authStore'
-import { invoiceApi, businessApi } from '../../lib/api'
+import { invoiceApi, businessApi, customerApi } from '../../lib/api'
 import { InvoiceFormToolbar, InvoiceHeaderSection, InvoiceLineItems, InvoiceTotalsFooter } from '../../components/invoice-form'
 import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
@@ -67,15 +67,29 @@ export default function NewInvoicePage() {
     }
   }, [location.search])
 
-  // Fetch business profile — always fresh so invoice number + terms are current
+  // Pre-populate customer from ?customerId= URL param
+  useEffect(() => {
+    if (isEditMode || cloneData) return
+    const params = new URLSearchParams(location.search)
+    const custId = params.get('customerId')
+    if (custId && !selectedCustomer) {
+      customerApi.get(custId).then(res => {
+        const customer = res.data?.data || res.data
+        if (customer) {
+          setSelectedCustomer(customer)
+          setCustomer(customer)
+        }
+      }).catch(() => {})
+    }
+  }, [location.search])
+
+  // Fetch business profile — show cached data instantly, refetch in background
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data?.data || response.data
-    },
-    staleTime: 0,
-    refetchOnMount: 'always'
+    }
   })
 
   // Compute resolved config (defaults merged with business overrides)
@@ -232,6 +246,8 @@ export default function NewInvoicePage() {
         defaultsAppliedRef.current = false
         // Refetch business profile to get updated nextInvoiceNumber
         queryClient.invalidateQueries({ queryKey: ['business'] })
+        // Update sidebar plan usage count
+        queryClient.invalidateQueries({ queryKey: ['plans', 'usage'] })
         // Navigate to the created invoice
         history.push(`/invoices/${data.id}`)
       }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Loader2, User, Phone, Mail, MapPin, FileText, Hash } from 'lucide-react'
+import { X, Loader2, User, Phone, Mail, MapPin, FileText, Hash, Trash2, AlertTriangle } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import Portal from '../../components/Portal'
@@ -25,11 +25,22 @@ const INDIAN_STATES = [
 
 const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' }
 
-export default function CustomerAddEditModal({ isOpen, onClose, customer = null, onSuccess }) {
+export default function CustomerAddEditModal({ isOpen, onClose, customer = null, onSuccess, onDelete }) {
   const queryClient = useQueryClient()
   const isEdit = !!customer
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => customerApi.delete(customer.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      setShowDeleteConfirm(false)
+      onDelete?.()
+      onClose()
+    }
+  })
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +57,8 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
         setForm(EMPTY_FORM)
       }
       setErrors({})
+      setShowDeleteConfirm(false)
+      deleteMutation.reset()
     }
   }, [isOpen, customer])
 
@@ -230,23 +243,71 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
           )}
         </form>
 
+        {/* Delete Confirmation */}
+        {showDeleteConfirm && (
+          <div className="px-6 py-3 bg-red-50 border-t border-red-200">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              <p className="text-sm font-medium text-red-700">Delete this customer?</p>
+            </div>
+            <p className="text-xs text-red-600 mb-3">This action cannot be undone.</p>
+            {deleteMutation.isError && (
+              <p className="text-xs text-red-600 mb-2">
+                {deleteMutation.error?.response?.data?.error?.message || 'Cannot delete. Customer may have existing invoices.'}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowDeleteConfirm(false); deleteMutation.reset() }}
+                className="flex-1 px-3 py-1.5 text-xs font-medium text-textSecondary bg-white border border-border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {deleteMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                {deleteMutation.isPending ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-gray-50/50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={mutation.isPending}
-            className="px-5 py-2 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
-          >
-            {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? 'Save Changes' : 'Add Customer'}
-          </button>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-gray-50/50">
+          <div>
+            {isEdit && !showDeleteConfirm && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-3 py-2 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={mutation.isPending}
+              className="px-5 py-2 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
+            >
+              {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isEdit ? 'Save Changes' : 'Add Customer'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

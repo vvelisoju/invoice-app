@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
 import { Plus, Download, FileText, Loader2, SlidersHorizontal, Search } from 'lucide-react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { invoiceApi } from '../../lib/api'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { invoiceApi, businessApi } from '../../lib/api'
 import {
   DataTable,
   StatusFilterPills,
@@ -60,6 +60,22 @@ const TABLE_COLUMNS = [
 export default function InvoiceListPage() {
   const history = useHistory()
   const [statusFilter, setStatusFilter] = useState('all')
+
+  // Fetch business profile to get enabled document types
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    }
+  })
+
+  const enabledKeys = businessProfile?.enabledInvoiceTypes || ['invoice', 'quote', 'receipt']
+  const filteredDocTypeOptions = useMemo(
+    () => DOC_TYPE_OPTIONS.filter(opt => enabledKeys.includes(opt.key)),
+    [enabledKeys]
+  )
+
   const [docTypeFilters, setDocTypeFilters] = useState(() => {
     const initial = {}
     DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = true })
@@ -274,7 +290,7 @@ export default function InvoiceListPage() {
             />
             <CheckboxFilter
               label="Document Type:"
-              options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+              options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
               onChange={handleDocTypeChange}
             />
           </div>
@@ -293,7 +309,7 @@ export default function InvoiceListPage() {
       <div className="hidden md:block">
         <CheckboxFilter
           label="Document Type:"
-          options={DOC_TYPE_OPTIONS.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+          options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
           onChange={handleDocTypeChange}
         />
       </div>

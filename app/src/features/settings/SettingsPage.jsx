@@ -758,9 +758,7 @@ function AccountSection({ onLogout }) {
     queryFn: async () => {
       const response = await authApi.getCurrentUser()
       return response.data
-    },
-    staleTime: 0,
-    refetchOnMount: 'always'
+    }
   })
 
   const [profileForm, setProfileForm] = useState({ name: '', email: '' })
@@ -1067,9 +1065,7 @@ export default function SettingsPage() {
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data.data || response.data
-    },
-    staleTime: 0,
-    refetchOnMount: 'always'
+    }
   })
 
   useEffect(() => {

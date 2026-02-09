@@ -1,22 +1,31 @@
-import { useState } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Loader2,
   CheckCircle2,
   Crown,
   Zap,
-  FileText,
   Shield,
   ArrowLeft,
   AlertTriangle,
   Receipt,
   Eye,
-  X
+  Download,
+  Printer,
+  Share2,
+  MessageCircle
 } from 'lucide-react'
-import Portal from '../../components/Portal'
+import { pdf } from '@react-pdf/renderer'
 import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
+import { downloadPDF } from '../invoices/utils/pdfGenerator.jsx'
+import SubscriptionInvoicePdf from './SubscriptionInvoicePdf'
+
+const PLANS_TABS = [
+  { key: 'plans', label: 'Plans & Pricing', mobileLabel: 'Plans', icon: Crown },
+  { key: 'billing', label: 'Billing History', mobileLabel: 'Billing', icon: Receipt },
+]
 
 const PLAN_CONFIG = {
   free: {
@@ -58,8 +67,240 @@ function loadRazorpayScript() {
   })
 }
 
-// ── Billing History Section ─────────────────────────────────────────
-function BillingHistorySection() {
+// ── Billing History Tab ──────────────────────────────────────────────
+const STATUS_COLORS = {
+  PAID: 'text-green-600 bg-green-50 border-green-200',
+  PENDING: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+  FAILED: 'text-red-600 bg-red-50 border-red-200',
+  REFUNDED: 'text-gray-600 bg-gray-50 border-gray-200',
+  CANCELLED: 'text-gray-500 bg-gray-50 border-gray-200',
+}
+
+const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '₹0.00'
+  return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Invoice detail view — PDF viewer like InvoiceDetailPage
+function BillingInvoiceDetail({ invoice, onBack }) {
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [pdfBlob, setPdfBlob] = useState(null)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+
+  // Generate PDF on mount
+  useEffect(() => {
+    let cancelled = false
+    const generate = async () => {
+      if (!invoice) return
+      setIsGeneratingPdf(true)
+      try {
+        const blob = await pdf(<SubscriptionInvoicePdf invoice={invoice} />).toBlob()
+        if (cancelled) return
+        setPdfBlob(blob)
+        const url = URL.createObjectURL(blob)
+        setPdfUrl(url)
+      } catch (err) {
+        console.error('Subscription invoice PDF generation failed:', err)
+      } finally {
+        if (!cancelled) setIsGeneratingPdf(false)
+      }
+    }
+    generate()
+    return () => {
+      cancelled = true
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl)
+    }
+  }, [invoice])
+
+  const handleDownload = useCallback(async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      await downloadPDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }, [pdfBlob, invoice])
+
+  const handlePrint = useCallback(() => {
+    if (!pdfBlob) return
+    const url = URL.createObjectURL(pdfBlob)
+    const printWindow = window.open(url, '_blank')
+    if (printWindow) {
+      printWindow.onload = () => printWindow.print()
+    }
+  }, [pdfBlob])
+
+  const handleShare = useCallback(async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      if (navigator.share && navigator.canShare) {
+        const file = new File([pdfBlob], `Subscription-Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
+        const shareText = `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}`
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Invoice ${invoice.invoiceNumber}`,
+            text: shareText,
+            files: [file]
+          })
+          return
+        }
+      }
+      await handleDownload()
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Share failed:', err)
+    }
+  }, [pdfBlob, invoice, handleDownload])
+
+  const handleWhatsAppShare = useCallback(async () => {
+    if (!invoice) return
+    const message = encodeURIComponent(
+      `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}\nDate: ${formatDate(invoice.createdAt)}`
+    )
+    window.open(`https://wa.me/?text=${message}`, '_blank')
+    await handleDownload()
+  }, [invoice, handleDownload])
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Top Bar — same as InvoiceDetailPage */}
+      <div className="px-3 md:px-6 py-2 md:py-3 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={onBack}
+              className="w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-lg active:bg-bgPrimary md:hover:bg-bgPrimary text-textSecondary shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm md:text-base font-bold text-textPrimary truncate">{invoice.invoiceNumber}</h1>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${STATUS_COLORS[invoice.status] || STATUS_COLORS.PENDING}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-500' : invoice.status === 'PENDING' ? 'bg-yellow-500' : 'bg-gray-400'}`} />
+                  {invoice.status}
+                </span>
+              </div>
+              <span className="text-xs text-textSecondary">{formatDate(invoice.createdAt)}</span>
+            </div>
+          </div>
+
+          {/* Desktop action buttons */}
+          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleWhatsAppShare}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-[#25D366] hover:bg-green-50 rounded-lg border border-[#25D366]/30 transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden lg:inline">WhatsApp</span>
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Download"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden lg:inline">Download</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Print"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden lg:inline">Print</span>
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={!pdfBlob}
+              className="md:px-3 md:py-1.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              title="Share"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden lg:inline">Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Action Bar — horizontal scroll, below header */}
+      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
+        <button
+          onClick={handleWhatsAppShare}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-[#25D366] active:bg-green-50 rounded-lg border border-[#25D366]/30 flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp
+        </button>
+        <button
+          onClick={handleDownload}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Download
+        </button>
+        <button
+          onClick={handlePrint}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          Print
+        </button>
+        <button
+          onClick={handleShare}
+          disabled={!pdfBlob}
+          className="px-3 py-2 text-xs font-medium text-textSecondary active:bg-bgPrimary rounded-lg border border-border flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          Share
+        </button>
+      </div>
+
+      {/* PDF Viewer Area — fills remaining space, same as InvoiceDetailPage */}
+      <div className="flex-1 bg-gray-100 pb-mobile-nav overflow-auto">
+        {isGeneratingPdf ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <p className="text-sm text-textSecondary">Generating PDF preview...</p>
+          </div>
+        ) : pdfUrl ? (
+          <>
+            {/* Desktop: full iframe viewer */}
+            <iframe
+              src={pdfUrl}
+              className="hidden md:block w-full h-full border-0"
+              title={`Subscription Invoice ${invoice.invoiceNumber} PDF`}
+            />
+            {/* Mobile: embedded PDF with proper scaling */}
+            <iframe
+              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              className="md:hidden w-full border-0"
+              style={{ height: 'calc(100dvh - 160px)', minHeight: 500 }}
+              title={`Subscription Invoice ${invoice.invoiceNumber} PDF`}
+            />
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <p className="text-sm text-textSecondary">PDF preview unavailable</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function BillingHistoryTab() {
   const [selectedInvoice, setSelectedInvoice] = useState(null)
 
   const { data: invoices = [], isLoading } = useQuery({
@@ -70,167 +311,62 @@ function BillingHistorySection() {
     }
   })
 
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return '₹0.00'
-    return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-  }
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—'
-    return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-  }
-
-  const statusColor = {
-    PAID: 'text-green-600 bg-green-50 border-green-200',
-    PENDING: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-    FAILED: 'text-red-600 bg-red-50 border-red-200',
-    REFUNDED: 'text-gray-600 bg-gray-50 border-gray-200',
-    CANCELLED: 'text-gray-500 bg-gray-50 border-gray-200',
+  // Show invoice detail view
+  if (selectedInvoice) {
+    return <BillingInvoiceDetail invoice={selectedInvoice} onBack={() => setSelectedInvoice(null)} />
   }
 
   return (
-    <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
-      <div className="flex items-center gap-2 mb-3 md:mb-4">
-        <Receipt className="w-4 h-4 text-textSecondary" />
-        <h3 className="text-xs md:text-sm font-semibold text-textPrimary uppercase tracking-wider">Billing History</h3>
-      </div>
-
+    <div className="max-w-4xl mx-auto space-y-4">
       {isLoading ? (
-        <div className="flex justify-center py-6">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : invoices.length === 0 ? (
-        <div className="text-center py-6">
-          <Receipt className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-xs text-textSecondary">No invoices yet</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">Invoices will appear here after you subscribe to a plan</p>
+        <div className="bg-white rounded-xl border border-border shadow-sm p-8 md:p-12 text-center">
+          <Receipt className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+          <h3 className="text-sm font-semibold text-textPrimary mb-1">No billing history</h3>
+          <p className="text-xs text-textSecondary max-w-sm mx-auto">
+            Invoices will appear here after you subscribe to a paid plan.
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {invoices.map(inv => (
-            <button
-              key={inv.id}
-              onClick={() => setSelectedInvoice(inv)}
-              className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-left"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs font-mono font-medium text-textPrimary">{inv.invoiceNumber}</span>
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${statusColor[inv.status] || statusColor.PENDING}`}>
-                    {inv.status}
-                  </span>
-                </div>
-                <p className="text-[11px] text-textSecondary">
-                  {formatDate(inv.createdAt)} · <span className="capitalize">{inv.billingPeriod || '—'}</span>
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-sm font-bold text-textPrimary">{formatCurrency(inv.total)}</span>
-                <Eye className="w-3.5 h-3.5 text-gray-400" />
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Invoice Detail Modal */}
-      {selectedInvoice && (
-        <Portal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedInvoice(null)} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
-              <div className="p-5 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-textPrimary">Invoice Details</h3>
-                    <p className="text-xs text-textSecondary font-mono mt-0.5">{selectedInvoice.invoiceNumber}</p>
-                  </div>
-                  <button onClick={() => setSelectedInvoice(null)} className="p-1 rounded-lg hover:bg-gray-100">
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-gray-50 rounded-lg p-2.5">
-                    <p className="text-gray-400 text-[10px]">Date</p>
-                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.createdAt)}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2.5">
-                    <p className="text-gray-400 text-[10px]">Period</p>
-                    <p className="font-semibold text-textPrimary capitalize">{selectedInvoice.billingPeriod || '—'}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2.5">
-                    <p className="text-gray-400 text-[10px]">From</p>
-                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.periodStart)}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2.5">
-                    <p className="text-gray-400 text-[10px]">To</p>
-                    <p className="font-semibold text-textPrimary">{formatDate(selectedInvoice.periodEnd)}</p>
-                  </div>
-                </div>
-
-                {/* Seller */}
-                <div className="text-xs">
-                  <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">From</p>
-                  <p className="font-semibold text-textPrimary">{selectedInvoice.sellerName}</p>
-                  {selectedInvoice.sellerGstin && <p className="text-textSecondary">GSTIN: {selectedInvoice.sellerGstin}</p>}
-                  {selectedInvoice.sellerAddress && <p className="text-textSecondary">{selectedInvoice.sellerAddress}</p>}
-                </div>
-
-                {/* Amounts */}
-                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary text-xs">Subtotal</span>
-                    <span className="font-medium text-textPrimary text-xs">{formatCurrency(selectedInvoice.subtotal)}</span>
-                  </div>
-                  {selectedInvoice.taxBreakup?.cgstAmount != null && (
-                    <>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-textSecondary">CGST ({selectedInvoice.taxBreakup.cgstRate}%)</span>
-                        <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.cgstAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-textSecondary">SGST ({selectedInvoice.taxBreakup.sgstRate}%)</span>
-                        <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.sgstAmount)}</span>
-                      </div>
-                    </>
-                  )}
-                  {selectedInvoice.taxBreakup?.igstAmount != null && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-textSecondary">IGST ({selectedInvoice.taxBreakup.igstRate}%)</span>
-                      <span className="text-textPrimary">{formatCurrency(selectedInvoice.taxBreakup.igstAmount)}</span>
-                    </div>
-                  )}
-                  {Number(selectedInvoice.taxTotal) > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-textSecondary">Tax</span>
-                      <span className="font-medium text-textPrimary">{formatCurrency(selectedInvoice.taxTotal)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-gray-100 pt-2">
-                    <span className="font-semibold text-textPrimary text-sm">Total</span>
-                    <span className="font-bold text-textPrimary">{formatCurrency(selectedInvoice.total)}</span>
-                  </div>
-                </div>
-
-                {/* Payment ref */}
-                {selectedInvoice.razorpayPaymentId && (
-                  <div className="bg-gray-50 rounded-lg p-2.5 text-[11px] text-textSecondary">
-                    <span className="text-gray-400">Payment ID:</span> {selectedInvoice.razorpayPaymentId}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setSelectedInvoice(null)}
-                  className="w-full py-2 text-sm font-medium text-textSecondary bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5">
+            <Receipt className="w-4 h-4 text-textSecondary" />
+            <h3 className="text-xs md:text-sm font-semibold text-textPrimary">
+              {invoices.length} Invoice{invoices.length !== 1 ? 's' : ''}
+            </h3>
           </div>
-        </Portal>
+          <div className="divide-y divide-border">
+            {invoices.map(inv => (
+              <button
+                key={inv.id}
+                onClick={() => setSelectedInvoice(inv)}
+                className="w-full flex items-center justify-between px-4 py-3.5 md:px-6 md:py-4 active:bg-gray-50 md:hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-mono font-semibold text-textPrimary">{inv.invoiceNumber}</span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${STATUS_COLORS[inv.status] || STATUS_COLORS.PENDING}`}>
+                      {inv.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-textSecondary">
+                    {formatDate(inv.createdAt)} · <span className="capitalize">{inv.billingPeriod || '—'}</span>
+                    {inv.periodStart && inv.periodEnd && (
+                      <span className="hidden md:inline"> · {formatDate(inv.periodStart)} — {formatDate(inv.periodEnd)}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-sm md:text-base font-bold text-textPrimary">{formatCurrency(inv.total)}</span>
+                  <Eye className="w-4 h-4 text-gray-300" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -238,18 +374,23 @@ function BillingHistorySection() {
 
 export default function PlansPage() {
   const history = useHistory()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [processingPlan, setProcessingPlan] = useState(null)
   const [billingPeriod, setBillingPeriod] = useState('yearly') // 'monthly' or 'yearly'
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search)
+    const tab = params.get('tab')
+    return tab && PLANS_TABS.some(t => t.key === tab) ? tab : 'plans'
+  })
+  const tabsRef = useRef(null)
 
   const { data: planUsage, isLoading: usageLoading } = useQuery({
     queryKey: ['plans', 'usage'],
     queryFn: async () => {
       const response = await plansApi.getUsage()
       return response.data.data || response.data
-    },
-    staleTime: 0,
-    refetchOnMount: 'always'
+    }
   })
 
   const { data: availablePlans = [], isLoading: plansLoading } = useQuery({
@@ -355,277 +496,341 @@ export default function PlansPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <PageToolbar
-        title="Plans & Billing"
-        subtitle="Simple pricing for your business"
-        mobileActions={
-          <button
-            onClick={() => history.push('/settings')}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-textSecondary active:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        }
-        actions={
-          <button
-            onClick={() => history.push('/settings')}
-            className="px-3 py-2 text-sm font-medium text-textSecondary md:hover:text-textPrimary md:hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Settings
-          </button>
-        }
-      />
-
-      <div className="flex-1 px-3 py-4 md:px-8 md:py-6 pb-mobile-nav overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-5 md:space-y-8">
-
-          {/* Current Usage — compact on mobile */}
-          <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
-            <div className="flex items-start justify-between mb-3 md:mb-4 gap-2">
-              <div className="min-w-0">
-                <h2 className="text-base md:text-lg font-semibold text-textPrimary">
-                  Current Plan: {currentPlanName}
-                </h2>
-                {subscription?.status === 'ACTIVE' && (
-                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1 flex-wrap">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    Active
-                    {subscription?.renewAt && (
-                      <span className="text-textSecondary">
-                        · Renews {new Date(subscription.renewAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
-                    )}
-                  </p>
-                )}
-              </div>
-              {isAtLimit && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 border border-red-200 rounded-lg shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                  <span className="text-[11px] font-medium text-red-600">Limit reached</span>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                <p className="text-[11px] md:text-xs text-textSecondary mb-1">Invoices Used</p>
-                <p className="text-xl md:text-2xl font-bold text-textPrimary">
-                  {used} <span className="text-xs md:text-sm font-normal text-textSecondary">/ {displayLimit}</span>
-                </p>
-                {!isUnlimited && (
-                  <div className="w-full h-1.5 md:h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
-                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
-                  </div>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                <p className="text-[11px] md:text-xs text-textSecondary mb-1">Remaining</p>
-                <p className="text-xl md:text-2xl font-bold text-textPrimary">
-                  {isUnlimited ? '∞' : Math.max(0, limit - used)}
-                </p>
-                <p className="text-[11px] md:text-xs text-textSecondary mt-1">this month</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4 col-span-2 md:col-span-1">
-                <p className="text-[11px] md:text-xs text-textSecondary mb-1">Billing Period</p>
-                <p className="text-xs md:text-sm font-medium text-textPrimary">
-                  {usage?.periodStart ? new Date(usage.periodStart).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '—'}
-                  {' — '}
-                  {usage?.periodEnd ? new Date(usage.periodEnd).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                </p>
-                <p className="text-[11px] md:text-xs text-textSecondary mt-1">Monthly reset</p>
-              </div>
-            </div>
+      {/* Mobile Header */}
+      <div className="md:hidden px-3 py-2 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => history.push('/settings')}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-textSecondary active:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-sm font-bold text-textPrimary">Plans & Billing</h1>
           </div>
+        </div>
+      </div>
 
-          {/* Plan Cards */}
-          <div>
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h3 className="text-xs md:text-sm font-semibold text-textSecondary uppercase tracking-wider">Choose Plan</h3>
-              <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-                <button
-                  onClick={() => setBillingPeriod('monthly')}
-                  className={`px-2.5 md:px-3 py-1.5 text-[11px] md:text-xs font-semibold rounded-md transition-all ${billingPeriod === 'monthly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'}`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setBillingPeriod('yearly')}
-                  className={`px-2.5 md:px-3 py-1.5 text-[11px] md:text-xs font-semibold rounded-md transition-all ${billingPeriod === 'yearly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'}`}
-                >
-                  Yearly <span className="text-green-600 ml-0.5">-33%</span>
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
-              {sortedPlans.filter(p => p.active !== false).map((plan) => {
-                const planKey = plan.name?.toLowerCase() || 'free'
-                const cfg = PLAN_CONFIG[planKey] || PLAN_CONFIG.free
-                const isCurrent = plan.id === currentPlanId || (!currentPlanId && planKey === 'free')
-                const isProcessing = processingPlan === plan.id
-                const monthlyPrice = Number(plan.priceMonthly) || 0
-                const yearlyPrice = Number(plan.priceYearly) || 0
-                const yearlyMonthly = yearlyPrice > 0 ? Math.round(yearlyPrice / 12) : 0
-                const savingsPercent = monthlyPrice > 0 ? Math.round((1 - yearlyPrice / (monthlyPrice * 12)) * 100) : 0
-                const isPaid = monthlyPrice > 0
-                const IconComp = cfg.icon
+      {/* Mobile Tab Bar — scrollable, like Settings */}
+      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
+        {PLANS_TABS.map((tab) => {
+          const active = activeTab === tab.key
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors ${
+                active
+                  ? 'text-primary bg-blue-50 border border-blue-200'
+                  : 'text-textSecondary active:text-textPrimary active:bg-gray-50 border border-border'
+              }`}
+            >
+              <tab.icon className={`w-3.5 h-3.5 ${active ? 'text-primary' : 'text-gray-400'}`} />
+              {tab.mobileLabel}
+            </button>
+          )
+        })}
+      </div>
 
+      {/* Desktop Header — full PageToolbar with tabs */}
+      <div className="hidden md:block">
+        <PageToolbar
+          title="Plans & Billing"
+          subtitle="Simple pricing for your business"
+          actions={
+            <button
+              onClick={() => history.push('/settings')}
+              className="px-3 py-2 text-sm font-medium text-textSecondary md:hover:text-textPrimary md:hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Settings
+            </button>
+          }
+        >
+          {/* Tab Navigation — Desktop */}
+          <div className="relative mt-2">
+            <div
+              ref={tabsRef}
+              className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+            >
+              {PLANS_TABS.map((tab) => {
+                const active = activeTab === tab.key
                 return (
-                  <div
-                    key={plan.id}
-                    className={`relative bg-gradient-to-br ${cfg.gradient} rounded-xl border-2 ${isCurrent ? 'border-primary ring-2 ring-primary/20' : cfg.border} shadow-sm overflow-hidden transition-all md:hover:shadow-md flex flex-col`}
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                      active
+                        ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
+                        : 'text-textSecondary hover:text-textPrimary hover:bg-gray-50 border border-transparent'
+                    }`}
                   >
-                    {cfg.popular && !isCurrent && (
-                      <div className="absolute top-0 right-0">
-                        <span className="px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] font-bold text-white bg-amber-500 rounded-bl-lg uppercase tracking-wider">
-                          Best Value
-                        </span>
-                      </div>
-                    )}
-                    {isCurrent && (
-                      <div className="absolute top-0 right-0">
-                        <span className="px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] font-bold text-white bg-primary rounded-bl-lg uppercase tracking-wider">
-                          Current
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="p-4 md:p-5 flex flex-col flex-1">
-                      {/* Header + Price row on mobile */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center ${cfg.iconBg} shrink-0`}>
-                            <IconComp className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm md:text-base font-bold text-textPrimary">{plan.displayName || plan.name}</h4>
-                            <p className="text-[11px] text-textSecondary leading-tight">{plan.description || ''}</p>
-                          </div>
-                        </div>
-                        {/* Price inline on mobile */}
-                        <div className="text-right shrink-0 md:hidden">
-                          {isPaid ? (
-                            billingPeriod === 'yearly' ? (
-                              <>
-                                <p className="text-lg font-bold text-textPrimary">₹{yearlyMonthly}<span className="text-[11px] font-normal text-textSecondary">/mo</span></p>
-                                <p className="text-[10px] text-green-600 font-medium">₹{yearlyPrice}/yr</p>
-                              </>
-                            ) : (
-                              <p className="text-lg font-bold text-textPrimary">₹{monthlyPrice}<span className="text-[11px] font-normal text-textSecondary">/mo</span></p>
-                            )
-                          ) : (
-                            <p className="text-lg font-bold text-textPrimary">Free</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Price — desktop only */}
-                      <div className="mb-3 hidden md:block">
-                        {isPaid ? (
-                          billingPeriod === 'yearly' ? (
-                            <div>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-bold text-textPrimary">₹{yearlyMonthly}</span>
-                                <span className="text-sm text-textSecondary">/month</span>
-                              </div>
-                              <p className="text-[11px] text-green-600 font-medium mt-0.5">
-                                ₹{yearlyPrice}/year — Save {savingsPercent}%
-                              </p>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-bold text-textPrimary">₹{monthlyPrice}</span>
-                                <span className="text-sm text-textSecondary">/month</span>
-                              </div>
-                              <p className="text-[11px] text-textSecondary mt-0.5">Billed monthly</p>
-                            </div>
-                          )
-                        ) : (
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold text-textPrimary">Free</span>
-                            <span className="text-sm text-textSecondary">forever</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Features — horizontal on mobile, vertical on desktop */}
-                      <div className="flex flex-wrap gap-x-3 gap-y-1.5 md:flex-col md:gap-x-0 md:space-y-2 mb-4 md:mb-5 flex-1">
-                        {cfg.features.map((feat, i) => (
-                          <div key={i} className="flex items-center gap-1.5 md:gap-2">
-                            <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-green-500 shrink-0" />
-                            <span className="text-xs md:text-sm text-textPrimary">{feat}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Button */}
-                      {isCurrent ? (
-                        <button
-                          disabled
-                          className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-gray-100 text-gray-400 cursor-default"
-                        >
-                          Current Plan
-                        </button>
-                      ) : isPaid ? (
-                        <button
-                          onClick={() => handleSubscribe(plan.id)}
-                          disabled={isProcessing}
-                          className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                              {billingPeriod === 'yearly'
-                                ? `Subscribe — ₹${yearlyPrice}/yr`
-                                : `Subscribe — ₹${monthlyPrice}/mo`
-                              }
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-gray-100 text-gray-400 cursor-default"
-                        >
-                          Free Forever
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    <tab.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
+                    {tab.label}
+                  </button>
                 )
               })}
             </div>
           </div>
+        </PageToolbar>
+      </div>
 
-          {/* Billing History */}
-          <BillingHistorySection />
+      {/* Content Area */}
+      {activeTab === 'plans' && (
+        <div className="flex-1 px-3 py-4 md:px-8 md:py-6 pb-mobile-nav overflow-y-auto">
+          <div className="max-w-5xl mx-auto space-y-5 md:space-y-8">
 
-          {/* FAQ — compact */}
-          <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
-            <h3 className="text-xs md:text-sm font-semibold text-textPrimary mb-2 md:mb-3">Frequently Asked Questions</h3>
-            <div className="space-y-2 md:space-y-3">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-textPrimary">How does billing work?</p>
-                <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">You pay via Razorpay. Your plan stays active for the billing period from the date of payment.</p>
+            {/* Current Usage — compact on mobile */}
+            <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
+              <div className="flex items-start justify-between mb-3 md:mb-4 gap-2">
+                <div className="min-w-0">
+                  <h2 className="text-base md:text-lg font-semibold text-textPrimary">
+                    Current Plan: {currentPlanName}
+                  </h2>
+                  {subscription?.status === 'ACTIVE' && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1 flex-wrap">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      Active
+                      {subscription?.renewAt && (
+                        <span className="text-textSecondary">
+                          · Renews {new Date(subscription.renewAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                {isAtLimit && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 border border-red-200 rounded-lg shrink-0">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                    <span className="text-[11px] font-medium text-red-600">Limit reached</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-textPrimary">What happens when I reach my limit?</p>
-                <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">You won't be able to issue new invoices until the next month or until you upgrade.</p>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                  <p className="text-[11px] md:text-xs text-textSecondary mb-1">Invoices Used</p>
+                  <p className="text-xl md:text-2xl font-bold text-textPrimary">
+                    {used} <span className="text-xs md:text-sm font-normal text-textSecondary">/ {displayLimit}</span>
+                  </p>
+                  {!isUnlimited && (
+                    <div className="w-full h-1.5 md:h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
+                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
+                    </div>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                  <p className="text-[11px] md:text-xs text-textSecondary mb-1">Remaining</p>
+                  <p className="text-xl md:text-2xl font-bold text-textPrimary">
+                    {isUnlimited ? '∞' : Math.max(0, limit - used)}
+                  </p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-1">this month</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4 col-span-2 md:col-span-1">
+                  <p className="text-[11px] md:text-xs text-textSecondary mb-1">Billing Period</p>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">
+                    {usage?.periodStart ? new Date(usage.periodStart).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '—'}
+                    {' — '}
+                    {usage?.periodEnd ? new Date(usage.periodEnd).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  </p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-1">Monthly reset</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-textPrimary">Can I upgrade anytime?</p>
-                <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">Yes! Upgrade at any time and your new plan takes effect immediately.</p>
+            </div>
+
+            {/* Plan Cards */}
+            <div>
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="text-xs md:text-sm font-semibold text-textSecondary uppercase tracking-wider">Choose Plan</h3>
+                <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setBillingPeriod('monthly')}
+                    className={`px-2.5 md:px-3 py-1.5 text-[11px] md:text-xs font-semibold rounded-md transition-all ${billingPeriod === 'monthly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'}`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setBillingPeriod('yearly')}
+                    className={`px-2.5 md:px-3 py-1.5 text-[11px] md:text-xs font-semibold rounded-md transition-all ${billingPeriod === 'yearly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary active:text-textPrimary md:hover:text-textPrimary'}`}
+                  >
+                    Yearly <span className="text-green-600 ml-0.5">-33%</span>
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
+                {sortedPlans.filter(p => p.active !== false).map((plan) => {
+                  const planKey = plan.name?.toLowerCase() || 'free'
+                  const cfg = PLAN_CONFIG[planKey] || PLAN_CONFIG.free
+                  const isCurrent = plan.id === currentPlanId || (!currentPlanId && planKey === 'free')
+                  const isProcessing = processingPlan === plan.id
+                  const monthlyPrice = Number(plan.priceMonthly) || 0
+                  const yearlyPrice = Number(plan.priceYearly) || 0
+                  const yearlyMonthly = yearlyPrice > 0 ? Math.round(yearlyPrice / 12) : 0
+                  const savingsPercent = monthlyPrice > 0 ? Math.round((1 - yearlyPrice / (monthlyPrice * 12)) * 100) : 0
+                  const isPaid = monthlyPrice > 0
+                  const IconComp = cfg.icon
+
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`relative bg-gradient-to-br ${cfg.gradient} rounded-xl border-2 ${isCurrent ? 'border-primary ring-2 ring-primary/20' : cfg.border} shadow-sm overflow-hidden transition-all md:hover:shadow-md flex flex-col`}
+                    >
+                      {cfg.popular && !isCurrent && (
+                        <div className="absolute top-0 right-0">
+                          <span className="px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] font-bold text-white bg-amber-500 rounded-bl-lg uppercase tracking-wider">
+                            Best Value
+                          </span>
+                        </div>
+                      )}
+                      {isCurrent && (
+                        <div className="absolute top-0 right-0">
+                          <span className="px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] font-bold text-white bg-primary rounded-bl-lg uppercase tracking-wider">
+                            Current
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="p-4 md:p-5 flex flex-col flex-1">
+                        {/* Header + Price row on mobile */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center ${cfg.iconBg} shrink-0`}>
+                              <IconComp className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm md:text-base font-bold text-textPrimary">{plan.displayName || plan.name}</h4>
+                              <p className="text-[11px] text-textSecondary leading-tight">{plan.description || ''}</p>
+                            </div>
+                          </div>
+                          {/* Price inline on mobile */}
+                          <div className="text-right shrink-0 md:hidden">
+                            {isPaid ? (
+                              billingPeriod === 'yearly' ? (
+                                <>
+                                  <p className="text-lg font-bold text-textPrimary">₹{yearlyMonthly}<span className="text-[11px] font-normal text-textSecondary">/mo</span></p>
+                                  <p className="text-[10px] text-green-600 font-medium">₹{yearlyPrice}/yr</p>
+                                </>
+                              ) : (
+                                <p className="text-lg font-bold text-textPrimary">₹{monthlyPrice}<span className="text-[11px] font-normal text-textSecondary">/mo</span></p>
+                              )
+                            ) : (
+                              <p className="text-lg font-bold text-textPrimary">Free</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price — desktop only */}
+                        <div className="mb-3 hidden md:block">
+                          {isPaid ? (
+                            billingPeriod === 'yearly' ? (
+                              <div>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-3xl font-bold text-textPrimary">₹{yearlyMonthly}</span>
+                                  <span className="text-sm text-textSecondary">/month</span>
+                                </div>
+                                <p className="text-[11px] text-green-600 font-medium mt-0.5">
+                                  ₹{yearlyPrice}/year — Save {savingsPercent}%
+                                </p>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-3xl font-bold text-textPrimary">₹{monthlyPrice}</span>
+                                  <span className="text-sm text-textSecondary">/month</span>
+                                </div>
+                                <p className="text-[11px] text-textSecondary mt-0.5">Billed monthly</p>
+                              </div>
+                            )
+                          ) : (
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-bold text-textPrimary">Free</span>
+                              <span className="text-sm text-textSecondary">forever</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Features — horizontal on mobile, vertical on desktop */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 md:flex-col md:gap-x-0 md:space-y-2 mb-4 md:mb-5 flex-1">
+                          {cfg.features.map((feat, i) => (
+                            <div key={i} className="flex items-center gap-1.5 md:gap-2">
+                              <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-green-500 shrink-0" />
+                              <span className="text-xs md:text-sm text-textPrimary">{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Button */}
+                        {isCurrent ? (
+                          <button
+                            disabled
+                            className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-gray-100 text-gray-400 cursor-default"
+                          >
+                            Current Plan
+                          </button>
+                        ) : isPaid ? (
+                          <button
+                            onClick={() => handleSubscribe(plan.id)}
+                            disabled={isProcessing}
+                            className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                          >
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                {billingPeriod === 'yearly'
+                                  ? `Subscribe — ₹${yearlyPrice}/yr`
+                                  : `Subscribe — ₹${monthlyPrice}/mo`
+                                }
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="w-full py-2 md:py-2.5 rounded-lg font-semibold text-xs md:text-sm bg-gray-100 text-gray-400 cursor-default"
+                          >
+                            Free Forever
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* FAQ — compact */}
+            <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
+              <h3 className="text-xs md:text-sm font-semibold text-textPrimary mb-2 md:mb-3">Frequently Asked Questions</h3>
+              <div className="space-y-2 md:space-y-3">
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">How does billing work?</p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">You pay via Razorpay. Your plan stays active for the billing period from the date of payment.</p>
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">What happens when I reach my limit?</p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">You won't be able to issue new invoices until the next month or until you upgrade.</p>
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">Can I upgrade anytime?</p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">Yes! Upgrade at any time and your new plan takes effect immediately.</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Billing History Tab */}
+      {activeTab === 'billing' && (
+        <div className="flex-1 px-3 py-4 md:px-8 md:py-6 pb-mobile-nav overflow-y-auto">
+          <BillingHistoryTab />
+        </div>
+      )}
     </div>
   )
 }

@@ -244,14 +244,21 @@ function BankAndSignature({ invoice, color = '#333' }) {
           {invoice.business?.upiId && <Text style={{ fontSize: 9, marginTop: 4 }}>UPI: {invoice.business.upiId}</Text>}
         </View>
       )}
-      <View style={{ width: 150, textAlign: 'right', alignItems: 'flex-end' }}>
+      <View style={{ width: 180, textAlign: 'right', alignItems: 'flex-end' }}>
         <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 6, color, textTransform: 'uppercase' }}>Authorized Signatory</Text>
         {getSignatureUrl(invoice) ? (
           <Image src={getSignatureUrl(invoice)} style={{ width: 100, height: 40, objectFit: 'contain', marginTop: 4 }} />
+        ) : invoice.business?.signatureName ? (
+          <View style={{ marginTop: 4, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, backgroundColor: '#FEFCE8', width: '100%', alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Times-Italic', color: '#1F2937' }}>{invoice.business.signatureName}</Text>
+            <Text style={{ fontSize: 7, color: '#9CA3AF', marginTop: 2, textTransform: 'uppercase' }}>Authorized Signatory</Text>
+          </View>
         ) : (
           <View style={{ height: 40, borderBottomWidth: 1, borderBottomColor: '#999', marginTop: 20, width: '100%' }} />
         )}
-        {invoice.business?.signatureName && <Text style={{ fontSize: 9, marginTop: 4 }}>{invoice.business.signatureName}</Text>}
+        {invoice.business?.signatureName && !getSignatureUrl(invoice) ? null : (
+          invoice.business?.signatureName && <Text style={{ fontSize: 9, marginTop: 4 }}>{invoice.business.signatureName}</Text>
+        )}
         {invoice.business?.name && <Text style={{ fontSize: 9, color: '#666' }}>For {invoice.business.name}</Text>}
       </View>
     </View>
