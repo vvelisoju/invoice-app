@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star } from 'lucide-react'
+import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen } from 'lucide-react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import {
@@ -327,6 +327,13 @@ export default function CustomerListPage() {
 
       // Actions
       <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); history.push(`/invoices?customerId=${customer.id}`) }}
+          className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+          title="View Documents"
+        >
+          <FolderOpen className="w-4 h-4" />
+        </button>
         <button
           onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
           className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"

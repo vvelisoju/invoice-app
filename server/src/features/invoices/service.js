@@ -318,11 +318,12 @@ export const getInvoice = async (prisma, invoiceId, businessId) => {
 }
 
 export const listInvoices = async (prisma, businessId, filters = {}) => {
-  const { search, status, dateFrom, dateTo, limit = 20, offset = 0 } = filters
+  const { search, status, customerId, dateFrom, dateTo, limit = 20, offset = 0 } = filters
 
   const where = {
     businessId,
     ...(status && { status }),
+    ...(customerId && { customerId }),
     ...(dateFrom && { date: { gte: new Date(dateFrom) } }),
     ...(dateTo && { date: { lte: new Date(dateTo) } }),
     ...(search && {

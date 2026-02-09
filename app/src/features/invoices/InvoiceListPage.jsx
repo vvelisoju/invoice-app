@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useHistory } from 'react-router-dom'
-import { Plus, Download, FileText, Loader2, SlidersHorizontal, Search } from 'lucide-react'
+import { useHistory, useLocation } from 'react-router-dom'
+import { Plus, Download, FileText, Loader2, SlidersHorizontal, Search, X, Users } from 'lucide-react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { invoiceApi, businessApi } from '../../lib/api'
+import { invoiceApi, businessApi, customerApi } from '../../lib/api'
+import Portal from '../../components/Portal'
 import {
   DataTable,
   StatusFilterPills,
@@ -57,8 +58,105 @@ const TABLE_COLUMNS = [
   { key: 'total', label: 'Total', colSpan: 2, headerAlign: 'right', align: 'right' },
 ]
 
+// ── Customer Filter Dropdown ────────────────────────────────────────
+function CustomerFilterDropdown({ customers, selected, onSelect, onClear, compact = false }) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef(null)
+  const dropdownRef = useRef(null)
+
+  const filtered = useMemo(() => {
+    if (!search) return customers
+    const q = search.toLowerCase()
+    return customers.filter(c => c.name?.toLowerCase().includes(q))
+  }, [customers, search])
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => {
+      if (
+        anchorRef.current && !anchorRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
+  }, [open])
+
+  // Position the dropdown relative to the anchor
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  useEffect(() => {
+    if (!open || !anchorRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+  }, [open])
+
+  if (selected) {
+    return (
+      <div className={`flex items-center gap-2 ${compact ? 'px-2.5 py-1' : 'px-3 py-2'} bg-primary/5 border border-primary/20 rounded-lg`}>
+        <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-primary shrink-0`} />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-primary truncate flex-1`}>{selected.name}</span>
+        <button
+          onClick={onClear}
+          className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} flex items-center justify-center rounded-full active:bg-primary/10 md:hover:bg-primary/10 text-primary shrink-0 tap-target-auto`}
+        >
+          <X className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={anchorRef}>
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          placeholder="Filter by customer..."
+          className={`w-full ${compact ? 'pl-7 pr-3 py-1.5 text-xs' : 'pl-8 pr-3 py-2 text-sm'} border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary tap-target-auto`}
+        />
+        <Users className={`${compact ? 'w-3 h-3 left-2.5 top-[7px]' : 'w-3.5 h-3.5 left-2.5 top-[10px]'} absolute text-gray-400 pointer-events-none`} />
+      </div>
+
+      {open && (
+        <Portal>
+          <div
+            ref={dropdownRef}
+            className="fixed z-50 bg-white border border-border rounded-lg shadow-xl overflow-y-auto"
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 200), maxHeight: compact ? 224 : 200 }}
+          >
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-textSecondary">No customers found</div>
+            ) : filtered.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { onSelect(c); setSearch(''); setOpen(false) }}
+                className={`w-full px-3 ${compact ? 'py-2' : 'py-2.5'} text-left ${compact ? 'text-xs' : 'text-sm'} text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 tap-target-auto`}
+              >
+                <span className="truncate">{c.name}</span>
+                {c.phone && <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-textSecondary shrink-0`}>{c.phone}</span>}
+              </button>
+            ))}
+          </div>
+        </Portal>
+      )}
+    </div>
+  )
+}
+
 export default function InvoiceListPage() {
   const history = useHistory()
+  const location = useLocation()
   const [statusFilter, setStatusFilter] = useState('all')
 
   // Fetch business profile to get enabled document types
@@ -84,6 +182,33 @@ export default function InvoiceListPage() {
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
+  // Customer filter state
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+
+  // Fetch customers for the dropdown
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', 'filter-list'],
+    queryFn: async () => {
+      const response = await customerApi.list({ limit: 200 })
+      return response.data?.customers || response.data || []
+    }
+  })
+  const allCustomers = customersData || []
+
+  // Read ?customerId= from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const custId = params.get('customerId')
+    if (custId && !selectedCustomer) {
+      customerApi.get(custId).then(res => {
+        const customer = res.data?.data || res.data
+        if (customer) setSelectedCustomer(customer)
+      }).catch(() => {})
+    }
+  }, [location.search])
+
+  const handleCustomerClear = () => { setSelectedCustomer(null); history.replace('/invoices') }
+
   useEffect(() => () => clearTimeout(searchTimeout.current), [])
 
   const {
@@ -93,13 +218,14 @@ export default function InvoiceListPage() {
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ['invoices', debouncedSearch, statusFilter],
+    queryKey: ['invoices', debouncedSearch, statusFilter, selectedCustomer?.id],
     queryFn: async ({ pageParam = 0 }) => {
       const params = {
         limit: 20,
         offset: pageParam,
         ...(debouncedSearch && { search: debouncedSearch }),
-        ...(statusFilter !== 'all' && { status: statusFilter })
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(selectedCustomer?.id && { customerId: selectedCustomer.id })
       }
       const response = await invoiceApi.list(params)
       return response.data
@@ -293,6 +419,13 @@ export default function InvoiceListPage() {
               options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
               onChange={handleDocTypeChange}
             />
+            {/* Mobile Customer Filter */}
+            <CustomerFilterDropdown
+              customers={allCustomers}
+              selected={selectedCustomer}
+              onSelect={setSelectedCustomer}
+              onClear={handleCustomerClear}
+            />
           </div>
         )}
         {/* Desktop: always visible */}
@@ -305,13 +438,25 @@ export default function InvoiceListPage() {
         </div>
       </PageToolbar>
 
-      {/* Secondary Filters — desktop only */}
-      <div className="hidden md:block">
-        <CheckboxFilter
-          label="Document Type:"
-          options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
-          onChange={handleDocTypeChange}
-        />
+      {/* Secondary Filters — desktop */}
+      <div className="hidden md:flex items-center gap-4 px-8 max-w-7xl">
+        <div className="flex-1">
+          <CheckboxFilter
+            label="Document Type:"
+            options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
+            onChange={handleDocTypeChange}
+          />
+        </div>
+        {/* Desktop Customer Filter */}
+        <div className="shrink-0 w-52">
+          <CustomerFilterDropdown
+            customers={allCustomers}
+            selected={selectedCustomer}
+            onSelect={setSelectedCustomer}
+            onClear={handleCustomerClear}
+            compact
+          />
+        </div>
       </div>
 
       {/* Table Section */}

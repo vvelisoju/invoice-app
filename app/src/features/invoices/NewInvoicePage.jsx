@@ -248,6 +248,10 @@ export default function NewInvoicePage() {
         queryClient.invalidateQueries({ queryKey: ['business'] })
         // Update sidebar plan usage count
         queryClient.invalidateQueries({ queryKey: ['plans', 'usage'] })
+        // Invalidate invoice list so Documents page shows the new record
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
+        // Update customer list (invoice counts may have changed)
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
         // Navigate to the created invoice
         history.push(`/invoices/${data.id}`)
       }
