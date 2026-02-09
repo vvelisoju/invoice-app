@@ -50,6 +50,35 @@ export default async function adminRoutes(fastify) {
     }
   }, handlers.getBusinessDetails)
 
+  fastify.patch('/businesses/:id', {
+    schema: {
+      description: 'Update business details (name, phone, email, GSTIN, etc.)',
+      tags: ['admin', 'businesses'],
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          phone: { type: 'string' },
+          email: { type: 'string' },
+          address: { type: 'string' },
+          gstin: { type: 'string' },
+          stateCode: { type: 'string' },
+          gstEnabled: { type: 'boolean' },
+          invoicePrefix: { type: 'string' },
+          nextInvoiceNumber: { type: 'integer' },
+          defaultNotes: { type: 'string' },
+          defaultTerms: { type: 'string' },
+          bankName: { type: 'string' },
+          accountNumber: { type: 'string' },
+          ifscCode: { type: 'string' },
+          upiId: { type: 'string' },
+          signatureName: { type: 'string' },
+          website: { type: 'string' }
+        }
+      }
+    }
+  }, handlers.updateBusinessDetails)
+
   fastify.patch('/businesses/:id/status', {
     schema: {
       description: 'Update business status (activate/suspend/ban)',
@@ -188,7 +217,14 @@ export default async function adminRoutes(fastify) {
         properties: {
           businessId: { type: 'string' },
           status: { type: 'string' },
-          limit: { type: 'integer', minimum: 1, maximum: 100 },
+          billingPeriod: { type: 'string', enum: ['monthly', 'yearly'] },
+          planId: { type: 'string' },
+          search: { type: 'string' },
+          dateFrom: { type: 'string', description: 'YYYY-MM-DD' },
+          dateTo: { type: 'string', description: 'YYYY-MM-DD' },
+          sortBy: { type: 'string', enum: ['createdAt', 'total', 'invoiceNumber'] },
+          sortOrder: { type: 'string', enum: ['asc', 'desc'] },
+          limit: { type: 'integer', minimum: 1, maximum: 200 },
           offset: { type: 'integer', minimum: 0 }
         }
       }

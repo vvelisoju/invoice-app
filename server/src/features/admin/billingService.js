@@ -224,17 +224,39 @@ export async function generateSubscriptionInvoice({
  * List all subscription invoices (admin view).
  */
 export async function listSubscriptionInvoices(filters = {}) {
-  const { businessId, status, limit = 50, offset = 0 } = filters
+  const {
+    businessId, status, billingPeriod, planId,
+    search, dateFrom, dateTo,
+    sortBy = 'createdAt', sortOrder = 'desc',
+    limit = 50, offset = 0
+  } = filters
 
   const where = {
     ...(businessId && { businessId }),
     ...(status && { status }),
+    ...(billingPeriod && { billingPeriod }),
+    ...(planId && { planId }),
+    ...((dateFrom || dateTo) && {
+      createdAt: {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo && { lt: new Date(new Date(dateTo).getTime() + 86400000) })
+      }
+    }),
+    ...(search && {
+      OR: [
+        { invoiceNumber: { contains: search, mode: 'insensitive' } },
+        { buyerName: { contains: search, mode: 'insensitive' } },
+        { buyerGstin: { contains: search, mode: 'insensitive' } },
+        { planName: { contains: search, mode: 'insensitive' } },
+        { business: { name: { contains: search, mode: 'insensitive' } } }
+      ]
+    })
   }
 
-  const [invoices, total] = await Promise.all([
+  const [invoices, total, aggregates] = await Promise.all([
     prisma.subscriptionInvoice.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { [sortBy]: sortOrder },
       take: parseInt(limit),
       skip: parseInt(offset),
       include: {
@@ -243,10 +265,39 @@ export async function listSubscriptionInvoices(filters = {}) {
         }
       }
     }),
-    prisma.subscriptionInvoice.count({ where })
+    prisma.subscriptionInvoice.count({ where }),
+    prisma.subscriptionInvoice.aggregate({
+      where,
+      _sum: { subtotal: true, taxTotal: true, total: true },
+      _count: { id: true }
+    })
   ])
 
-  return { invoices, total, limit: parseInt(limit), offset: parseInt(offset) }
+  // Status breakdown for the filtered set
+  const statusBreakdown = await prisma.subscriptionInvoice.groupBy({
+    by: ['status'],
+    where,
+    _count: { id: true },
+    _sum: { total: true }
+  })
+
+  return {
+    invoices,
+    total,
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    totals: {
+      subtotal: aggregates._sum.subtotal ? Number(aggregates._sum.subtotal) : 0,
+      taxTotal: aggregates._sum.taxTotal ? Number(aggregates._sum.taxTotal) : 0,
+      total: aggregates._sum.total ? Number(aggregates._sum.total) : 0,
+      count: aggregates._count.id
+    },
+    statusBreakdown: statusBreakdown.map(s => ({
+      status: s.status,
+      count: s._count.id,
+      total: s._sum.total ? Number(s._sum.total) : 0
+    }))
+  }
 }
 
 /**

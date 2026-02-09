@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useHistory } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../../lib/api'
+import Portal from '../../components/Portal'
 import {
   ArrowLeft, Building2, User, FileText, Package, Users as UsersIcon,
   CreditCard, Calendar, CheckCircle, AlertTriangle, Ban, ExternalLink,
-  Shield, BarChart3, Palette, Receipt, DollarSign, Hash
+  Shield, BarChart3, Palette, Receipt, DollarSign, Hash, Pencil, X,
+  Save, Loader2, RefreshCw
 } from 'lucide-react'
 
 const STATUS_BADGE = {
@@ -61,23 +63,221 @@ const INR = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractio
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 const fmtShort = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'
 
+// ── Edit Business Modal ───────────────────────────────────────────────────
+const EDIT_FIELDS = [
+  { key: 'name', label: 'Business Name', type: 'text' },
+  { key: 'phone', label: 'Phone', type: 'text' },
+  { key: 'email', label: 'Email', type: 'text' },
+  { key: 'website', label: 'Website', type: 'text' },
+  { key: 'address', label: 'Address', type: 'textarea' },
+  { key: 'gstEnabled', label: 'GST Enabled', type: 'boolean' },
+  { key: 'gstin', label: 'GSTIN', type: 'text' },
+  { key: 'stateCode', label: 'State Code', type: 'text' },
+  { key: 'invoicePrefix', label: 'Invoice Prefix', type: 'text' },
+  { key: 'nextInvoiceNumber', label: 'Next Invoice Number', type: 'number' },
+  { key: 'defaultNotes', label: 'Default Notes', type: 'textarea' },
+  { key: 'defaultTerms', label: 'Default Terms', type: 'textarea' },
+  { key: 'bankName', label: 'Bank Name', type: 'text' },
+  { key: 'accountNumber', label: 'Account Number', type: 'text' },
+  { key: 'ifscCode', label: 'IFSC Code', type: 'text' },
+  { key: 'upiId', label: 'UPI ID', type: 'text' },
+  { key: 'signatureName', label: 'Signatory Name', type: 'text' },
+]
+
+function EditBusinessModal({ business, onClose, onSave, isSaving }) {
+  const [form, setForm] = useState({})
+
+  useEffect(() => {
+    const initial = {}
+    EDIT_FIELDS.forEach(f => {
+      initial[f.key] = business[f.key] ?? ''
+    })
+    setForm(initial)
+  }, [business])
+
+  const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }))
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const changes = {}
+    EDIT_FIELDS.forEach(f => {
+      const orig = business[f.key] ?? ''
+      const curr = form[f.key]
+      if (f.type === 'boolean') {
+        if (Boolean(curr) !== Boolean(orig)) changes[f.key] = Boolean(curr)
+      } else if (f.type === 'number') {
+        if (Number(curr) !== Number(orig)) changes[f.key] = Number(curr)
+      } else {
+        if (String(curr || '') !== String(orig || '')) changes[f.key] = curr
+      }
+    })
+    if (Object.keys(changes).length > 0) {
+      onSave(changes)
+    } else {
+      onClose()
+    }
+  }
+
+  return (
+    <Portal>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-8 md:pt-16 px-3">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-gray-400" /> Edit Business Details
+            </h2>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 tap-target-auto">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {EDIT_FIELDS.map(f => (
+              <div key={f.key}>
+                <label className="block text-[11px] font-medium text-gray-500 mb-1">{f.label}</label>
+                {f.type === 'boolean' ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form[f.key])}
+                      onChange={(e) => handleChange(f.key, e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 tap-target-auto"
+                    />
+                    <span className="text-xs text-gray-700">{form[f.key] ? 'Enabled' : 'Disabled'}</span>
+                  </label>
+                ) : f.type === 'textarea' ? (
+                  <textarea
+                    value={form[f.key] || ''}
+                    onChange={(e) => handleChange(f.key, e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  />
+                ) : (
+                  <input
+                    type={f.type}
+                    value={form[f.key] ?? ''}
+                    onChange={(e) => handleChange(f.key, e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                )}
+              </div>
+            ))}
+          </form>
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 tap-target-auto">
+              Cancel
+            </button>
+            <button onClick={handleSubmit} disabled={isSaving}
+              className="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 tap-target-auto">
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  )
+}
+
+// ── Change Plan Modal ─────────────────────────────────────────────────────
+function ChangePlanModal({ business, onClose, onSave, isSaving }) {
+  const [selectedPlanId, setSelectedPlanId] = useState(business.planId || '')
+
+  const { data: plansData } = useQuery({
+    queryKey: ['admin', 'plans-list'],
+    queryFn: () => adminApi.listPlans().then(r => r.data?.data || r.data),
+    staleTime: 60000
+  })
+  const plans = Array.isArray(plansData) ? plansData : plansData?.plans || []
+
+  return (
+    <Portal>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-3">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-gray-400" /> Change Plan
+            </h2>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 tap-target-auto">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
+            <p className="text-[11px] text-gray-500 mb-2">Current: <strong>{business.plan?.displayName || 'No Plan'}</strong></p>
+            {plans.map(plan => (
+              <label key={plan.id}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedPlanId === plan.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="plan"
+                  value={plan.id}
+                  checked={selectedPlanId === plan.id}
+                  onChange={() => setSelectedPlanId(plan.id)}
+                  className="w-4 h-4 text-blue-600 tap-target-auto"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-900">{plan.displayName}</p>
+                  <p className="text-[10px] text-gray-500">{plan.name} · {plan.maxInvoicesPerMonth || '∞'} invoices/mo</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-bold text-gray-900">{INR(plan.monthlyPrice)}/mo</p>
+                  {plan.yearlyPrice && <p className="text-[10px] text-gray-400">{INR(plan.yearlyPrice)}/yr</p>}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200">
+            <button onClick={onClose} className="px-4 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 tap-target-auto">
+              Cancel
+            </button>
+            <button
+              onClick={() => onSave(selectedPlanId)}
+              disabled={isSaving || !selectedPlanId || selectedPlanId === business.planId}
+              className="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 tap-target-auto"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+              Assign Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  )
+}
+
 export default function AdminBusinessDetailPage() {
   const { id } = useParams()
   const history = useHistory()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showPlanModal, setShowPlanModal] = useState(false)
 
   const { data: business, isLoading, error } = useQuery({
     queryKey: ['admin', 'business', id],
     queryFn: () => adminApi.getBusinessDetails(id).then(r => r.data.data)
   })
 
+  const invalidate = () => {
+    queryClient.invalidateQueries(['admin', 'business', id])
+    queryClient.invalidateQueries(['admin', 'businesses'])
+  }
+
   const statusMutation = useMutation({
     mutationFn: (status) => adminApi.updateBusinessStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'business', id])
-      queryClient.invalidateQueries(['admin', 'businesses'])
-    }
+    onSuccess: invalidate
+  })
+
+  const editMutation = useMutation({
+    mutationFn: (data) => adminApi.updateBusinessDetails(id, data),
+    onSuccess: () => { invalidate(); setShowEditModal(false) }
+  })
+
+  const planMutation = useMutation({
+    mutationFn: (planId) => adminApi.updateBusinessPlan(id, planId),
+    onSuccess: () => { invalidate(); setShowPlanModal(false) }
   })
 
   const impersonateMutation = useMutation({
@@ -114,7 +314,7 @@ export default function AdminBusinessDetailPage() {
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => history.push('/admin/businesses')} className="p-2 hover:bg-gray-100 rounded-lg">
+        <button onClick={() => history.push('/admin/businesses')} className="p-2 hover:bg-gray-100 rounded-lg tap-target-auto">
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex-1 min-w-0">
@@ -133,36 +333,44 @@ export default function AdminBusinessDetailPage() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
+        <button onClick={() => setShowEditModal(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg active:bg-blue-100 md:hover:bg-blue-100 tap-target-auto">
+          <Pencil className="w-3.5 h-3.5" /> Edit Details
+        </button>
+        <button onClick={() => setShowPlanModal(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg active:bg-purple-100 md:hover:bg-purple-100 tap-target-auto">
+          <RefreshCw className="w-3.5 h-3.5" /> Change Plan
+        </button>
         {business.status === 'ACTIVE' && (
-          <button onClick={() => statusMutation.mutate('SUSPENDED')} disabled={statusMutation.isLoading}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100">
+          <button onClick={() => statusMutation.mutate('SUSPENDED')} disabled={statusMutation.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg active:bg-yellow-100 md:hover:bg-yellow-100 tap-target-auto">
             <AlertTriangle className="w-3.5 h-3.5" /> Suspend
           </button>
         )}
         {business.status === 'SUSPENDED' && (
           <>
-            <button onClick={() => statusMutation.mutate('ACTIVE')} disabled={statusMutation.isLoading}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">
+            <button onClick={() => statusMutation.mutate('ACTIVE')} disabled={statusMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg active:bg-green-100 md:hover:bg-green-100 tap-target-auto">
               <CheckCircle className="w-3.5 h-3.5" /> Activate
             </button>
-            <button onClick={() => statusMutation.mutate('BANNED')} disabled={statusMutation.isLoading}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">
+            <button onClick={() => statusMutation.mutate('BANNED')} disabled={statusMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg active:bg-red-100 md:hover:bg-red-100 tap-target-auto">
               <Ban className="w-3.5 h-3.5" /> Ban
             </button>
           </>
         )}
         {business.status === 'BANNED' && (
-          <button onClick={() => statusMutation.mutate('ACTIVE')} disabled={statusMutation.isLoading}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">
+          <button onClick={() => statusMutation.mutate('ACTIVE')} disabled={statusMutation.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg active:bg-green-100 md:hover:bg-green-100 tap-target-auto">
             <CheckCircle className="w-3.5 h-3.5" /> Reactivate
           </button>
         )}
-        <button onClick={() => impersonateMutation.mutate()} disabled={impersonateMutation.isLoading}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+        <button onClick={() => impersonateMutation.mutate()} disabled={impersonateMutation.isPending}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg active:bg-blue-100 md:hover:bg-blue-100 tap-target-auto">
           <ExternalLink className="w-3.5 h-3.5" /> View as User
         </button>
         <button onClick={() => history.push(`/admin/users/${business.owner?.id}`)}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100">
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg active:bg-gray-100 md:hover:bg-gray-100 tap-target-auto">
           <User className="w-3.5 h-3.5" /> View Owner
         </button>
       </div>
@@ -173,10 +381,10 @@ export default function AdminBusinessDetailPage() {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors -mb-px ${
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors -mb-px tap-target-auto ${
               activeTab === key
                 ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 active:text-gray-700 md:hover:text-gray-700'
             }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -194,6 +402,24 @@ export default function AdminBusinessDetailPage() {
       {activeTab === 'customers' && <CustomersTab customers={business.customers} />}
       {activeTab === 'products' && <ProductsTab products={business.products} />}
       {activeTab === 'settings' && <SettingsTab business={business} />}
+
+      {/* Modals */}
+      {showEditModal && (
+        <EditBusinessModal
+          business={business}
+          onClose={() => setShowEditModal(false)}
+          onSave={(data) => editMutation.mutate(data)}
+          isSaving={editMutation.isPending}
+        />
+      )}
+      {showPlanModal && (
+        <ChangePlanModal
+          business={business}
+          onClose={() => setShowPlanModal(false)}
+          onSave={(planId) => planMutation.mutate(planId)}
+          isSaving={planMutation.isPending}
+        />
+      )}
     </div>
   )
 }
@@ -420,16 +646,14 @@ function ProductsTab({ products }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-semibold text-gray-900 truncate">{prod.name}</p>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">{prod.type}</span>
               </div>
               <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
                 {prod.unit && <span>Unit: {prod.unit}</span>}
-                {prod.hsnCode && <span className="font-mono">HSN: {prod.hsnCode}</span>}
                 {prod.taxRate !== null && prod.taxRate !== undefined && <span>Tax: {prod.taxRate}%</span>}
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-sm font-bold text-gray-900">{INR(prod.rate)}</p>
+              <p className="text-sm font-bold text-gray-900">{INR(prod.defaultRate)}</p>
               <p className="text-[10px] text-gray-400">{fmtShort(prod.createdAt)}</p>
             </div>
           </div>

@@ -26,6 +26,12 @@ export async function getBusinessDetails(request, reply) {
   return { data: business }
 }
 
+export async function updateBusinessDetails(request, reply) {
+  const { id } = request.params
+  const business = await adminService.updateBusinessDetails(id, request.body)
+  return { data: business }
+}
+
 export async function updateBusinessStatus(request, reply) {
   const { id } = request.params
   const { status } = request.body

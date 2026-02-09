@@ -172,6 +172,7 @@ export const adminApi = {
   // Business Management
   listBusinesses: (params) => api.get('/admin/businesses', { params }),
   getBusinessDetails: (id) => api.get(`/admin/businesses/${id}`),
+  updateBusinessDetails: (id, data) => api.patch(`/admin/businesses/${id}`, data),
   updateBusinessStatus: (id, status) => api.patch(`/admin/businesses/${id}/status`, { status }),
   updateBusinessPlan: (id, planId) => api.patch(`/admin/businesses/${id}/plan`, { planId }),
 

@@ -337,7 +337,7 @@ export async function getBusinessDetails(businessId) {
     take: 50,
     select: {
       id: true, name: true, phone: true, email: true, gstin: true,
-      billingAddress: true, createdAt: true,
+      address: true, createdAt: true,
       _count: { select: { invoices: true } }
     }
   })
@@ -348,8 +348,8 @@ export async function getBusinessDetails(businessId) {
     orderBy: { createdAt: 'desc' },
     take: 50,
     select: {
-      id: true, name: true, type: true, rate: true, unit: true,
-      hsnCode: true, taxRate: true, createdAt: true
+      id: true, name: true, defaultRate: true, unit: true,
+      taxRate: true, createdAt: true
     }
   })
 
@@ -376,6 +376,41 @@ export async function getBusinessDetails(businessId) {
     products,
     taxRates
   }
+}
+
+export async function updateBusinessDetails(businessId, data) {
+  const business = await prisma.business.findUnique({ where: { id: businessId } })
+  if (!business) throw new NotFoundError('Business not found')
+
+  // Only allow updating safe fields
+  const allowedFields = [
+    'name', 'phone', 'email', 'address', 'gstin', 'stateCode',
+    'gstEnabled', 'invoicePrefix', 'nextInvoiceNumber',
+    'defaultNotes', 'defaultTerms', 'bankName', 'accountNumber',
+    'ifscCode', 'upiId', 'signatureName', 'website'
+  ]
+
+  const updateData = {}
+  for (const key of allowedFields) {
+    if (data[key] !== undefined) {
+      if (key === 'gstEnabled') {
+        updateData[key] = Boolean(data[key])
+      } else if (key === 'nextInvoiceNumber') {
+        updateData[key] = parseInt(data[key]) || business.nextInvoiceNumber
+      } else {
+        updateData[key] = data[key]
+      }
+    }
+  }
+
+  return prisma.business.update({
+    where: { id: businessId },
+    data: updateData,
+    include: {
+      owner: { select: { id: true, phone: true, name: true } },
+      plan: { select: { id: true, displayName: true } }
+    }
+  })
 }
 
 export async function updateBusinessStatus(businessId, status) {
