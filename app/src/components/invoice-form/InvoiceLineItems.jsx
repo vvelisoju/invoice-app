@@ -435,6 +435,13 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
             onCreateNew={(name) => onCreateProduct(index, name)}
             placeholder="Description"
           />
+          <input
+            type="text"
+            value={item.hsnCode || ''}
+            onChange={(e) => onUpdate(index, 'hsnCode', e.target.value)}
+            placeholder="HSN/SAC"
+            className="w-32 mt-1 bg-bgPrimary/30 px-2 py-1 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-[11px] text-textSecondary transition-all focus:outline-none"
+          />
         </div>
         {/* Amount */}
         <div className="col-span-5 md:col-span-2">
@@ -475,6 +482,13 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
             onProductSelect={(product) => onProductSelect(index, product)}
             onCreateNew={(name) => onCreateProduct(index, name)}
             placeholder="Description"
+          />
+          <input
+            type="text"
+            value={item.hsnCode || ''}
+            onChange={(e) => onUpdate(index, 'hsnCode', e.target.value)}
+            placeholder="HSN/SAC"
+            className="w-32 mt-1 bg-bgPrimary/30 px-2 py-1 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-[11px] text-textSecondary transition-all focus:outline-none"
           />
         </div>
         {/* Unit Price */}

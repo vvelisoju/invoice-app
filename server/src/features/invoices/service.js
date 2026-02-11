@@ -132,6 +132,7 @@ export const createInvoice = async (prisma, businessId, data) => {
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       status: initialStatus,
       issuedAt: !business.enableStatusWorkflow ? new Date() : null,
+      paidAt: !business.enableStatusWorkflow ? new Date() : null,
       subtotal,
       discountTotal,
       taxTotal,
@@ -151,6 +152,7 @@ export const createInvoice = async (prisma, businessId, data) => {
         create: data.lineItems.map(item => ({
           id: item.id || uuidv4(),
           name: item.name,
+          hsnCode: item.hsnCode || null,
           quantity: parseFloat(item.quantity),
           rate: parseFloat(item.rate),
           lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
@@ -275,6 +277,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
           create: rawLineItems.map(item => ({
             id: item.id || uuidv4(),
             name: item.name,
+            hsnCode: item.hsnCode || null,
             quantity: parseFloat(item.quantity),
             rate: parseFloat(item.rate),
             lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
@@ -450,7 +453,10 @@ export const updateInvoiceStatus = async (prisma, invoiceId, businessId, status)
 
   const updated = await prisma.invoice.update({
     where: { id: invoiceId },
-    data: { status }
+    data: {
+      status,
+      ...(status === 'PAID' && { paidAt: new Date() })
+    }
   })
 
   return updated

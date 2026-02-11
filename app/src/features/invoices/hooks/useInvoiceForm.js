@@ -8,6 +8,7 @@ const DRAFT_STORAGE_KEY = 'invoice_draft'
 const createEmptyLineItem = () => ({
   id: uuidv4(),
   name: '',
+  hsnCode: '',
   quantity: 1,
   rate: 0,
   lineTotal: 0,
@@ -217,6 +218,7 @@ export function useInvoiceForm(invoiceId = null) {
       newLineItems[index] = {
         ...newLineItems[index],
         name: product?.name || newLineItems[index].name,
+        hsnCode: product?.hsnCode || newLineItems[index].hsnCode || '',
         rate: product?.defaultRate || newLineItems[index].rate,
         productServiceId: product?.id || null,
         taxRate: product?.taxRate || null,

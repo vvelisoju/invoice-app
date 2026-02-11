@@ -129,7 +129,23 @@ export const reportsApi = {
   getSummary: (params) => api.get('/reports/summary', { params }),
   getGSTSummary: (params) => api.get('/reports/gst', { params }),
   getDocuments: (params) => api.get('/reports/documents', { params }),
-  getMonthlyTrend: (months) => api.get('/reports/trend', { params: { months } })
+  getMonthlyTrend: (months) => api.get('/reports/trend', { params: { months } }),
+  getGSTR3B: (month) => api.get('/reports/gstr3b', { params: { month } }),
+  getGSTR1B2B: (month) => api.get('/reports/gstr1/b2b', { params: { month } }),
+  getGSTR1B2CLarge: (month) => api.get('/reports/gstr1/b2c-large', { params: { month } }),
+  getGSTR1B2CSmall: (month) => api.get('/reports/gstr1/b2c-small', { params: { month } }),
+  getGSTR1NilExempt: (month) => api.get('/reports/gstr1/nil-exempt', { params: { month } }),
+  getGSTR1CreditNotes: (month) => api.get('/reports/gstr1/credit-notes', { params: { month } }),
+  getGSTR1DocSummary: (month) => api.get('/reports/gstr1/doc-summary', { params: { month } }),
+  getSalesRegister: (params) => api.get('/reports/sales-register', { params }),
+  getCustomerSummary: (params) => api.get('/reports/customer-summary', { params }),
+  getTaxRateReport: (params) => api.get('/reports/tax-rate-report', { params }),
+  getReceivablesAging: (params) => api.get('/reports/receivables', { params }),
+  getCustomerLedger: (customerId, params) => api.get(`/reports/customer-ledger/${customerId}`, { params }),
+  getAnnualSummary: (fy) => api.get('/reports/annual-summary', { params: { fy } }),
+  getGSTR9Data: (fy) => api.get('/reports/gstr9', { params: { fy } }),
+  getGSTR1HSNSummary: (month) => api.get('/reports/gstr1/hsn-summary', { params: { month } }),
+  getCAPackage: (month) => api.get('/reports/ca-package', { params: { month } }),
 }
 
 // Template API

@@ -193,6 +193,7 @@ model ProductService {
   defaultRate Decimal? @db.Decimal(10, 2)
   unit        String?  // e.g., "hour", "item", "kg"
   taxRate     Decimal? @db.Decimal(5, 2) // e.g., 18.00 for 18% GST
+  hsnCode     String?  // HSN/SAC code for GST classification
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,14 +271,21 @@ model Invoice {
   
   // Issuance tracking (no server PDF storage - generated on-demand by client)
   issuedAt DateTime?
+  paidAt   DateTime?  // When payment was received (auto-set when status → PAID)
+  
+  // Credit/Debit note linking
+  originalInvoiceId String?     // For credit/debit notes — links to original invoice
+  reverseCharge     Boolean @default(false) // Reverse charge flag for GSTR-1
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  customer   Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  lineItems  InvoiceLineItem[]
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer         Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lineItems        InvoiceLineItem[]
+  originalInvoice  Invoice?           @relation("CreditNoteRef", fields: [originalInvoiceId], references: [id])
+  creditNotes      Invoice[]          @relation("CreditNoteRef")
 
   @@unique([businessId, invoiceNumber])
   @@index([businessId, status])
@@ -291,6 +299,7 @@ model InvoiceLineItem {
   id        String  @id @default(uuid())
   invoiceId String
   name      String
+  hsnCode   String? // HSN/SAC code for GST classification
   quantity  Decimal @default(1) @db.Decimal(10, 3)
   rate      Decimal @db.Decimal(10, 2)
   lineTotal Decimal @db.Decimal(12, 2)

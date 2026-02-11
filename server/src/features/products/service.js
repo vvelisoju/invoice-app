@@ -58,7 +58,8 @@ export const createProduct = async (prisma, businessId, data) => {
       name: data.name,
       defaultRate: data.defaultRate || null,
       unit: data.unit || null,
-      taxRate: data.taxRate || null
+      taxRate: data.taxRate || null,
+      hsnCode: data.hsnCode || null
     }
   })
 
