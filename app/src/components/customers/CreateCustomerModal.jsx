@@ -3,6 +3,7 @@ import { X, Loader2, UserPlus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import Portal from '../Portal'
+import { addDemoCustomer } from '../../lib/demoStorage'
 
 /**
  * Reusable modal for creating a new customer.
@@ -12,7 +13,7 @@ import Portal from '../Portal'
  * - onCreated: (customer) => void — called with the newly created customer
  * - initialName?: string — pre-fill the name field
  */
-export default function CreateCustomerModal({ isOpen, onClose, onCreated, initialName = '' }) {
+export default function CreateCustomerModal({ isOpen, onClose, onCreated, initialName = '', demoMode }) {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     name: initialName,
@@ -61,6 +62,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
       ...(formData.gstin && { gstin: formData.gstin.trim().toUpperCase() }),
       ...(formData.stateCode && { stateCode: formData.stateCode.trim() }),
       ...(formData.address && { address: formData.address.trim() })
+    }
+    if (demoMode) {
+      const customer = addDemoCustomer(payload)
+      onCreated?.(customer)
+      handleClose()
+      return
     }
     createMutation.mutate(payload)
   }

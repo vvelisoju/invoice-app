@@ -607,7 +607,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
   )
 }
 
-export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct, docTypeConfig }) {
+export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct, docTypeConfig, demoMode }) {
   const layout = docTypeConfig?.fields?.lineItemsLayout || 'full'
   // When config layout is 'basic', force basic mode regardless of formMode
   // When config layout is 'full', respect formMode toggle
@@ -629,7 +629,8 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
     queryFn: async () => {
       const response = await taxRateApi.list()
       return response.data?.data || response.data || []
-    }
+    },
+    enabled: !demoMode
   })
 
   return (

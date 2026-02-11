@@ -53,10 +53,10 @@ function LandingHeader() {
               Log in
             </button>
             <button
-              onClick={() => history.push('/auth/phone')}
+              onClick={() => history.push('/demo')}
               className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg transition-all shadow-sm shadow-blue-600/25"
             >
-              Get Started Free
+              Create Invoice Now
             </button>
           </div>
 
@@ -92,10 +92,10 @@ function LandingHeader() {
                 Log in
               </button>
               <button
-                onClick={() => { setMobileOpen(false); history.push('/auth/phone') }}
+                onClick={() => { setMobileOpen(false); history.push('/demo') }}
                 className="w-full text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2.5 rounded-lg transition-all text-center"
               >
-                Get Started Free
+                Create Invoice Now
               </button>
             </div>
           </div>

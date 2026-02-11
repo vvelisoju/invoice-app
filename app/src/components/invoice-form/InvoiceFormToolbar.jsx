@@ -58,15 +58,15 @@ export default function InvoiceFormToolbar({
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="px-4 md:px-5 py-2 bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
+          className="px-4 md:px-5 py-2 bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white rounded-lg transition-all font-medium text-sm shadow-sm flex items-center gap-2 disabled:opacity-60 tap-target-auto"
         >
           {isSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
           ) : (
-            <Save className="w-4 h-4" />
+            <Save className="w-4 h-4 shrink-0" />
           )}
-          <span className="hidden sm:inline">{saveLabel}</span>
-          <span className="sm:hidden">Save</span>
+          <span className="hidden sm:inline leading-none">{saveLabel}</span>
+          <span className="sm:hidden leading-none">Save</span>
         </button>
       </div>
     </div>

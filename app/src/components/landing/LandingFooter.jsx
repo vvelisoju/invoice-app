@@ -33,10 +33,10 @@ function LandingFooter() {
             Join thousands of Indian businesses using Invoice Baba for fast, GST-compliant invoicing
           </p>
           <button
-            onClick={() => history.push('/auth/phone')}
+            onClick={() => history.push('/demo')}
             className="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl hover:bg-blue-50 transition-all shadow-lg shadow-black/10"
           >
-            Get Started Free
+            Create Invoice Now
             <ArrowRight className="w-4 h-4" />
           </button>
           <p className="text-blue-200 text-xs sm:text-sm mt-4">No credit card required</p>

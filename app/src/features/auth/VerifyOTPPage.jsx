@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
-import { authApi } from '../../lib/api'
+import { authApi, customerApi, productApi, businessApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
+import { DEMO_INVOICE_KEY } from '../invoices/NewInvoicePage'
+import { clearAllDemoData } from '../../lib/demoStorage'
 
 export default function VerifyOTPPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -37,12 +39,87 @@ export default function VerifyOTPPage() {
 
   const verifyOTPMutation = useMutation({
     mutationFn: ({ phone, otp }) => authApi.verifyOTP(phone, otp),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       const { token, user, business } = response.data
       setAuth(token, user, business)
-      setTimeout(() => {
-        history.replace('/invoices/new')
-      }, 500)
+
+      // Check if there's pending demo invoice data to migrate
+      const rawDemo = localStorage.getItem(DEMO_INVOICE_KEY)
+      if (rawDemo) {
+        try {
+          const demoData = JSON.parse(rawDemo)
+          // Map demo IDs → real IDs so invoice line items reference real products
+          const customerIdMap = {}
+          const productIdMap = {}
+
+          // Create real customers from demo data
+          if (demoData.customers?.length) {
+            for (const c of demoData.customers) {
+              try {
+                const res = await customerApi.create({
+                  name: c.name, phone: c.phone || undefined, email: c.email || undefined,
+                  gstin: c.gstin || undefined, stateCode: c.stateCode || undefined, address: c.address || undefined,
+                })
+                const real = res.data?.data || res.data
+                if (real?.id) customerIdMap[c.id] = real.id
+              } catch {}
+            }
+          }
+
+          // Create real products from demo data
+          if (demoData.products?.length) {
+            for (const p of demoData.products) {
+              try {
+                const res = await productApi.create({
+                  name: p.name, defaultRate: p.defaultRate, unit: p.unit, taxRate: p.taxRate,
+                })
+                const real = res.data?.data || res.data
+                if (real?.id) productIdMap[p.id] = real.id
+              } catch {}
+            }
+          }
+
+          // Upload logo if present
+          if (demoData.logo) {
+            try {
+              const blob = await fetch(demoData.logo).then(r => r.blob())
+              const file = new File([blob], 'logo.png', { type: blob.type })
+              await businessApi.uploadLogo(file)
+            } catch {}
+          }
+
+          // Upload signature if present
+          if (demoData.signature) {
+            try {
+              const blob = await fetch(demoData.signature).then(r => r.blob())
+              const file = new File([blob], 'signature.png', { type: blob.type })
+              await businessApi.uploadSignature(file)
+            } catch {}
+          }
+
+          // Remap demo IDs to real IDs in the invoice data
+          if (demoData.invoice) {
+            if (demoData.invoice.customerId && customerIdMap[demoData.invoice.customerId]) {
+              demoData.invoice.customerId = customerIdMap[demoData.invoice.customerId]
+            }
+            if (demoData.invoice.lineItems) {
+              demoData.invoice.lineItems = demoData.invoice.lineItems.map(item => ({
+                ...item,
+                productServiceId: item.productServiceId && productIdMap[item.productServiceId]
+                  ? productIdMap[item.productServiceId] : item.productServiceId
+              }))
+            }
+          }
+
+          // Save updated demo data back (with real IDs)
+          localStorage.setItem(DEMO_INVOICE_KEY, JSON.stringify(demoData))
+          clearAllDemoData()
+        } catch {}
+
+        history.replace('/invoices/new?restore=demo')
+      } else {
+        setTimeout(() => history.replace('/invoices/new'), 500)
+      }
     },
     onError: (err) => {
       setError(err.response?.data?.error?.message || 'Invalid OTP')

@@ -16,6 +16,7 @@ import InvoiceListPage from './features/invoices/InvoiceListPage'
 import InvoiceDetailPage from './features/invoices/InvoiceDetailPage'
 import NewInvoicePage from './features/invoices/NewInvoicePage'
 import SettingsPage from './features/settings/SettingsPage'
+import AccountProfilePage from './features/settings/AccountProfilePage'
 import ReportsPage from './features/reports/ReportsPage'
 import TemplateSelectPage from './features/templates/TemplateSelectPage'
 import TemplateEditorPage from './features/templates/TemplateEditorPage'
@@ -57,6 +58,7 @@ function AuthenticatedApp() {
         <Route exact path="/customers" component={CustomerListPage} />
         <Route exact path="/products" component={ProductListPage} />
         <Route exact path="/settings" component={SettingsPage} />
+        <Route exact path="/account" component={AccountProfilePage} />
         <Route exact path="/plans" component={PlansPage} />
         <Route exact path="/reports" component={ReportsPage} />
         <Route exact path="/templates" component={TemplateSelectPage} />

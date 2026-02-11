@@ -40,10 +40,10 @@ function HeroSection() {
             {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-8">
               <button
-                onClick={() => history.push('/auth/phone')}
+                onClick={() => history.push('/demo')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0"
               >
-                Start Invoicing Free
+                Create Invoice Now
                 <ArrowRight className="w-4.5 h-4.5" />
               </button>
               <button

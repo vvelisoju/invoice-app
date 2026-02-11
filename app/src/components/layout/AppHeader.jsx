@@ -79,7 +79,7 @@ export default function AppHeader({ onMenuToggle }) {
   const settingsMenuItems = (
     <>
       <SettingsMenuItem icon={Settings} label="Business Settings" onClick={() => handleNavigate('/settings')} />
-      <SettingsMenuItem icon={User} label="Account Profile" onClick={() => {}} />
+      <SettingsMenuItem icon={User} label="Account Profile" onClick={() => handleNavigate('/account')} />
       <SettingsMenuItem icon={HelpCircle} label="Help & Support" onClick={() => {}} />
     </>
   )
@@ -185,14 +185,14 @@ export default function AppHeader({ onMenuToggle }) {
       {/* Mobile Bottom Sheet */}
       {settingsOpen && (
         <Portal>
-        <div className="md:hidden fixed inset-0 z-50" ref={sheetRef}>
+        <div className="md:hidden fixed inset-x-0 top-0 z-30" style={{ bottom: '64px' }} ref={sheetRef}>
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 transition-opacity"
             onClick={() => setSettingsOpen(false)}
           />
           {/* Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-slide-up" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' }}>
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-slide-up">
             {/* Handle bar */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-gray-300" />

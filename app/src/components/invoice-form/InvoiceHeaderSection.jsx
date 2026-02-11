@@ -26,6 +26,7 @@ export default function InvoiceHeaderSection({
   onDueDateChange,
   onLogoClick,
   onEditSettings,
+  demoLogoUrl,
   docTypeConfig
 }) {
   const labels = docTypeConfig?.labels || {}
@@ -593,7 +594,7 @@ export default function InvoiceHeaderSection({
         {/* Logo Upload / Display — hidden on mobile when collapsed */}
         <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
           {fields.showLogo !== false && (
-            <LogoUpload logoUrl={businessProfile?.logoUrl} onClick={onLogoClick} />
+            <LogoUpload logoUrl={demoLogoUrl || businessProfile?.logoUrl} onClick={onLogoClick} />
           )}
         </div>
 

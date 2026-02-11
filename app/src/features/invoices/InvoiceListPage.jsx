@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Download, FileText, Loader2, SlidersHorizontal, Search, X, Users } from 'lucide-react'
+import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users } from 'lucide-react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { invoiceApi, businessApi, customerApi } from '../../lib/api'
 import Portal from '../../components/Portal'
 import {
   DataTable,
   StatusFilterPills,
-  CheckboxFilter,
-  PageToolbar,
   TableSummary
 } from '../../components/data-table'
 
@@ -58,17 +56,18 @@ const TABLE_COLUMNS = [
   { key: 'total', label: 'Total', colSpan: 2, headerAlign: 'right', align: 'right' },
 ]
 
-// ── Customer Filter Dropdown ────────────────────────────────────────
-function CustomerFilterDropdown({ customers, selected, onSelect, onClear, compact = false }) {
+// ── Customer Multi-Select Filter ────────────────────────────────────
+function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compact = false }) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const anchorRef = useRef(null)
   const dropdownRef = useRef(null)
 
   const filtered = useMemo(() => {
-    if (!search) return customers
-    const q = search.toLowerCase()
-    return customers.filter(c => c.name?.toLowerCase().includes(q))
+    const list = search
+      ? customers.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()))
+      : customers
+    return list
   }, [customers, search])
 
   // Close on outside click
@@ -98,33 +97,51 @@ function CustomerFilterDropdown({ customers, selected, onSelect, onClear, compac
     setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
   }, [open])
 
-  if (selected) {
-    return (
-      <div className={`flex items-center gap-2 ${compact ? 'px-2.5 py-1' : 'px-3 py-2'} bg-primary/5 border border-primary/20 rounded-lg`}>
-        <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-primary shrink-0`} />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-primary truncate flex-1`}>{selected.name}</span>
-        <button
-          onClick={onClear}
-          className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} flex items-center justify-center rounded-full active:bg-primary/10 md:hover:bg-primary/10 text-primary shrink-0 tap-target-auto`}
-        >
-          <X className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
-        </button>
-      </div>
-    )
-  }
+  const selectedCustomers = customers.filter(c => selectedIds.includes(c.id))
+
+  const inputRef = useRef(null)
 
   return (
     <div ref={anchorRef}>
-      <div className="relative">
+      {/* Tag-input style container */}
+      <div
+        onClick={() => inputRef.current?.focus()}
+        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[32px] px-2 py-1' : 'min-h-[38px] px-2.5 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
+      >
+        <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-gray-400 shrink-0`} />
+        {/* Selected chips inside the input */}
+        {selectedCustomers.map(c => (
+          <span
+            key={c.id}
+            className={`inline-flex items-center gap-0.5 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]'} bg-primary/8 text-primary rounded-md font-medium shrink-0`}
+          >
+            <span className="truncate max-w-[100px]">{c.name}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle(c) }}
+              className="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-primary/15 tap-target-auto shrink-0 ml-0.5"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        {/* Inline search input */}
         <input
+          ref={inputRef}
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="Filter by customer..."
-          className={`w-full ${compact ? 'pl-7 pr-3 py-1.5 text-xs' : 'pl-8 pr-3 py-2 text-sm'} border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary tap-target-auto`}
+          placeholder={selectedCustomers.length ? 'Add customer...' : 'Search customers...'}
+          className={`flex-1 min-w-[80px] outline-none bg-transparent ${compact ? 'text-[11px] py-0' : 'text-xs py-0'} placeholder:text-gray-400 tap-target-auto`}
         />
-        <Users className={`${compact ? 'w-3 h-3 left-2.5 top-[7px]' : 'w-3.5 h-3.5 left-2.5 top-[10px]'} absolute text-gray-400 pointer-events-none`} />
+        {selectedCustomers.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onClear() }}
+            className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-textSecondary hover:text-red-500 font-medium shrink-0 tap-target-auto`}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {open && (
@@ -132,21 +149,27 @@ function CustomerFilterDropdown({ customers, selected, onSelect, onClear, compac
           <div
             ref={dropdownRef}
             className="fixed z-50 bg-white border border-border rounded-lg shadow-xl overflow-y-auto"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 200), maxHeight: compact ? 224 : 200 }}
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 224 }}
           >
             {filtered.length === 0 ? (
               <div className="px-3 py-3 text-xs text-textSecondary">No customers found</div>
-            ) : filtered.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => { onSelect(c); setSearch(''); setOpen(false) }}
-                className={`w-full px-3 ${compact ? 'py-2' : 'py-2.5'} text-left ${compact ? 'text-xs' : 'text-sm'} text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 tap-target-auto`}
-              >
-                <span className="truncate">{c.name}</span>
-                {c.phone && <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-textSecondary shrink-0`}>{c.phone}</span>}
-              </button>
-            ))}
+            ) : filtered.map(c => {
+              const isSelected = selectedIds.includes(c.id)
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { onToggle(c); setSearch('') }}
+                  className={`w-full px-3 py-2 text-left text-xs text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 tap-target-auto ${
+                    isSelected ? 'bg-primary/5' : ''
+                  }`}
+                >
+                  <span className={`truncate flex-1 ${isSelected ? 'font-semibold text-primary' : ''}`}>{c.name}</span>
+                  {isSelected && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
+                  {!isSelected && c.phone && <span className="text-[10px] text-textSecondary shrink-0">{c.phone}</span>}
+                </button>
+              )
+            })}
           </div>
         </Portal>
       )}
@@ -182,8 +205,8 @@ export default function InvoiceListPage() {
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  // Customer filter state
-  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  // Customer filter state — multi-select
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState([])
 
   // Fetch customers for the dropdown
   const { data: customersData } = useQuery({
@@ -199,15 +222,19 @@ export default function InvoiceListPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const custId = params.get('customerId')
-    if (custId && !selectedCustomer) {
-      customerApi.get(custId).then(res => {
-        const customer = res.data?.data || res.data
-        if (customer) setSelectedCustomer(customer)
-      }).catch(() => {})
+    if (custId && selectedCustomerIds.length === 0) {
+      setSelectedCustomerIds([custId])
     }
   }, [location.search])
 
-  const handleCustomerClear = () => { setSelectedCustomer(null); history.replace('/invoices') }
+  const handleCustomerToggle = (customer) => {
+    setSelectedCustomerIds(prev =>
+      prev.includes(customer.id)
+        ? prev.filter(id => id !== customer.id)
+        : [...prev, customer.id]
+    )
+  }
+  const handleCustomerClear = () => { setSelectedCustomerIds([]); history.replace('/invoices') }
 
   useEffect(() => () => clearTimeout(searchTimeout.current), [])
 
@@ -218,14 +245,14 @@ export default function InvoiceListPage() {
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ['invoices', debouncedSearch, statusFilter, selectedCustomer?.id],
+    queryKey: ['invoices', debouncedSearch, statusFilter, selectedCustomerIds],
     queryFn: async ({ pageParam = 0 }) => {
       const params = {
         limit: 20,
         offset: pageParam,
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(selectedCustomer?.id && { customerId: selectedCustomer.id })
+        ...(selectedCustomerIds.length === 1 && { customerId: selectedCustomerIds[0] })
       }
       const response = await invoiceApi.list(params)
       return response.data
@@ -258,13 +285,15 @@ export default function InvoiceListPage() {
     })
   }
 
-  // Filter by doc type checkboxes
+  // Filter by doc type + multi-customer (client-side for >1 customer)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
       const type = inv.documentType || 'invoice'
-      return docTypeFilters[type] !== false
+      if (docTypeFilters[type] === false) return false
+      if (selectedCustomerIds.length > 1 && !selectedCustomerIds.includes(inv.customerId)) return false
+      return true
     })
-  }, [invoices, docTypeFilters])
+  }, [invoices, docTypeFilters, selectedCustomerIds])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
@@ -362,100 +391,162 @@ export default function InvoiceListPage() {
 
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
+  // Check if all doc types are selected (treat as "all" — no filtering)
+  const allDocTypesSelected = filteredDocTypeOptions.every(opt => docTypeFilters[opt.key] !== false)
+
+  // Toggle a doc type pill: if all are on, turn all off except clicked; if only one on and it's clicked, turn all on
+  const handleDocTypePillClick = (key) => {
+    if (allDocTypesSelected) {
+      // All selected → select only this one
+      const next = {}
+      DOC_TYPE_OPTIONS.forEach(opt => { next[opt.key] = opt.key === key })
+      setDocTypeFilters(next)
+    } else if (docTypeFilters[key]) {
+      // This one is on — check if it's the only one
+      const activeCount = filteredDocTypeOptions.filter(opt => docTypeFilters[opt.key] !== false).length
+      if (activeCount === 1) {
+        // Last one — turn all back on
+        const next = {}
+        DOC_TYPE_OPTIONS.forEach(opt => { next[opt.key] = true })
+        setDocTypeFilters(next)
+      } else {
+        setDocTypeFilters(prev => ({ ...prev, [key]: false }))
+      }
+    } else {
+      setDocTypeFilters(prev => ({ ...prev, [key]: true }))
+    }
+  }
+
   return (
     <div className="h-full flex flex-col">
-      {/* Primary Filter Section */}
-      <PageToolbar
-        title="Documents"
-        subtitle="Track and manage all your business documents"
-        mobileActions={
-          <>
-            <button
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors ${
-                showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => history.push('/invoices/new')}
-              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          </>
-        }
-        actions={
-          <>
-            <button
-              onClick={handleExport}
-              disabled={filteredInvoices.length === 0}
-              className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-40"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-            <button
-              onClick={() => history.push('/invoices/new')}
-              className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Document
-            </button>
-          </>
-        }
-      >
-        {/* Mobile: collapsible filters */}
-        {showMobileFilters && (
-          <div className="md:hidden space-y-3 mb-1">
+      {/* Header — compact */}
+      <div className="bg-white border-b border-border px-4 md:px-8 pt-2.5 md:pt-3 pb-2 md:pb-2.5">
+        <div className="max-w-7xl mx-auto">
+          {/* Mobile: title + actions */}
+          <div className="flex items-center justify-between md:hidden mb-2">
+            <h1 className="text-base font-bold text-textPrimary truncate">Documents</h1>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors tap-target-auto ${
+                  showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => history.push('/invoices/new')}
+                className="w-9 h-9 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm tap-target-auto"
+              >
+                <Plus className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop: title row */}
+          <div className="hidden md:flex items-center justify-between mb-2">
+            <h1 className="text-lg font-bold text-textPrimary">Documents</h1>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleExport}
+                disabled={filteredInvoices.length === 0}
+                className="px-3 py-1.5 text-xs font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-40"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export
+              </button>
+              <button
+                onClick={() => history.push('/invoices/new')}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Document
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile: collapsible filters */}
+          {showMobileFilters && (
+            <div className="md:hidden space-y-2.5 mb-1">
+              <StatusFilterPills
+                filters={filtersWithCounts}
+                activeKey={statusFilter}
+                onChange={setStatusFilter}
+              />
+              {/* Customer multi-filter — mobile */}
+              <CustomerMultiFilter
+                customers={allCustomers}
+                selectedIds={selectedCustomerIds}
+                onToggle={handleCustomerToggle}
+                onClear={handleCustomerClear}
+              />
+              {/* Doc type pills — mobile */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+                {filteredDocTypeOptions.map((opt) => {
+                  const active = !allDocTypesSelected && (docTypeFilters[opt.key] !== false)
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => handleDocTypePillClick(opt.key)}
+                      className={`px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap shrink-0 border transition-colors tap-target-auto ${
+                        active
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-textSecondary border-border active:bg-gray-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Desktop: status pills */}
+          <div className="hidden md:block">
             <StatusFilterPills
               filters={filtersWithCounts}
               activeKey={statusFilter}
               onChange={setStatusFilter}
             />
-            <CheckboxFilter
-              label="Document Type:"
-              options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
-              onChange={handleDocTypeChange}
-            />
-            {/* Mobile Customer Filter */}
-            <CustomerFilterDropdown
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Filters — desktop: customer filter (left) + doc type pills (right) */}
+      <div className="hidden md:block bg-white border-b border-borderLight">
+        <div className="max-w-7xl mx-auto px-8 py-1.5 flex items-center gap-3">
+          {/* Customer Multi-Filter — left */}
+          <div className="shrink-0 w-72">
+            <CustomerMultiFilter
               customers={allCustomers}
-              selected={selectedCustomer}
-              onSelect={setSelectedCustomer}
+              selectedIds={selectedCustomerIds}
+              onToggle={handleCustomerToggle}
               onClear={handleCustomerClear}
+              compact
             />
           </div>
-        )}
-        {/* Desktop: always visible */}
-        <div className="hidden md:block">
-          <StatusFilterPills
-            filters={filtersWithCounts}
-            activeKey={statusFilter}
-            onChange={setStatusFilter}
-          />
-        </div>
-      </PageToolbar>
-
-      {/* Secondary Filters — desktop */}
-      <div className="hidden md:flex items-center gap-4 px-8 max-w-7xl">
-        <div className="flex-1">
-          <CheckboxFilter
-            label="Document Type:"
-            options={filteredDocTypeOptions.map((o) => ({ ...o, checked: docTypeFilters[o.key] ?? true }))}
-            onChange={handleDocTypeChange}
-          />
-        </div>
-        {/* Desktop Customer Filter */}
-        <div className="shrink-0 w-52">
-          <CustomerFilterDropdown
-            customers={allCustomers}
-            selected={selectedCustomer}
-            onSelect={setSelectedCustomer}
-            onClear={handleCustomerClear}
-            compact
-          />
+          {/* Divider */}
+          <div className="h-5 w-px bg-border shrink-0" />
+          {/* Document Type pills — smaller */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0">
+            {filteredDocTypeOptions.map((opt) => {
+              const active = !allDocTypesSelected && (docTypeFilters[opt.key] !== false)
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => handleDocTypePillClick(opt.key)}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap shrink-0 border transition-colors ${
+                    active
+                      ? 'bg-primary/10 text-primary border-primary/30'
+                      : 'text-textSecondary border-border hover:bg-gray-50 hover:text-textPrimary'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

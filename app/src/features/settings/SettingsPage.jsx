@@ -41,7 +41,6 @@ const SETTINGS_TABS = [
   { key: 'gst', label: 'GST Settings', mobileLabel: 'GST', icon: Receipt },
   { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
-  { key: 'account', label: 'Account', mobileLabel: 'Account', icon: User },
 ]
 
 function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
@@ -748,7 +747,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
   )
 }
 
-function AccountSection({ onLogout }) {
+export function AccountSection({ onLogout }) {
   const queryClient = useQueryClient()
   const setAuth = useAuthStore((state) => state.setAuth)
   const authUser = useAuthStore((state) => state.user)
@@ -1563,10 +1562,7 @@ export default function SettingsPage() {
             </>
           )}
 
-          {/* Account Tab */}
-          {activeTab === 'account' && (
-            <AccountSection onLogout={handleLogout} />
-          )}
+          
         </div>
       </div>
 

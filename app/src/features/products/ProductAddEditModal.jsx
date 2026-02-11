@@ -3,6 +3,7 @@ import { X, Loader2, PackagePlus, ChevronDown, Trash2, AlertTriangle } from 'luc
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
 import Portal from '../../components/Portal'
+import { addDemoProduct } from '../../lib/demoStorage'
 
 const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '' }
 
@@ -24,7 +25,8 @@ export default function ProductAddEditModal({
   initialName = '',
   onSuccess,
   onCreated,
-  onDelete
+  onDelete,
+  demoMode
 }) {
   const queryClient = useQueryClient()
   const isEdit = !!product
@@ -45,7 +47,7 @@ export default function ProductAddEditModal({
       const response = await productApi.listUnits()
       return response.data?.data || response.data || []
     },
-    enabled: isOpen
+    enabled: isOpen && !demoMode
   })
 
   // Fetch tax rates for the select dropdown
@@ -55,7 +57,7 @@ export default function ProductAddEditModal({
       const response = await taxRateApi.list()
       return response.data?.data || response.data || []
     },
-    enabled: isOpen
+    enabled: isOpen && !demoMode
   })
 
   // Filtered unit suggestions based on typed input
@@ -148,6 +150,12 @@ export default function ProductAddEditModal({
       defaultRate: form.defaultRate ? Number(form.defaultRate) : null,
       unit: form.unit || null,
       taxRate: form.taxRate ? Number(form.taxRate) : null,
+    }
+    if (demoMode) {
+      const product = addDemoProduct(payload)
+      onCreated?.(product)
+      onClose()
+      return
     }
     mutation.mutate(payload)
   }

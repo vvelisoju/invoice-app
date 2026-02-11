@@ -14,16 +14,25 @@ import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
 import { getDocTypeConfig } from '../../config/documentTypeDefaults'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
 import ImageUploadModal from '../../components/settings/ImageUploadModal'
+import {
+  addDemoCustomer, searchDemoCustomers, getDemoCustomers,
+  addDemoProduct, searchDemoProducts, getDemoProducts,
+  getDemoLogo, setDemoLogo, removeDemoLogo,
+  getDemoSignature, setDemoSignature, removeDemoSignature,
+} from '../../lib/demoStorage'
 
 const FORM_MODE_KEY = 'invoice_form_mode'
+export const DEMO_INVOICE_KEY = 'demo_invoice_draft'
 
-export default function NewInvoicePage() {
+export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const history = useHistory()
   const location = useLocation()
   const { id: editId } = useParams()
   const queryClient = useQueryClient()
+  const token = useAuthStore((state) => state.token)
   const business = useAuthStore((state) => state.business)
-  const isEditMode = !!editId
+  const isDemo = demoProp || false
+  const isEditMode = !!editId && !isDemo
   const cloneData = location.state?.clone || null
   const [error, setError] = useState('')
   const [editLoaded, setEditLoaded] = useState(false)
@@ -44,6 +53,10 @@ export default function NewInvoicePage() {
   const [showSignatureUpload, setShowSignatureUpload] = useState(false)
   const termsDebounceRef = useRef(null)
   const defaultsAppliedRef = useRef(false)
+
+  // Demo-mode local state for logo / signature (base64 data-URLs)
+  const [demoLogo, setDemoLogoState] = useState(() => isDemo ? getDemoLogo() : null)
+  const [demoSignature, setDemoSignatureState] = useState(() => isDemo ? getDemoSignature() : null)
 
   // Persist form mode selection
   const handleFormModeChange = (mode) => {
@@ -69,7 +82,7 @@ export default function NewInvoicePage() {
 
   // Pre-populate customer from ?customerId= URL param
   useEffect(() => {
-    if (isEditMode || cloneData) return
+    if (isDemo || isEditMode || cloneData) return
     const params = new URLSearchParams(location.search)
     const custId = params.get('customerId')
     if (custId && !selectedCustomer) {
@@ -89,7 +102,8 @@ export default function NewInvoicePage() {
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data?.data || response.data
-    }
+    },
+    enabled: !isDemo
   })
 
   // Compute resolved config (defaults merged with business overrides)
@@ -126,7 +140,7 @@ export default function NewInvoicePage() {
       const response = await invoiceApi.get(editId)
       return response.data
     },
-    enabled: isEditMode
+    enabled: isEditMode && !isDemo
   })
 
   // Populate form with existing invoice data (edit mode)
@@ -164,6 +178,45 @@ export default function NewInvoicePage() {
     setEditLoaded(true)
     defaultsAppliedRef.current = true
   }, [isEditMode, existingInvoice, editLoaded])
+
+  // Restore demo invoice data after signup/login
+  useEffect(() => {
+    if (isDemo || isEditMode) return
+    const params = new URLSearchParams(location.search)
+    if (params.get('restore') !== 'demo') return
+    try {
+      const raw = localStorage.getItem(DEMO_INVOICE_KEY)
+      if (!raw) return
+      const demoData = JSON.parse(raw)
+      const inv = demoData.invoice
+      if (inv) {
+        setInvoiceData({
+          fromAddress: inv.fromAddress || '',
+          billTo: inv.billTo || '',
+          shipTo: inv.shipTo || '',
+          invoiceNumber: inv.invoiceNumber || '',
+          date: inv.date || new Date().toISOString().split('T')[0],
+          dueDate: inv.dueDate || null,
+          poNumber: inv.poNumber || '',
+          lineItems: (inv.lineItems || []).map(item => ({
+            id: uuidv4(),
+            name: item.name,
+            quantity: item.quantity,
+            rate: item.rate,
+            lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+            productServiceId: item.productServiceId || null
+          })),
+          discountTotal: inv.discountTotal || 0,
+          taxRate: inv.taxRate || null,
+          notes: inv.notes || '',
+          terms: inv.terms || ''
+        })
+        if (demoData.formMode) handleFormModeChange(demoData.formMode)
+        defaultsAppliedRef.current = true
+      }
+      localStorage.removeItem(DEMO_INVOICE_KEY)
+    } catch {}
+  }, [location.search])
 
   // Populate form with clone data
   useEffect(() => {
@@ -274,6 +327,43 @@ export default function NewInvoicePage() {
       setError('Please add at least one item with a name and rate')
       return
     }
+
+    // Demo mode: save ALL data to localStorage and redirect to signup
+    if (isDemo) {
+      try {
+        const demoData = {
+          formMode,
+          documentTypeKey,
+          invoice: {
+            customerId: invoice.customerId,
+            customerName: invoice.customerName,
+            customerPhone: invoice.customerPhone,
+            customerStateCode: invoice.customerStateCode,
+            fromAddress: invoice.fromAddress,
+            billTo: invoice.billTo,
+            shipTo: invoice.shipTo,
+            invoiceNumber: invoice.invoiceNumber,
+            date: invoice.date,
+            dueDate: invoice.dueDate,
+            poNumber: invoice.poNumber,
+            lineItems: invoice.lineItems,
+            discountTotal: invoice.discountTotal,
+            taxRate: invoice.taxRate,
+            notes: invoice.notes,
+            terms: invoice.terms
+          },
+          customers: getDemoCustomers(),
+          products: getDemoProducts(),
+          logo: getDemoLogo(),
+          signature: getDemoSignature(),
+          savedAt: new Date().toISOString()
+        }
+        localStorage.setItem(DEMO_INVOICE_KEY, JSON.stringify(demoData))
+      } catch {}
+      history.push('/auth/phone')
+      return
+    }
+
     saveMutation.mutate()
   }
 
@@ -392,7 +482,8 @@ export default function NewInvoicePage() {
             dueDate={invoice.dueDate || ''}
             onDueDateChange={(val) => updateField('dueDate', val)}
             onLogoClick={() => setShowLogoUpload(true)}
-            onEditSettings={() => setShowBusinessSettings(true)}
+            onEditSettings={isDemo ? undefined : () => setShowBusinessSettings(true)}
+            demoLogoUrl={isDemo ? demoLogo : undefined}
             docTypeConfig={docTypeConfig}
           />
 
@@ -412,6 +503,7 @@ export default function NewInvoicePage() {
               setShowCreateProduct(true)
             }}
             docTypeConfig={docTypeConfig}
+            demoMode={isDemo}
           />
 
           {/* Totals Footer: Terms, Subtotal, Total, Signature */}
@@ -425,32 +517,36 @@ export default function NewInvoicePage() {
             docTypeConfig={docTypeConfig}
             onTermsChange={(val) => {
               updateField('terms', val)
-              // Debounced sync to business defaultTerms
-              if (termsDebounceRef.current) clearTimeout(termsDebounceRef.current)
-              termsDebounceRef.current = setTimeout(() => {
-                businessApi.updateProfile({ defaultTerms: val }).then(() => {
-                  queryClient.invalidateQueries({ queryKey: ['business'] })
-                }).catch(() => {})
-              }, 1500)
+              // Debounced sync to business defaultTerms (skip in demo mode)
+              if (!isDemo) {
+                if (termsDebounceRef.current) clearTimeout(termsDebounceRef.current)
+                termsDebounceRef.current = setTimeout(() => {
+                  businessApi.updateProfile({ defaultTerms: val }).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['business'] })
+                  }).catch(() => {})
+                }, 1500)
+              }
             }}
             lineItems={invoice.lineItems}
             formatCurrency={formatCurrency}
-            signatureUrl={businessProfile?.signatureUrl}
-            signatureName={businessProfile?.signatureName || businessProfile?.name}
+            signatureUrl={isDemo ? demoSignature : businessProfile?.signatureUrl}
+            signatureName={isDemo ? 'Your Business' : (businessProfile?.signatureName || businessProfile?.name)}
             onSignatureClick={() => setShowSignatureUpload(true)}
           />
         </div>
 
         {/* Bottom Action Bar */}
-        <div
-          onClick={handleSave}
-          className="bg-primary text-white p-4 rounded-b-xl flex justify-center items-center shadow-lg active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer mt-auto safe-bottom"
-        >
-          <button className="font-semibold text-sm flex items-center justify-center gap-2 w-full" disabled={saveMutation.isPending}>
+        <div className="bg-primary rounded-b-xl mt-auto safe-bottom">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+            className="bg-primary text-white py-3 px-4 flex items-center justify-center gap-2 active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer w-full font-semibold text-sm tap-target-auto disabled:opacity-60"
+          >
             {saveMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
             ) : (
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4 shrink-0" />
             )}
             {isEditMode ? `Update ${docTypeConfig.label}` : docTypeConfig.labels.saveButton}
           </button>
@@ -463,27 +559,54 @@ export default function NewInvoicePage() {
       </div>
 
       {/* Create Customer Modal */}
-      <CreateCustomerModal
-        isOpen={showCreateCustomer}
-        onClose={() => setShowCreateCustomer(false)}
-        initialName={createCustomerName}
-        onCreated={(customer) => {
-          setSelectedCustomer(customer)
-          setCustomer(customer)
-        }}
-      />
+      {isDemo ? (
+        <CreateCustomerModal
+          isOpen={showCreateCustomer}
+          onClose={() => setShowCreateCustomer(false)}
+          initialName={createCustomerName}
+          demoMode
+          onCreated={(customer) => {
+            setSelectedCustomer(customer)
+            setCustomer(customer)
+          }}
+        />
+      ) : (
+        <CreateCustomerModal
+          isOpen={showCreateCustomer}
+          onClose={() => setShowCreateCustomer(false)}
+          initialName={createCustomerName}
+          onCreated={(customer) => {
+            setSelectedCustomer(customer)
+            setCustomer(customer)
+          }}
+        />
+      )}
 
       {/* Create Product Modal */}
-      <ProductAddEditModal
-        isOpen={showCreateProduct}
-        onClose={() => setShowCreateProduct(false)}
-        initialName={createProductName}
-        onCreated={(product) => {
-          if (createProductLineIndex !== null) {
-            setProductForLineItem(createProductLineIndex, product)
-          }
-        }}
-      />
+      {isDemo ? (
+        <ProductAddEditModal
+          isOpen={showCreateProduct}
+          onClose={() => setShowCreateProduct(false)}
+          initialName={createProductName}
+          demoMode
+          onCreated={(product) => {
+            if (createProductLineIndex !== null) {
+              setProductForLineItem(createProductLineIndex, product)
+            }
+          }}
+        />
+      ) : (
+        <ProductAddEditModal
+          isOpen={showCreateProduct}
+          onClose={() => setShowCreateProduct(false)}
+          initialName={createProductName}
+          onCreated={(product) => {
+            if (createProductLineIndex !== null) {
+              setProductForLineItem(createProductLineIndex, product)
+            }
+          }}
+        />
+      )}
 
       {/* Plan Limit Modal */}
       <PlanLimitModal
@@ -494,20 +617,20 @@ export default function NewInvoicePage() {
       />
 
       {/* Business Settings Modal */}
-      <BusinessSettingsModal
-        isOpen={showBusinessSettings}
-        onClose={async () => {
-          setShowBusinessSettings(false)
-          // Re-read business settings so terms, invoice number, etc. update
-          await queryClient.invalidateQueries({ queryKey: ['business'] })
-          // Refresh fromAddress from updated business profile
-          const freshBp = queryClient.getQueryData(['business'])
-          if (freshBp) {
-            const computed = computeFromAddress(freshBp)
-            if (computed) updateField('fromAddress', computed)
-          }
-        }}
-      />
+      {!isDemo && (
+        <BusinessSettingsModal
+          isOpen={showBusinessSettings}
+          onClose={async () => {
+            setShowBusinessSettings(false)
+            await queryClient.invalidateQueries({ queryKey: ['business'] })
+            const freshBp = queryClient.getQueryData(['business'])
+            if (freshBp) {
+              const computed = computeFromAddress(freshBp)
+              if (computed) updateField('fromAddress', computed)
+            }
+          }}
+        />
+      )}
 
       {/* Logo Upload Modal */}
       <ImageUploadModal
@@ -515,15 +638,21 @@ export default function NewInvoicePage() {
         onClose={() => setShowLogoUpload(false)}
         title="Business Logo"
         subtitle="Upload or change your business logo"
-        currentUrl={businessProfile?.logoUrl}
-        onUploaded={() => {
-          queryClient.invalidateQueries({ queryKey: ['business'] })
+        currentUrl={isDemo ? demoLogo : businessProfile?.logoUrl}
+        onUploaded={(url) => {
+          if (isDemo) {
+            setDemoLogoState(url)
+          } else {
+            queryClient.invalidateQueries({ queryKey: ['business'] })
+          }
         }}
-        onRemove={async () => {
+        onRemove={isDemo ? () => { removeDemoLogo(); setDemoLogoState(null) } : async () => {
           await businessApi.updateProfile({ logoUrl: null })
           queryClient.invalidateQueries({ queryKey: ['business'] })
         }}
-        uploadFn={async (file) => {
+        uploadFn={isDemo ? async (file) => {
+          return await setDemoLogo(file)
+        } : async (file) => {
           const response = await businessApi.uploadLogo(file)
           return response.data?.data?.logoUrl || response.data?.logoUrl
         }}
@@ -535,15 +664,21 @@ export default function NewInvoicePage() {
         onClose={() => setShowSignatureUpload(false)}
         title="Signature"
         subtitle="Upload a signature image for your invoices"
-        currentUrl={businessProfile?.signatureUrl}
+        currentUrl={isDemo ? demoSignature : businessProfile?.signatureUrl}
         onUploaded={(url) => {
-          queryClient.invalidateQueries({ queryKey: ['business'] })
+          if (isDemo) {
+            setDemoSignatureState(url)
+          } else {
+            queryClient.invalidateQueries({ queryKey: ['business'] })
+          }
         }}
-        onRemove={() => {
+        onRemove={isDemo ? () => { removeDemoSignature(); setDemoSignatureState(null) } : () => {
           businessApi.updateProfile({ signatureUrl: null })
           queryClient.invalidateQueries({ queryKey: ['business'] })
         }}
-        uploadFn={async (file) => {
+        uploadFn={isDemo ? async (file) => {
+          return await setDemoSignature(file)
+        } : async (file) => {
           const response = await businessApi.uploadSignature(file)
           return response.data?.data?.signatureUrl || response.data?.signatureUrl
         }}

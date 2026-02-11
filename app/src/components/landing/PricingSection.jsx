@@ -19,7 +19,7 @@ function PricingSection() {
         'WhatsApp sharing',
         'Offline drafts',
       ],
-      cta: 'Get Started Free',
+      cta: 'Create Invoice Now',
       primary: false,
     },
     {
@@ -110,7 +110,7 @@ function PricingSection() {
               </ul>
 
               <button
-                onClick={() => history.push('/auth/phone')}
+                onClick={() => history.push('/demo')}
                 className={`w-full flex items-center justify-center gap-2 font-semibold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl transition-all ${
                   plan.primary
                     ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40'

@@ -35,7 +35,8 @@ api.interceptors.response.use(
       const url = error.config?.url || ''
       const authSafeEndpoints = ['/auth/confirm-phone-change', '/auth/change-phone', '/auth/verify-otp', '/auth/request-otp']
       const isSafeEndpoint = authSafeEndpoints.some(ep => url.includes(ep))
-      if (!isSafeEndpoint && !isRedirectingTo401) {
+      const isOnDemoPage = window.location.pathname === '/demo'
+      if (!isSafeEndpoint && !isRedirectingTo401 && !isOnDemoPage) {
         isRedirectingTo401 = true
         // Clear all browser storage to prevent stale data leaking between sessions
         localStorage.clear()
