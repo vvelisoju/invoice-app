@@ -36,6 +36,7 @@ export default function InvoiceHeaderSection({
   const [fromText, setFromText] = useState(fromAddress || '')
   const [showFromSuggestion, setShowFromSuggestion] = useState(false)
   const [metaCollapsed, setMetaCollapsed] = useState(true)
+  const [billToCollapsed, setBillToCollapsed] = useState(false)
   const [billToText, setBillToText] = useState(billTo || '')
   const [searchTerm, setSearchTerm] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -357,9 +358,26 @@ export default function InvoiceHeaderSection({
 
         {/* Bill To Section — Customer Typeahead Textarea */}
         <div className="group relative transition-all">
-          <label className="flex items-center gap-2 text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">
-            <User className="w-3.5 h-3.5 text-orange-500/70" /> {labels.toSection || 'Bill To'}
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setBillToCollapsed(!billToCollapsed)}
+              className="flex items-center gap-2 text-xs font-semibold text-orange-600 uppercase tracking-wide md:pointer-events-none"
+            >
+              <User className="w-3.5 h-3.5 text-orange-500/70" /> {labels.toSection || 'Bill To'}
+              {billToCollapsed ? (
+                <ChevronDown className="w-3.5 h-3.5 text-orange-500/50 md:hidden" />
+              ) : (
+                <ChevronUp className="w-3.5 h-3.5 text-orange-500/50 md:hidden" />
+              )}
+            </button>
+          </div>
+          {/* Collapsed summary on mobile */}
+          {billToCollapsed && billToText && (
+            <div className="md:hidden text-xs text-textSecondary truncate px-1">
+              {billToText.split('\n')[0]}
+            </div>
+          )}
+          <div className={`${billToCollapsed ? 'hidden md:block' : ''}`}>
           <div className="relative">
             <div className="relative">
               <textarea
@@ -454,6 +472,7 @@ export default function InvoiceHeaderSection({
                 )}
               </div>
             )}
+          </div>
           </div>
         </div>
 

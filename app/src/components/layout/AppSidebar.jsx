@@ -161,17 +161,14 @@ export default function AppSidebar({ mobile = false, onClose }) {
   // Mobile drawer sidebar
   return (
     <aside className="h-full bg-bgSecondary flex flex-col shadow-xl">
-      {/* Drawer Header — Logo + Business Name */}
+      {/* Drawer Header — Logo + Close */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center min-w-0">
           <img
-            src="/assets/brand/icon-transparent.png"
+            src="/assets/brand/logo-full-transparent.png"
             alt="Invoice Baba"
-            className="w-8 h-8 shrink-0"
+            className="h-10 shrink-0"
           />
-          <span className="font-bold text-base text-textPrimary truncate">
-            {business?.name || 'Invoice Baba'}
-          </span>
         </div>
         <button
           onClick={onClose}

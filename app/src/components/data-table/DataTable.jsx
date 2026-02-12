@@ -28,6 +28,7 @@ export default function DataTable({
   renderMobileCard,
   rowKey,
   onRowClick,
+  onMobileRowClick,
   getRowClassName,
   selectable = true,
   onSelectionChange,
@@ -118,15 +119,15 @@ export default function DataTable({
               {/* Mobile Card View */}
               {renderMobileCard ? (
                 <div
-                  onClick={() => onRowClick?.(row)}
-                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                  onClick={() => (onMobileRowClick || onRowClick)?.(row)}
+                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
                 >
                   {renderMobileCard(row, index)}
                 </div>
               ) : (
                 <div
-                  onClick={() => onRowClick?.(row)}
-                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                  onClick={() => (onMobileRowClick || onRowClick)?.(row)}
+                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
                 >
                   {/* Default mobile: show first and last cells */}
                   <div className="flex items-center justify-between gap-3">

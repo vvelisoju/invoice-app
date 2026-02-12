@@ -225,13 +225,13 @@ export default function ReportsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 shrink-0 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'bg-primary text-white shadow-sm'
-                    : 'text-textSecondary hover:bg-gray-100 hover:text-textPrimary'
+                    : 'text-textSecondary active:bg-gray-100 md:hover:bg-gray-100 active:text-textPrimary md:hover:text-textPrimary'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4 hidden md:block" />
                 {tab.label}
               </button>
             )
