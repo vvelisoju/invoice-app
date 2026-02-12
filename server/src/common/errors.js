@@ -47,12 +47,15 @@ export class RateLimitError extends AppError {
 }
 
 export const errorHandler = (error, request, reply) => {
+  const isProduction = process.env.NODE_ENV === 'production'
+
   if (error instanceof AppError) {
     return reply.status(error.statusCode).send({
       error: {
         code: error.code,
         message: error.message,
-        ...(error.details && { details: error.details })
+        ...(error.details && { details: error.details }),
+        ...(!isProduction && { requestId: request.id }),
       }
     })
   }
@@ -67,12 +70,22 @@ export const errorHandler = (error, request, reply) => {
     })
   }
 
-  request.log.error(error)
+  // Log full error context for unexpected errors
+  request.log.error({
+    err: error,
+    method: request.method,
+    url: request.url,
+    requestId: request.id,
+  }, 'Unhandled server error')
 
   return reply.status(500).send({
     error: {
       code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred'
+      message: isProduction
+        ? 'An unexpected error occurred'
+        : error.message || 'An unexpected error occurred',
+      ...(!isProduction && { stack: error.stack }),
+      requestId: request.id,
     }
   })
 }

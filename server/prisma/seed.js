@@ -65,159 +65,167 @@ async function main() {
 
   console.log('✅ Created plans:', { free: freePlan.name, starter: starterPlan.name, pro: proPlan.name })
 
-  // Create base templates
-  const cleanTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'clean' },
-    update: {},
-    create: {
+  // =========================================================================
+  // BASE TEMPLATES — 100 templates from 20 layouts × 5 palettes + 6 legacy
+  // =========================================================================
+
+  // Shared configSchema for all templates
+  const sharedConfigSchema = {
+    supports: [
+      'logo', 'logoPosition', 'primaryColor', 'accentColor',
+      'headerAlignment', 'spacingDensity',
+      'showBusinessGSTIN', 'showCustomerGSTIN', 'showPlaceOfSupply',
+      'showDueDate', 'showNotes', 'showTerms', 'showSignature',
+      'showBankDetails', 'showDiscount', 'showTax', 'invoiceTitle', 'footerMessage'
+    ],
+    defaults: {
+      logoPosition: 'left',
+      headerAlignment: 'left',
+      spacingDensity: 'regular',
+      showBusinessGSTIN: true,
+      showCustomerGSTIN: true,
+      showPlaceOfSupply: true,
+      showDueDate: true,
+      showNotes: true,
+      showTerms: true,
+      showSignature: false,
+      showBankDetails: false,
+      showDiscount: true,
+      showTax: true,
+      invoiceTitle: 'Tax Invoice'
+    }
+  }
+
+  // 5 color palettes
+  const palettes = {
+    charcoal: { key: 'charcoal', family: 'black', primary: '#374151' },
+    crimson:  { key: 'crimson',  family: 'red',   primary: '#DC2626' },
+    ocean:    { key: 'ocean',    family: 'blue',  primary: '#2563EB' },
+    forest:   { key: 'forest',   family: 'green', primary: '#047857' },
+    royal:    { key: 'royal',    family: 'purple', primary: '#7C3AED' },
+  }
+
+  // 20 layout families
+  const layouts = [
+    { key: 'clean',     name: 'Clean',     category: 'minimal' },
+    { key: 'sidebar',   name: 'Sidebar',   category: 'modern' },
+    { key: 'stripe',    name: 'Stripe',    category: 'classic' },
+    { key: 'banner',    name: 'Banner',    category: 'modern' },
+    { key: 'executive', name: 'Executive', category: 'professional' },
+    { key: 'compact',   name: 'Compact',   category: 'minimal' },
+    { key: 'elegant',   name: 'Elegant',   category: 'professional' },
+    { key: 'bold',      name: 'Bold',      category: 'creative' },
+    { key: 'split',     name: 'Split',     category: 'modern' },
+    { key: 'grid',      name: 'Grid',      category: 'classic' },
+    { key: 'ribbon',    name: 'Ribbon',    category: 'creative' },
+    { key: 'ledger',    name: 'Ledger',    category: 'classic' },
+    { key: 'minimal',   name: 'Minimal',   category: 'minimal' },
+    { key: 'prestige',  name: 'Prestige',  category: 'professional' },
+    { key: 'dual',      name: 'Dual',      category: 'professional' },
+    { key: 'wave',      name: 'Wave',      category: 'creative' },
+    { key: 'corner',    name: 'Corner',    category: 'modern' },
+    { key: 'frame',     name: 'Frame',     category: 'classic' },
+    { key: 'accent',    name: 'Accent',    category: 'modern' },
+    { key: 'classic',   name: 'Classic',   category: 'classic' },
+  ]
+
+  const paletteDisplayNames = {
+    charcoal: 'Charcoal', crimson: 'Crimson', ocean: 'Ocean', forest: 'Forest', royal: 'Royal'
+  }
+
+  // Generate all 100 themed template definitions
+  const themedTemplates = []
+  for (const layout of layouts) {
+    for (const [palKey, pal] of Object.entries(palettes)) {
+      const id = `${layout.key}-${palKey}`
+      themedTemplates.push({
+        name: id,
+        description: `${layout.name} layout with ${paletteDisplayNames[palKey]} color scheme`,
+        configSchema: {
+          ...sharedConfigSchema,
+          defaults: { ...sharedConfigSchema.defaults, primaryColor: pal.primary }
+        },
+        renderConfig: {
+          themeId: id,
+          layoutKey: layout.key,
+          paletteKey: palKey,
+          category: layout.category,
+          colorFamily: pal.family,
+        },
+        active: true,
+      })
+    }
+  }
+
+  // Legacy 6 templates (kept for backward compatibility)
+  const legacyTemplates = [
+    {
       name: 'clean',
       description: 'Clean and minimal invoice template',
-      configSchema: {
-        supports: [
-          'logo',
-          'logoPosition',
-          'primaryColor',
-          'accentColor',
-          'headerAlignment',
-          'spacingDensity',
-          'showBusinessGSTIN',
-          'showCustomerGSTIN',
-          'showPlaceOfSupply',
-          'showDueDate',
-          'showNotes',
-          'showTerms',
-          'showSignature',
-          'showBankDetails',
-          'showDiscount',
-          'showTax',
-          'invoiceTitle',
-          'footerMessage'
-        ],
-        defaults: {
-          logoPosition: 'left',
-          primaryColor: '#1F2937',
-          accentColor: '#3B82F6',
-          headerAlignment: 'left',
-          spacingDensity: 'regular',
-          showBusinessGSTIN: true,
-          showCustomerGSTIN: true,
-          showPlaceOfSupply: true,
-          showDueDate: true,
-          showNotes: true,
-          showTerms: true,
-          showSignature: false,
-          showBankDetails: false,
-          showDiscount: true,
-          showTax: true,
-          invoiceTitle: 'Tax Invoice'
-        }
-      },
-      renderConfig: {
-        componentId: 'clean-template-v1',
-        layout: {
-          type: 'single-column',
-          sections: ['header', 'business', 'customer', 'items', 'totals', 'gst', 'notes', 'footer']
-        },
-        defaultStyles: {
-          fonts: {
-            primary: 'Inter, sans-serif',
-            heading: 'Inter, sans-serif'
-          },
-          spacing: {
-            section: '24px',
-            item: '8px'
-          }
-        },
-        printSettings: {
-          pageSize: 'A4',
-          margins: {
-            top: '20mm',
-            right: '15mm',
-            bottom: '20mm',
-            left: '15mm'
-          }
-        }
-      },
-      active: true
-    }
-  })
-
-  const modernRedTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'modern-red' },
-    update: {},
-    create: {
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#1F2937' } },
+      renderConfig: { componentId: 'clean-template-v1', themeId: 'clean-charcoal', layoutKey: 'clean', paletteKey: 'charcoal' },
+      active: true,
+    },
+    {
       name: 'modern-red',
       description: 'Bold red accents with a modern sidebar layout',
-      configSchema: {
-        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
-        defaults: { primaryColor: '#DC2626' }
-      },
-      renderConfig: { componentId: 'modern-red', layout: { type: 'sidebar-accent' } },
-      active: true
-    }
-  })
-
-  const classicRedTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'classic-red' },
-    update: {},
-    create: {
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#DC2626' } },
+      renderConfig: { componentId: 'modern-red', themeId: 'sidebar-crimson', layoutKey: 'sidebar', paletteKey: 'crimson' },
+      active: true,
+    },
+    {
       name: 'classic-red',
       description: 'Traditional invoice layout with green header stripe',
-      configSchema: {
-        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
-        defaults: { primaryColor: '#047857' }
-      },
-      renderConfig: { componentId: 'classic-red', layout: { type: 'header-stripe' } },
-      active: true
-    }
-  })
-
-  const wexlerTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'wexler' },
-    update: {},
-    create: {
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#047857' } },
+      renderConfig: { componentId: 'classic-red', themeId: 'stripe-forest', layoutKey: 'stripe', paletteKey: 'forest' },
+      active: true,
+    },
+    {
       name: 'wexler',
       description: 'Colorful accent band with bold typography',
-      configSchema: {
-        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
-        defaults: { primaryColor: '#1E3A5F' }
-      },
-      renderConfig: { componentId: 'wexler', layout: { type: 'accent-band' } },
-      active: true
-    }
-  })
-
-  const plexerTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'plexer' },
-    update: {},
-    create: {
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#1E3A5F' } },
+      renderConfig: { componentId: 'wexler', themeId: 'executive-ocean', layoutKey: 'executive', paletteKey: 'ocean' },
+      active: true,
+    },
+    {
       name: 'plexer',
       description: 'Professional two-tone layout with clean lines',
-      configSchema: {
-        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
-        defaults: { primaryColor: '#374151' }
-      },
-      renderConfig: { componentId: 'plexer', layout: { type: 'two-tone' } },
-      active: true
-    }
-  })
-
-  const contemporaryTemplate = await prisma.baseTemplate.upsert({
-    where: { name: 'contemporary' },
-    update: {},
-    create: {
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#374151' } },
+      renderConfig: { componentId: 'plexer', themeId: 'compact-charcoal', layoutKey: 'compact', paletteKey: 'charcoal' },
+      active: true,
+    },
+    {
       name: 'contemporary',
       description: 'Modern gradient header with spacious layout',
-      configSchema: {
-        supports: ['logo', 'primaryColor', 'showBusinessGSTIN', 'showCustomerGSTIN', 'showDueDate', 'showNotes', 'showTerms', 'showSignature', 'showBankDetails', 'invoiceTitle'],
-        defaults: { primaryColor: '#E11D48' }
-      },
-      renderConfig: { componentId: 'contemporary', layout: { type: 'gradient-header' } },
-      active: true
-    }
-  })
+      configSchema: { ...sharedConfigSchema, defaults: { ...sharedConfigSchema.defaults, primaryColor: '#E11D48' } },
+      renderConfig: { componentId: 'contemporary', themeId: 'banner-crimson', layoutKey: 'banner', paletteKey: 'crimson' },
+      active: true,
+    },
+  ]
 
-  console.log('✅ Created base templates:', [cleanTemplate.name, modernRedTemplate.name, classicRedTemplate.name, wexlerTemplate.name, plexerTemplate.name, contemporaryTemplate.name].join(', '))
+  // Upsert legacy templates first
+  const seededLegacy = []
+  for (const tpl of legacyTemplates) {
+    const result = await prisma.baseTemplate.upsert({
+      where: { name: tpl.name },
+      update: { description: tpl.description, configSchema: tpl.configSchema, renderConfig: tpl.renderConfig },
+      create: tpl,
+    })
+    seededLegacy.push(result.name)
+  }
+  console.log('✅ Seeded legacy templates:', seededLegacy.join(', '))
+
+  // Upsert all 100 themed templates
+  let themedCount = 0
+  for (const tpl of themedTemplates) {
+    await prisma.baseTemplate.upsert({
+      where: { name: tpl.name },
+      update: { description: tpl.description, configSchema: tpl.configSchema, renderConfig: tpl.renderConfig },
+      create: tpl,
+    })
+    themedCount++
+  }
+  console.log(`✅ Seeded ${themedCount} themed templates (20 layouts × 5 palettes)`)
 
   // =========================================================================
   // SUPER ADMIN USER

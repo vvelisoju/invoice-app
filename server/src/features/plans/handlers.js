@@ -1,3 +1,4 @@
+import { logger } from '../../common/logger.js'
 import * as planService from './service.js'
 import { generateSubscriptionInvoice, getBusinessSubscriptionInvoices } from '../admin/billingService.js'
 
@@ -80,7 +81,7 @@ export async function verifyPayment(request, reply) {
     })
   } catch (err) {
     // Don't fail the payment verification if invoice generation fails
-    console.error('[Billing] Failed to generate subscription invoice:', err.message)
+    logger.error({ err: err.message, businessId: request.businessId }, '[Billing] Failed to generate subscription invoice')
   }
 
   return { data: result }

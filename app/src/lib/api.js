@@ -5,6 +5,7 @@ const API_BASE_URL = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -29,6 +30,18 @@ let isRedirectingTo401 = false
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Network errors (no response from server)
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        error.message = 'Request timed out. Please check your connection and try again.'
+      } else if (!navigator.onLine) {
+        error.message = 'You are offline. Please check your internet connection.'
+      } else {
+        error.message = 'Unable to reach the server. Please try again later.'
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401) {
       // Don't logout on 401 from auth endpoints that intentionally return 401
       // (e.g. wrong OTP during phone change, invalid OTP during verify)
@@ -50,19 +63,7 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  requestOTP: (phone) => {
-    console.log('API: Requesting OTP for phone:', phone)
-    console.log('API: Base URL:', API_BASE_URL)
-    return api.post('/auth/request-otp', { phone })
-      .then(response => {
-        console.log('API: OTP request successful', response)
-        return response
-      })
-      .catch(error => {
-        console.error('API: OTP request failed', error)
-        throw error
-      })
-  },
+  requestOTP: (phone) => api.post('/auth/request-otp', { phone }),
   verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/profile', data),
@@ -112,14 +113,16 @@ export const businessApi = {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/business/logo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     })
   },
   uploadSignature: (file) => {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/business/signature', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     })
   }
 }

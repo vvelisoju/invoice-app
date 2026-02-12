@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { DOCUMENT_TYPE_DEFAULTS } from '../../../../config/documentTypeDefaults'
+import BaseInvoiceDocument from './themes/BaseInvoiceDocument'
+import { ALL_THEMES, THEME_IDS, resolveTheme, LEGACY_MAP } from './themes/index'
 
 // ============================================================================
 // Shared Helpers
@@ -963,14 +965,45 @@ export function ContemporaryTemplate({ invoice }) {
 }
 
 // ============================================================================
+// Theme-based Template System — 100 templates from 20 layouts × 5 palettes
+// ============================================================================
+
+// Generic themed template wrapper — resolves theme and renders BaseInvoiceDocument
+function ThemedTemplate({ invoice, themeId }) {
+  const theme = resolveTheme(themeId)
+  if (!theme) return null
+  return <BaseInvoiceDocument invoice={invoice} theme={theme} />
+}
+
+// Factory: create a component for a specific theme ID
+function createThemedComponent(themeId) {
+  const Component = ({ invoice }) => <ThemedTemplate invoice={invoice} themeId={themeId} />
+  Component.displayName = `Theme_${themeId}`
+  return Component
+}
+
+// ============================================================================
 // Template Map — used by pdfGenerator to dispatch
 // ============================================================================
 
-export const TEMPLATE_COMPONENTS = {
+// Start with legacy templates (exact original rendering for backward compat)
+const LEGACY_COMPONENTS = {
   clean: CleanTemplate,
   'modern-red': ModernRedTemplate,
   'classic-red': ClassicRedTemplate,
   wexler: WexlerTemplate,
   plexer: PlexerTemplate,
   contemporary: ContemporaryTemplate,
+}
+
+// Build the full map: 100 themed templates + legacy overrides
+const themedComponents = {}
+for (const themeId of THEME_IDS) {
+  themedComponents[themeId] = createThemedComponent(themeId)
+}
+
+// Merge: legacy IDs point to original components, everything else uses themed
+export const TEMPLATE_COMPONENTS = {
+  ...themedComponents,
+  ...LEGACY_COMPONENTS,
 }

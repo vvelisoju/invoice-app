@@ -1,4 +1,5 @@
 import { prisma } from '../../common/prisma.js'
+import { logger } from '../../common/logger.js'
 import { ForbiddenError, NotFoundError, ValidationError } from '../../common/errors.js'
 import { getRazorpay, verifyRazorpaySignature } from '../../common/razorpay.js'
 import { config } from '../../common/config.js'
@@ -146,7 +147,7 @@ export async function createSubscriptionOrder(businessId, planId, billingPeriod 
       }
     })
   } catch (err) {
-    console.error('[Razorpay] Order creation failed:', err.message, err.statusCode, JSON.stringify(err.error || {}))
+    logger.error({ err: err.message, statusCode: err.statusCode, details: err.error }, '[Razorpay] Order creation failed')
     throw new ValidationError(`Payment gateway error: ${err.error?.description || err.message || 'Unable to create order'}`)
   }
 

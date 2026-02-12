@@ -1,4 +1,6 @@
+import crypto from 'crypto'
 import { config } from '../../common/config.js'
+import { logger } from '../../common/logger.js'
 import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 import springedge from 'springedge'
@@ -11,17 +13,16 @@ const generateOTP = () => {
   }
 
   const length = config.otp.length
-  const digits = '0123456789'
   let otp = ''
   for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * 10)]
+    otp += crypto.randomInt(0, 10).toString()
   }
   return otp
 }
 
 const sendOTP = async (phone, otp) => {
   if (!isProduction()) {
-    console.log(`[OTP] Phone: ${phone}, OTP: ${otp}`)
+    logger.info({ phone, otp }, '[OTP] Development mode OTP generated')
     return true
   }
 
@@ -31,17 +32,17 @@ const sendOTP = async (phone, otp) => {
       sender: config.sms.springEdgeSender || 'CODVEL',
       apikey: config.sms.springEdgeApiKey,
       to: [`91${phone}`],
-      message: `Your OTP for logging into Lokalhunt is ${otp}. Do not share this with anyone.`,
+      message: `Your OTP for Invoice Baba is ${otp}. Do not share this with anyone.`,
       format: 'json'
     }
 
     springedge.messages.send(params, 5000, (err, response) => {
       if (err) {
-        console.error('[SpringEdge] SMS send error:', err)
+        logger.error({ err, phone }, '[SpringEdge] SMS send error')
         reject(new Error('Failed to send OTP via SMS'))
         return
       }
-      console.log('[SpringEdge] SMS response:', JSON.stringify(response))
+      logger.info({ phone, status: response?.status }, '[SpringEdge] SMS sent successfully')
       resolve(true)
     })
   })

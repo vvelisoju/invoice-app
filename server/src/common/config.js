@@ -48,7 +48,7 @@ export const config = {
         privateKey = sa.private_key || privateKey
         projectId = sa.project_id || projectId
       } catch (e) {
-        console.warn('Failed to parse GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY:', e.message)
+        process.stderr.write(`[config] Failed to parse GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY: ${e.message}\n`)
       }
     }
 
@@ -62,9 +62,33 @@ export const config = {
   logLevel: process.env.LOG_LEVEL || 'info'
 }
 
+// --- Environment validation ---
+const isProduction = config.nodeEnv === 'production'
+
+// Always required
 const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET']
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     throw new Error(`Missing required environment variable: ${envVar}`)
+  }
+}
+
+// JWT secret must be at least 32 characters in production
+if (isProduction && config.jwt.secret && config.jwt.secret.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production')
+}
+
+// CORS_ORIGIN must be explicitly set in production (not the dev default)
+if (isProduction && config.corsOrigin === 'http://localhost:5173') {
+  throw new Error('CORS_ORIGIN must be explicitly set in production (not localhost)')
+}
+
+// Warn about missing production services (non-fatal — allows graceful degradation)
+if (isProduction) {
+  const warnings = []
+  if (!config.sms.springEdgeApiKey) warnings.push('SPRING_EDGE_API_KEY_ID (SMS will be disabled)')
+  if (!config.gcs.clientEmail) warnings.push('GCS credentials (logo/signature uploads will fail)')
+  if (warnings.length > 0) {
+    process.stderr.write(`[config] Production warnings — missing: ${warnings.join(', ')}\n`)
   }
 }

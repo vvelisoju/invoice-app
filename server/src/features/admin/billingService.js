@@ -1,4 +1,5 @@
 import { prisma } from '../../common/prisma.js'
+import { logger } from '../../common/logger.js'
 import { NotFoundError } from '../../common/errors.js'
 
 /**
@@ -343,9 +344,9 @@ export async function getBusinessSubscriptionInvoices(businessId) {
         periodStart: sub.startDate,
         periodEnd: sub.renewAt,
       })
-      console.log(`[Billing] Repaired missing invoice for subscription ${sub.id}`)
+      logger.info({ subscriptionId: sub.id }, '[Billing] Repaired missing invoice for subscription')
     } catch (err) {
-      console.error(`[Billing] Failed to repair invoice for subscription ${sub.id}:`, err.message)
+      logger.error({ subscriptionId: sub.id, err: err.message }, '[Billing] Failed to repair invoice for subscription')
     }
   }
 

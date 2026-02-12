@@ -32,7 +32,7 @@ import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { PageToolbar } from '../../components/data-table'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
-import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../invoices/utils/templates/registry'
+import { TEMPLATE_REGISTRY, COLOR_FAMILIES, CATEGORIES, getTemplateList } from '../invoices/utils/templates/registry'
 import { DOCUMENT_TYPE_DEFAULTS } from '../../config/documentTypeDefaults'
 import BusinessInfoForm, { FieldInput, FieldTextarea, FieldToggle } from '../../components/settings/BusinessInfoForm'
 
@@ -285,18 +285,25 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
   )
 }
 
-const TEMPLATE_PREVIEW_COLORS = {
-  clean: { bg: '#FFFFFF', accent: '#1F2937', headerBg: '#F9FAFB' },
-  'modern-red': { bg: '#FFFFFF', accent: '#DC2626', headerBg: '#FEF2F2' },
-  'classic-red': { bg: '#FFFFFF', accent: '#047857', headerBg: '#ECFDF5' },
-  wexler: { bg: '#FFFFFF', accent: '#1E3A5F', headerBg: '#1E3A5F' },
-  plexer: { bg: '#FFFFFF', accent: '#374151', headerBg: '#F3F4F6' },
-  contemporary: { bg: '#FFFFFF', accent: '#E11D48', headerBg: '#E11D48' },
+// Derive dynamic preview colors from template previewColor
+function getSettingsPreviewColors(template) {
+  const accent = template.previewColor || '#374151'
+  const category = template.category
+  const isFullHeader = category === 'modern' || category === 'creative'
+  return {
+    bg: '#FFFFFF',
+    accent,
+    headerBg: isFullHeader ? accent : `${accent}12`,
+  }
 }
+
+const SETTINGS_TPL_PAGE_SIZE = 18
 
 function TemplateSection() {
   const queryClient = useQueryClient()
   const [colorFilter, setColorFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [page, setPage] = useState(0)
 
   const { data: currentConfig, isLoading: configLoading } = useQuery({
     queryKey: ['templates', 'config'],
@@ -324,9 +331,19 @@ function TemplateSection() {
   }, [serverTemplates])
 
   const filteredTemplates = useMemo(() => {
-    if (colorFilter === 'all') return templates
-    return templates.filter(t => t.colorFamily === colorFilter)
-  }, [templates, colorFilter])
+    return templates.filter(t => {
+      const catMatch = categoryFilter === 'all' || t.category === categoryFilter
+      const colorMatch = colorFilter === 'all' || t.colorFamily === colorFilter
+      return catMatch && colorMatch
+    })
+  }, [templates, colorFilter, categoryFilter])
+
+  const pagedTemplates = useMemo(() => {
+    const start = page * SETTINGS_TPL_PAGE_SIZE
+    return filteredTemplates.slice(start, start + SETTINGS_TPL_PAGE_SIZE)
+  }, [filteredTemplates, page])
+
+  const totalPages = Math.ceil(filteredTemplates.length / SETTINGS_TPL_PAGE_SIZE)
 
   const currentTemplateId = useMemo(() => {
     if (!currentConfig?.baseTemplateId || !serverTemplates?.length) return 'clean'
@@ -357,35 +374,56 @@ function TemplateSection() {
           </div>
           <div>
             <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Template</h3>
-            <p className="text-[11px] md:text-xs text-textSecondary">Default template for invoice PDFs</p>
+            <p className="text-[11px] md:text-xs text-textSecondary">
+              {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Color Filter */}
-      <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-border flex items-center gap-2 md:gap-3">
-        <span className="text-xs font-medium text-textSecondary">Filter by Color</span>
-        <div className="flex items-center gap-1.5">
-          {COLOR_FAMILIES.map(cf => (
+      {/* Filters */}
+      <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-border space-y-2">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {CATEGORIES.map(cat => (
             <button
-              key={cf.key}
-              onClick={() => setColorFilter(cf.key)}
-              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                colorFilter === cf.key
-                  ? 'border-primary scale-110 shadow-sm'
-                  : 'border-transparent hover:border-gray-300'
+              key={cat.key}
+              onClick={() => { setCategoryFilter(cat.key); setPage(0) }}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === cat.key
+                  ? 'bg-primary text-white'
+                  : 'bg-bgPrimary text-textSecondary hover:bg-gray-200'
               }`}
-              style={cf.color ? { backgroundColor: cf.color } : { backgroundColor: '#F3F4F6' }}
-              title={cf.label}
             >
-              {colorFilter === cf.key && (
-                <Check className={`w-3.5 h-3.5 ${cf.color ? 'text-white' : 'text-gray-600'}`} />
-              )}
-              {cf.key === 'all' && colorFilter !== 'all' && (
-                <span className="text-[9px] font-bold text-gray-500">All</span>
-              )}
+              {cat.label}
             </button>
           ))}
+        </div>
+        {/* Color Filter */}
+        <div className="flex items-center gap-2 md:gap-3">
+          <span className="text-xs font-medium text-textSecondary">Color</span>
+          <div className="flex items-center gap-1.5">
+            {COLOR_FAMILIES.map(cf => (
+              <button
+                key={cf.key}
+                onClick={() => { setColorFilter(cf.key); setPage(0) }}
+                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                  colorFilter === cf.key
+                    ? 'border-primary scale-110 shadow-sm'
+                    : 'border-transparent hover:border-gray-300'
+                }`}
+                style={cf.color ? { backgroundColor: cf.color } : { backgroundColor: '#F3F4F6' }}
+                title={cf.label}
+              >
+                {colorFilter === cf.key && (
+                  <Check className={`w-3.5 h-3.5 ${cf.color ? 'text-white' : 'text-gray-600'}`} />
+                )}
+                {cf.key === 'all' && colorFilter !== 'all' && (
+                  <span className="text-[9px] font-bold text-gray-500">All</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -396,15 +434,15 @@ function TemplateSection() {
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
             <p className="text-sm text-textSecondary">Loading templates...</p>
           </div>
-        ) : filteredTemplates.length === 0 ? (
+        ) : pagedTemplates.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sm text-textSecondary">No templates match this filter</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredTemplates.map(template => {
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {pagedTemplates.map(template => {
               const isSelected = currentTemplateId === template.id
-              const colors = TEMPLATE_PREVIEW_COLORS[template.id] || TEMPLATE_PREVIEW_COLORS.clean
+              const colors = getSettingsPreviewColors(template)
               const isSelecting = selectMutation.isPending && selectMutation.variables === template.id
 
               return (
@@ -423,51 +461,51 @@ function TemplateSection() {
                   } ${selectMutation.isPending && !isSelecting ? 'opacity-50' : ''}`}
                 >
                   {/* Mini Preview */}
-                  <div className="aspect-[3/4] bg-gray-50 p-3 relative">
+                  <div className="aspect-[3/4] bg-gray-50 p-2 relative">
                     <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden flex flex-col">
                       <div className="h-[18%] flex items-center px-2" style={{ backgroundColor: colors.headerBg }}>
                         <div className="flex items-center justify-between w-full">
-                          <span className="text-[7px] font-bold tracking-wider" style={{ color: colors.headerBg === colors.accent ? '#FFFFFF' : colors.accent }}>
+                          <span className="text-[6px] font-bold tracking-wider" style={{ color: colors.headerBg === colors.accent ? '#FFFFFF' : colors.accent }}>
                             INVOICE
                           </span>
                           <div className="flex flex-col items-end gap-0.5">
-                            <div className="w-8 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
-                            <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.2 }} />
+                            <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
+                            <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.2 }} />
                           </div>
                         </div>
                       </div>
-                      <div className="px-2 py-1.5 flex gap-2">
+                      <div className="px-2 py-1 flex gap-1.5">
                         <div className="flex-1">
-                          <div className="w-10 h-1 rounded-full bg-gray-300 mb-1" />
-                          <div className="w-14 h-0.5 rounded-full bg-gray-200 mb-0.5" />
-                          <div className="w-12 h-0.5 rounded-full bg-gray-200" />
+                          <div className="w-8 h-0.5 rounded-full bg-gray-300 mb-0.5" />
+                          <div className="w-10 h-0.5 rounded-full bg-gray-200 mb-0.5" />
+                          <div className="w-8 h-0.5 rounded-full bg-gray-200" />
                         </div>
                         <div className="flex-1">
-                          <div className="w-8 h-1 rounded-full bg-gray-300 mb-1" />
-                          <div className="w-12 h-0.5 rounded-full bg-gray-200 mb-0.5" />
-                          <div className="w-10 h-0.5 rounded-full bg-gray-200" />
+                          <div className="w-6 h-0.5 rounded-full bg-gray-300 mb-0.5" />
+                          <div className="w-9 h-0.5 rounded-full bg-gray-200 mb-0.5" />
+                          <div className="w-7 h-0.5 rounded-full bg-gray-200" />
                         </div>
                       </div>
                       <div className="px-2 flex-1">
-                        <div className="h-[1px] mb-1" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
+                        <div className="h-[1px] mb-0.5" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
                         {[1, 2, 3].map(i => (
-                          <div key={i} className="flex items-center gap-1 mb-1">
+                          <div key={i} className="flex items-center gap-0.5 mb-0.5">
                             <div className="flex-1 h-0.5 rounded-full bg-gray-200" />
-                            <div className="w-4 h-0.5 rounded-full bg-gray-200" />
-                            <div className="w-5 h-0.5 rounded-full bg-gray-300" />
+                            <div className="w-3 h-0.5 rounded-full bg-gray-200" />
+                            <div className="w-4 h-0.5 rounded-full bg-gray-300" />
                           </div>
                         ))}
                       </div>
-                      <div className="px-2 pb-2 flex justify-end">
-                        <div className="flex items-center gap-1">
-                          <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.5 }} />
-                          <div className="w-8 h-1.5 rounded-full" style={{ backgroundColor: colors.accent }} />
+                      <div className="px-2 pb-1.5 flex justify-end">
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-5 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.5 }} />
+                          <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent }} />
                         </div>
                       </div>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow">
-                        <Check className="w-3 h-3 text-white" />
+                      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center shadow">
+                        <Check className="w-2.5 h-2.5 text-white" />
                       </div>
                     )}
                     {isSelecting && (
@@ -476,16 +514,39 @@ function TemplateSection() {
                       </div>
                     )}
                   </div>
-                  <div className="px-3 py-2.5 bg-white border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: template.previewColor }} />
-                      <span className="text-xs font-semibold text-textPrimary truncate">{template.name}</span>
+                  <div className="px-2.5 py-2 bg-white border-t border-border/50">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: template.previewColor }} />
+                      <span className="text-[11px] font-semibold text-textPrimary truncate">{template.name}</span>
                     </div>
-                    <p className="text-[10px] text-textSecondary mt-0.5 line-clamp-1 pl-5">{template.description}</p>
+                    <p className="text-[9px] text-textSecondary mt-0.5 line-clamp-1 pl-4">{template.category}</p>
                   </div>
                 </button>
               )
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg border border-border text-textSecondary hover:bg-bgPrimary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-[11px] text-textSecondary">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg border border-border text-textSecondary hover:bg-bgPrimary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         )}
 
