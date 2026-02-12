@@ -485,6 +485,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             onEditSettings={isDemo ? undefined : () => setShowBusinessSettings(true)}
             demoLogoUrl={isDemo ? demoLogo : undefined}
             docTypeConfig={docTypeConfig}
+            defaultFromExpanded={isDemo}
           />
 
           {/* Line Items Section */}

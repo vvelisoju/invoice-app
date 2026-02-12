@@ -27,12 +27,13 @@ export default function InvoiceHeaderSection({
   onLogoClick,
   onEditSettings,
   demoLogoUrl,
-  docTypeConfig
+  docTypeConfig,
+  defaultFromExpanded = false
 }) {
   const labels = docTypeConfig?.labels || {}
   const fields = docTypeConfig?.fields || {}
   const isAdvanced = formMode === 'advanced'
-  const [fromCollapsed, setFromCollapsed] = useState(true)
+  const [fromCollapsed, setFromCollapsed] = useState(!defaultFromExpanded)
   const [fromText, setFromText] = useState(fromAddress || '')
   const [showFromSuggestion, setShowFromSuggestion] = useState(false)
   const [metaCollapsed, setMetaCollapsed] = useState(true)
