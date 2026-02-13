@@ -31,7 +31,7 @@ function AutoResizeTextarea({ value, onChange, placeholder, className, onFocus, 
   )
 }
 
-function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, placeholder }) {
+function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, placeholder, hsnCode }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const inputRef = useRef(null)
@@ -107,16 +107,23 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
 
   return (
     <div className="relative flex-1">
-      <AutoResizeTextarea
-        inputRef={inputRef}
-        value={value}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-full bg-transparent border border-border/60 rounded-lg px-3 py-1.5 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 focus:border-primary/40 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none transition-colors"
-      />
+      <div className={`border border-border/60 rounded-lg transition-colors ${showSuggestions ? 'border-primary/40' : ''}`}>
+        <AutoResizeTextarea
+          inputRef={inputRef}
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="w-full bg-transparent border-0 px-3 py-1.5 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none"
+        />
+        {hsnCode && value && (
+          <div className="px-3 pb-1 -mt-1">
+            <span className="text-[10px] text-textSecondary/50 font-mono">HSN: {hsnCode}</span>
+          </div>
+        )}
+      </div>
 
       {showSuggestions && value?.length >= 1 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[280px]">
@@ -146,6 +153,7 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{product.name}</div>
                     <div className="text-xs text-textSecondary flex items-center gap-2">
+                      {product.hsnCode && <span className="font-mono text-violet-600">HSN: {product.hsnCode}</span>}
                       {product.defaultRate && <span>{formatRate(product.defaultRate)}</span>}
                       {product.taxRate && <span className="text-orange-600">{Number(product.taxRate)}% tax</span>}
                       {product.unit && <span>{product.unit}</span>}
@@ -425,45 +433,73 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
 function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
   return (
     <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
-      <div className="grid grid-cols-12 gap-2 md:gap-4 items-start p-2 md:p-3">
-        {/* Description — Product Typeahead */}
-        <div className="col-span-12 md:col-span-7">
+      {/* ── Desktop: columnar grid ── */}
+      <div className="hidden md:grid grid-cols-12 gap-4 items-start p-3">
+        <div className="col-span-7">
           <ProductTypeaheadInput
             value={item.name}
             onChange={(val) => onUpdate(index, 'name', val)}
             onProductSelect={(product) => onProductSelect(index, product)}
             onCreateNew={(name) => onCreateProduct(index, name)}
             placeholder="Description"
-          />
-          <input
-            type="text"
-            value={item.hsnCode || ''}
-            onChange={(e) => onUpdate(index, 'hsnCode', e.target.value)}
-            placeholder="HSN/SAC"
-            className="w-32 mt-1 bg-bgPrimary/30 px-2 py-1 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-[11px] text-textSecondary transition-all focus:outline-none"
+            hsnCode={item.hsnCode}
           />
         </div>
-        {/* Amount */}
-        <div className="col-span-5 md:col-span-2">
+        <div className="col-span-2">
           <input
             type="number"
             value={item.rate || ''}
             onChange={(e) => onUpdate(index, 'rate', e.target.value)}
             placeholder="0.00"
-            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-border/40 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
           />
         </div>
-        {/* Tax & Delete */}
-        <div className="col-span-7 md:col-span-3 flex items-center gap-2">
+        <div className="col-span-3 flex items-center gap-2">
           <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
           {canRemove && (
             <button
               onClick={() => onRemove(index)}
-              className="w-10 h-10 md:w-8 md:h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
+              className="w-8 h-8 flex items-center justify-center text-textSecondary md:hover:text-red-500 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ── Mobile: compact card layout ── */}
+      <div className="md:hidden bg-gray-50/60 rounded-lg px-2 py-2">
+        {/* Row 1: Description with inline HSN + delete */}
+        <div className="flex items-start gap-1">
+          <div className="flex-1 min-w-0">
+            <ProductTypeaheadInput
+              value={item.name}
+              onChange={(val) => onUpdate(index, 'name', val)}
+              onProductSelect={(product) => onProductSelect(index, product)}
+              onCreateNew={(name) => onCreateProduct(index, name)}
+              placeholder="Item name or description"
+              hsnCode={item.hsnCode}
+            />
+          </div>
+          {canRemove && (
+            <button
+              onClick={() => onRemove(index)}
+              className="w-7 h-7 flex items-center justify-center text-textSecondary/30 active:text-red-500 active:bg-red-50 rounded-full transition-all shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {/* Row 2: Rate + Tax — single line */}
+        <div className="flex items-center gap-2 mt-1.5">
+          <input
+            type="number"
+            value={item.rate || ''}
+            onChange={(e) => onUpdate(index, 'rate', e.target.value)}
+            placeholder="₹ Amount"
+            className="flex-1 bg-white px-2.5 py-1.5 rounded-lg border border-border/40 focus:border-primary focus:ring-1 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+          />
+          <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
         </div>
       </div>
     </div>
@@ -471,67 +507,110 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
 }
 
 function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
+  const formatAmount = (val) => {
+    if (!val) return ''
+    return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(val)
+  }
+
   return (
     <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
-      <div className="grid grid-cols-12 gap-2 md:gap-4 items-start p-2 md:p-3">
-        {/* Description — Product Typeahead (full width on mobile) */}
-        <div className="col-span-12 md:col-span-5">
+      {/* ── Desktop: columnar grid ── */}
+      <div className="hidden md:grid grid-cols-12 gap-4 items-start p-3">
+        <div className="col-span-5">
           <ProductTypeaheadInput
             value={item.name}
             onChange={(val) => onUpdate(index, 'name', val)}
             onProductSelect={(product) => onProductSelect(index, product)}
             onCreateNew={(name) => onCreateProduct(index, name)}
             placeholder="Description"
-          />
-          <input
-            type="text"
-            value={item.hsnCode || ''}
-            onChange={(e) => onUpdate(index, 'hsnCode', e.target.value)}
-            placeholder="HSN/SAC"
-            className="w-32 mt-1 bg-bgPrimary/30 px-2 py-1 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-[11px] text-textSecondary transition-all focus:outline-none"
+            hsnCode={item.hsnCode}
           />
         </div>
-        {/* Unit Price */}
-        <div className="col-span-4 md:col-span-2">
+        <div className="col-span-2">
           <input
             type="number"
             value={item.rate || ''}
             onChange={(e) => onUpdate(index, 'rate', e.target.value)}
             placeholder="Price"
-            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-border/40 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
           />
         </div>
-        {/* Qty */}
-        <div className="col-span-3 md:col-span-1">
+        <div className="col-span-1">
           <input
             type="number"
             value={item.quantity || ''}
             onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
             placeholder="Qty"
-            className="w-full bg-bgPrimary/30 px-2 py-2 md:py-1.5 rounded border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
+            className="w-full bg-bgPrimary/30 px-2 py-1.5 rounded border border-border/40 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
           />
         </div>
-        {/* Amount */}
-        <div className="col-span-5 md:col-span-2">
+        <div className="col-span-2">
           <input
             type="number"
             value={item.lineTotal || ''}
             readOnly
             placeholder="0.00"
-            className="w-full bg-bgPrimary/30 px-3 py-2 md:py-1.5 rounded border border-transparent text-sm text-right transition-all cursor-default"
+            className="w-full bg-bgPrimary/30 px-3 py-1.5 rounded border border-border/40 text-sm text-right transition-all cursor-default"
           />
         </div>
-        {/* Tax & Delete */}
-        <div className="col-span-7 md:col-span-2 flex items-center gap-2">
+        <div className="col-span-2 flex items-center gap-2">
           <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
           {canRemove && (
             <button
               onClick={() => onRemove(index)}
-              className="w-10 h-10 md:w-8 md:h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
+              className="w-8 h-8 flex items-center justify-center text-textSecondary md:hover:text-red-500 md:hover:bg-red-50 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ── Mobile: compact card layout ── */}
+      <div className="md:hidden bg-gray-50/60 rounded-lg px-2 py-2">
+        {/* Row 1: Description with inline HSN + delete */}
+        <div className="flex items-start gap-1">
+          <div className="flex-1 min-w-0">
+            <ProductTypeaheadInput
+              value={item.name}
+              onChange={(val) => onUpdate(index, 'name', val)}
+              onProductSelect={(product) => onProductSelect(index, product)}
+              onCreateNew={(name) => onCreateProduct(index, name)}
+              placeholder="Item name or description"
+              hsnCode={item.hsnCode}
+            />
+          </div>
+          {canRemove && (
+            <button
+              onClick={() => onRemove(index)}
+              className="w-7 h-7 flex items-center justify-center text-textSecondary/30 active:text-red-500 active:bg-red-50 rounded-full transition-all shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {/* Row 2: Price × Qty = Total · Tax — all in one line */}
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <input
+            type="number"
+            value={item.rate || ''}
+            onChange={(e) => onUpdate(index, 'rate', e.target.value)}
+            placeholder="Price"
+            className="w-24 bg-white px-2.5 py-1.5 rounded-lg border border-border/40 focus:border-primary focus:ring-1 focus:ring-primary/10 text-sm text-right transition-all focus:outline-none"
+          />
+          <span className="text-textSecondary/40 text-xs">×</span>
+          <input
+            type="number"
+            value={item.quantity || ''}
+            onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+            placeholder="Qty"
+            className="w-16 bg-white px-2 py-1.5 rounded-lg border border-border/40 focus:border-primary focus:ring-1 focus:ring-primary/10 text-sm text-center transition-all focus:outline-none"
+          />
+          {item.lineTotal > 0 && (
+            <span className="text-xs font-medium text-textPrimary shrink-0">= ₹{formatAmount(item.lineTotal)}</span>
+          )}
+          <div className="flex-1" />
+          <TaxButton item={item} index={index} onUpdate={onUpdate} taxRates={taxRates} />
         </div>
       </div>
     </div>
@@ -601,6 +680,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-textPrimary truncate">{product.name}</div>
                   <div className="text-xs text-textSecondary flex items-center gap-2">
+                    {product.hsnCode && <span className="font-mono text-violet-600">HSN: {product.hsnCode}</span>}
                     {product.defaultRate && <span>{formatRate(product.defaultRate)}</span>}
                     {product.taxRate && <span className="text-orange-600">{Number(product.taxRate)}%</span>}
                     {product.unit && <span>{product.unit}</span>}

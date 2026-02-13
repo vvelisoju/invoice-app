@@ -5,7 +5,7 @@ import { productApi, taxRateApi } from '../../lib/api'
 import Portal from '../../components/Portal'
 import { addDemoProduct } from '../../lib/demoStorage'
 
-const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '' }
+const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '', hsnCode: '' }
 
 /**
  * Unified product add/edit modal used in both ProductListPage and NewInvoicePage.
@@ -83,6 +83,7 @@ export default function ProductAddEditModal({
           defaultRate: product.defaultRate != null ? String(product.defaultRate) : '',
           unit: product.unit || '',
           taxRate: product.taxRate != null ? String(product.taxRate) : '',
+          hsnCode: product.hsnCode || '',
         })
         setUnitInputValue(product.unit || '')
       } else {
@@ -150,6 +151,7 @@ export default function ProductAddEditModal({
       defaultRate: form.defaultRate ? Number(form.defaultRate) : null,
       unit: form.unit || null,
       taxRate: form.taxRate ? Number(form.taxRate) : null,
+      hsnCode: form.hsnCode?.trim() || null,
     }
     if (demoMode) {
       const product = addDemoProduct(payload)
@@ -232,6 +234,20 @@ export default function ProductAddEditModal({
               }`}
             />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          </div>
+
+          {/* HSN/SAC Code */}
+          <div>
+            <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">
+              HSN/SAC Code
+            </label>
+            <input
+              type="text"
+              value={form.hsnCode}
+              onChange={(e) => updateField('hsnCode', e.target.value)}
+              placeholder="e.g., 998314, 8471"
+              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+            />
           </div>
 
           {/* Rate + Tax Rate row */}
