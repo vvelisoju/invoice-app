@@ -98,6 +98,7 @@ export default function ProductListPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [mobileActionProduct, setMobileActionProduct] = useState(null)
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -220,9 +221,9 @@ export default function ProductListPage() {
         </div>
         <div>
           <div className="font-semibold text-textPrimary">{product.name}</div>
-          {product.description && (
-            <div className="text-xs text-textSecondary line-clamp-1">{product.description}</div>
-          )}
+          <div className="text-xs text-textSecondary line-clamp-1">
+            {product.hsnCode ? `HSN: ${product.hsnCode}` : 'No HSN'}{product.description ? ` · ${product.description}` : ''}
+          </div>
         </div>
       </div>,
 
@@ -407,6 +408,7 @@ export default function ProductListPage() {
             rowKey={(p) => p.id}
             renderRow={renderRow}
             onRowClick={(p) => handleEdit(p)}
+            onMobileRowClick={(p) => setMobileActionProduct(p)}
             getRowClassName={() => ''}
             selectable={true}
             onSelectionChange={setSelectedIds}
@@ -425,7 +427,7 @@ export default function ProductListPage() {
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-sm text-textPrimary truncate">{product.name}</div>
                     <div className="text-xs text-textSecondary">
-                      {product.unit || 'No unit'}{product.description ? ` · ${product.description}` : ''}
+                      {product.hsnCode ? `HSN: ${product.hsnCode}` : 'No HSN'}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -495,6 +497,69 @@ export default function ProductListPage() {
         product={editingProduct}
         onSuccess={() => { setShowAddModal(false); setEditingProduct(null) }}
       />
+
+      {/* Mobile Action Bottom Sheet */}
+      {mobileActionProduct && (
+        <Portal>
+        <div className="fixed inset-0 z-50 md:hidden" onClick={() => setMobileActionProduct(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl safe-bottom animate-slide-up" onClick={e => e.stopPropagation()}>
+            {/* Product Info Header */}
+            <div className="flex items-center gap-3 px-5 pt-5 pb-3 border-b border-borderLight">
+              <div className={`w-11 h-11 rounded-lg ${getAvatarColor(mobileActionProduct.name).bg} ${getAvatarColor(mobileActionProduct.name).text} flex items-center justify-center font-bold text-sm shrink-0`}>
+                {getInitials(mobileActionProduct.name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-base text-textPrimary truncate">{mobileActionProduct.name}</div>
+                <div className="text-xs text-textSecondary">
+                  {mobileActionProduct.defaultRate ? formatCurrency(mobileActionProduct.defaultRate) : 'No rate'}
+                  {mobileActionProduct.hsnCode ? ` · HSN: ${mobileActionProduct.hsnCode}` : ''}
+                </div>
+              </div>
+            </div>
+            {/* Actions */}
+            <div className="py-2 px-2">
+              <button
+                onClick={() => { history.push('/invoices/new'); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-textPrimary active:bg-gray-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <span>Create Invoice</span>
+              </button>
+              <button
+                onClick={() => { handleEdit(mobileActionProduct); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-textPrimary active:bg-gray-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                  <Pencil className="w-4.5 h-4.5" />
+                </div>
+                <span>Edit Product</span>
+              </button>
+              <button
+                onClick={() => { handleDelete(mobileActionProduct); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-red-600 active:bg-red-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4.5 h-4.5" />
+                </div>
+                <span>Delete Product</span>
+              </button>
+            </div>
+            {/* Cancel */}
+            <div className="px-4 pb-4 pt-1">
+              <button
+                onClick={() => setMobileActionProduct(null)}
+                className="w-full py-3 text-sm font-semibold text-textSecondary bg-gray-100 active:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+        </Portal>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
