@@ -119,8 +119,8 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
           className="w-full bg-transparent border-0 px-3 py-1.5 text-sm text-textPrimary placeholder-textSecondary/40 focus:ring-0 resize-none overflow-hidden min-h-[28px] leading-7 focus:outline-none"
         />
         {hsnCode && value && (
-          <div className="px-3 pb-1 -mt-1">
-            <span className="text-[10px] text-textSecondary/50 font-mono">HSN: {hsnCode}</span>
+          <div className="px-3 pb-0.5 -mt-2">
+            <span className="text-[9px] text-textSecondary/50 font-mono leading-none">HSN: {hsnCode}</span>
           </div>
         )}
       </div>
@@ -410,7 +410,7 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className={`flex-1 text-xs font-medium py-2 md:py-1.5 px-2 rounded border transition-colors truncate ${
+        className={`shrink-0 text-xs font-medium py-2 md:py-1.5 px-2.5 rounded border transition-colors whitespace-nowrap ${
           item.taxRate
             ? 'bg-green-50 active:bg-green-100 md:hover:bg-green-100 text-green-700 border-green-200/50'
             : 'bg-yellow-50 active:bg-yellow-100 md:hover:bg-yellow-100 text-yellow-700 border-yellow-200/50'
@@ -434,7 +434,7 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
   return (
     <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
       {/* ── Desktop: columnar grid ── */}
-      <div className="hidden md:grid grid-cols-12 gap-4 items-start p-3">
+      <div className="hidden md:grid grid-cols-12 gap-3 items-start px-2 py-1.5">
         <div className="col-span-7">
           <ProductTypeaheadInput
             value={item.name}
@@ -515,7 +515,7 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
   return (
     <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
       {/* ── Desktop: columnar grid ── */}
-      <div className="hidden md:grid grid-cols-12 gap-4 items-start p-3">
+      <div className="hidden md:grid grid-cols-12 gap-3 items-start px-2 py-1.5">
         <div className="col-span-5">
           <ProductTypeaheadInput
             value={item.name}
@@ -727,6 +727,18 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
     enabled: !demoMode
   })
 
+  // Enrich product with taxRateName from available tax rates before passing to parent
+  const handleProductSelect = useCallback((index, product) => {
+    if (product?.taxRate && taxRates.length > 0) {
+      const matchingTaxRate = taxRates.find(tr => Number(tr.rate) === Number(product.taxRate))
+      if (matchingTaxRate) {
+        onProductSelect(index, { ...product, taxRateName: matchingTaxRate.name })
+        return
+      }
+    }
+    onProductSelect(index, product)
+  }, [onProductSelect, taxRates])
+
   return (
     <div className="mb-6">
       {/* Header Row — hidden on mobile for cleaner card-like layout */}
@@ -773,7 +785,7 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
               onUpdate={onUpdateItem}
               onRemove={onRemoveItem}
               canRemove={lineItems.length > 1}
-              onProductSelect={onProductSelect}
+              onProductSelect={handleProductSelect}
               onCreateProduct={onCreateProduct}
               taxRates={taxRates}
             />
@@ -785,7 +797,7 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
               onUpdate={onUpdateItem}
               onRemove={onRemoveItem}
               canRemove={lineItems.length > 1}
-              onProductSelect={onProductSelect}
+              onProductSelect={handleProductSelect}
               onCreateProduct={onCreateProduct}
               taxRates={taxRates}
             />
@@ -818,7 +830,7 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
           onAddItem()
           // Use setTimeout to ensure the new item is added before populating
           setTimeout(() => {
-            onProductSelect(lineItems.length, product)
+            handleProductSelect(lineItems.length, product)
           }, 0)
         }}
       />

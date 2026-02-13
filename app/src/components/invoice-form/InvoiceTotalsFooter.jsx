@@ -174,12 +174,13 @@ export default function InvoiceTotalsFooter({
     lineItems.forEach((item) => {
       if (item.taxRate && item.taxRate > 0) {
         const rate = Number(item.taxRate)
-        const name = item.taxRateName || `Tax ${rate}%`
-        const key = `${rate}_${name}`
+        const key = String(rate)
         const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)
         const taxAmount = (lineTotal * rate) / 100
         if (!breakdown[key]) {
-          breakdown[key] = { rate, name, amount: 0 }
+          breakdown[key] = { rate, name: item.taxRateName || `Tax ${rate}%`, amount: 0 }
+        } else if (!breakdown[key].name.includes(item.taxRateName) && item.taxRateName) {
+          breakdown[key].name = item.taxRateName
         }
         breakdown[key].amount += taxAmount
       }

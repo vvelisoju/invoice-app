@@ -222,6 +222,7 @@ export function useInvoiceForm(invoiceId = null) {
         rate: product?.defaultRate || newLineItems[index].rate,
         productServiceId: product?.id || null,
         taxRate: product?.taxRate || null,
+        taxRateName: product?.taxRateName || newLineItems[index].taxRateName || null,
         lineTotal: (parseFloat(newLineItems[index].quantity) || 0) * (parseFloat(product?.defaultRate) || 0)
       }
 

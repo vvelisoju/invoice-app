@@ -181,7 +181,7 @@ export function CleanTemplate({ invoice }) {
           </View>
           {invoice.lineItems?.map((item, i) => (
             <View key={i} style={cleanStyles.tableRow}>
-              <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>{item.name}</Text>
+              <View style={isBasic ? { flex: 4 } : cleanStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
               {!isBasic && <Text style={cleanStyles.colQty}>{item.quantity}</Text>}
               {!isBasic && <Text style={cleanStyles.colRate}>{formatCurrency(item.rate)}</Text>}
               <Text style={cleanStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
@@ -369,7 +369,7 @@ export function ModernRedTemplate({ invoice }) {
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={i % 2 === 1 ? modernRedStyles.tableRowAlt : modernRedStyles.tableRow}>
-                <Text style={isBasic ? { flex: 4 } : modernRedStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : modernRedStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={modernRedStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={modernRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
                 <Text style={modernRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
@@ -513,7 +513,7 @@ export function ClassicRedTemplate({ invoice }) {
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={classicRedStyles.tableRow}>
                 <Text style={classicRedStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : classicRedStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : classicRedStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={classicRedStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={classicRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
                 <Text style={classicRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
@@ -640,7 +640,7 @@ export function WexlerTemplate({ invoice }) {
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={wexlerStyles.tableRow}>
                 <Text style={wexlerStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : wexlerStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : wexlerStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={wexlerStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={wexlerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
                 <Text style={wexlerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
@@ -781,7 +781,7 @@ export function PlexerTemplate({ invoice }) {
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={plexerStyles.tableRow}>
                 <Text style={plexerStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : plexerStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : plexerStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={plexerStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={plexerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
                 <Text style={plexerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
@@ -921,7 +921,7 @@ export function ContemporaryTemplate({ invoice }) {
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={contemporaryStyles.tableRow}>
-                <Text style={isBasic ? { flex: 4 } : contemporaryStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : contemporaryStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={contemporaryStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={contemporaryStyles.colRate}>{formatCurrency(item.rate)}</Text>}
                 <Text style={contemporaryStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>

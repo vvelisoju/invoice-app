@@ -633,7 +633,10 @@ function TableSection({ invoice, doc, palette, layout }) {
         return (
           <View key={i} style={[rowStyles.container, isAlt && { backgroundColor: palette.altRowBg }]}>
             {showSno && <Text style={colSno}>{i + 1}</Text>}
-            <Text style={isBasic ? colNameBasic : colName}>{item.name}</Text>
+            <View style={isBasic ? colNameBasic : colName}>
+              <Text>{item.name}</Text>
+              {item.hsnCode && <Text style={{ fontSize: 6, color: palette.textLight || '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}
+            </View>
             {!isBasic && <Text style={colQty}>{item.quantity}</Text>}
             {!isBasic && <Text style={colRate}>{formatCurrency(item.rate)}</Text>}
             <Text style={colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>

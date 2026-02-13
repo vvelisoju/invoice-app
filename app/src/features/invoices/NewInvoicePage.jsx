@@ -165,6 +165,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         quantity: item.quantity,
         rate: item.rate,
         lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        hsnCode: item.hsnCode || '',
+        taxRate: item.taxRate || null,
+        taxRateName: item.taxRateName || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: inv.discountTotal || 0,
@@ -204,6 +207,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             quantity: item.quantity,
             rate: item.rate,
             lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+            hsnCode: item.hsnCode || '',
+            taxRate: item.taxRate || null,
+            taxRateName: item.taxRateName || null,
             productServiceId: item.productServiceId || null
           })),
           discountTotal: inv.discountTotal || 0,
@@ -235,6 +241,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         quantity: item.quantity,
         rate: item.rate,
         lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        hsnCode: item.hsnCode || '',
+        taxRate: item.taxRate || null,
+        taxRateName: item.taxRateName || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: cloneData.discountTotal || 0,
@@ -254,6 +263,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           name: item.name.trim(),
           quantity: parseFloat(item.quantity) || 1,
           rate: parseFloat(item.rate),
+          hsnCode: item.hsnCode || null,
+          taxRate: item.taxRate ? Number(item.taxRate) : null,
+          taxRateName: item.taxRateName || null,
           productServiceId: item.productServiceId || null
         }))
 

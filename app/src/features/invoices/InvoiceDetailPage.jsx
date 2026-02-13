@@ -243,6 +243,9 @@ export default function InvoiceDetailPage() {
             name: item.name,
             quantity: item.quantity,
             rate: item.rate,
+            hsnCode: item.hsnCode || '',
+            taxRate: item.taxRate || null,
+            taxRateName: item.taxRateName || null,
             productServiceId: item.productServiceId || null
           })),
           discountTotal: invoice.discountTotal || 0,
