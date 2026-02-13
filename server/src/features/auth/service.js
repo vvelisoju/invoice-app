@@ -35,7 +35,7 @@ const sendOTP = async (phone, otp) => {
       sender,
       apikey: apiKey,
       to: [`91${phone}`],
-      message: `Your OTP for Lokalhunt is ${otp}. Do not share this with anyone.`,
+      message: `Your OTP for logging into Lokalhunt is ${otp}. Do not share this with anyone.`,
       format: 'json'
     }
 
