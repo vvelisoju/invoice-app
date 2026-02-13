@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { unregisterPushToken } from '../lib/firebase'
+import { removeCapacitorPushListeners } from '../lib/capacitorPush'
 
 export const useAuthStore = create(
   persist(
@@ -22,6 +24,8 @@ export const useAuthStore = create(
       },
 
       logout: () => {
+        unregisterPushToken()
+        removeCapacitorPushListeners()
         localStorage.clear()
         sessionStorage.clear()
         set({ token: null, user: null, business: null, isAuthenticated: false })

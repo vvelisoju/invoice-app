@@ -51,5 +51,9 @@ export const updateBusinessSchema = z.object({
       labels: z.record(z.string(), z.string()).optional(),
       fields: z.record(z.string(), z.any()).optional()
     })).optional()
+  ),
+  defaultDocType: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined) ? undefined : val,
+    z.string().max(50).optional()
   )
 }).strip()

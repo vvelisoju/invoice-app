@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { Bell, LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { LogOut, Settings, ChevronDown, User, HelpCircle, Menu, X } from 'lucide-react'
+import NotificationBell from '../../features/notifications/NotificationBell'
+import { businessApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { headerTabs, headerQuickActions, getActiveTabKey } from './navigationConfig'
 import Portal from '../Portal'
@@ -32,6 +34,16 @@ export default function AppHeader({ onMenuToggle }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef(null)
   const sheetRef = useRef(null)
+
+  // Fetch business profile to get defaultDocType
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
 
   const activeTabKey = getActiveTabKey(location.pathname)
   const isSettingsActive = activeTabKey === 'settings'
@@ -134,7 +146,10 @@ export default function AppHeader({ onMenuToggle }) {
           {headerQuickActions.map((action) => (
             <button
               key={action.path}
-              onClick={() => history.push(action.path)}
+              onClick={() => {
+                const docType = businessProfile?.defaultDocType || 'invoice'
+                history.push(`/invoices/new?type=${docType}`)
+              }}
               className="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2"
             >
               <action.icon className="w-4 h-4 text-gray-400" />
@@ -146,10 +161,7 @@ export default function AppHeader({ onMenuToggle }) {
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-1 md:gap-3 shrink-0">
-        <button className="relative w-11 h-11 flex items-center justify-center rounded-lg text-textSecondary active:bg-bgPrimary md:hover:text-textPrimary transition-colors">
-          <Bell className="w-[18px] h-[18px]" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationBell />
 
         {/* Settings Button */}
         <div className="relative" ref={settingsRef}>

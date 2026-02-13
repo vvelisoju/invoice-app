@@ -107,6 +107,7 @@ model Business {
   defaultTaxRate     Decimal? @db.Decimal(5, 2)
   enabledInvoiceTypes Json?  // JSON array of enabled invoice type keys for sidebar
   documentTypeConfig  Json?  // Business-level label/field overrides per document type
+  defaultDocType      String  @default("invoice") // Default document type key for "New" button
   
   // Plan & subscription
   planId         String?

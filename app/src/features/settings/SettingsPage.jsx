@@ -232,11 +232,16 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
   )
 }
 
-function InvoiceTypesSection({ enabledTypes, onChange }) {
+function InvoiceTypesSection({ enabledTypes, onChange, defaultDocType, onDefaultChange }) {
   const toggleType = (key) => {
     if (enabledTypes.includes(key)) {
       if (enabledTypes.length <= 1) return
-      onChange(enabledTypes.filter(k => k !== key))
+      // If disabling the current default, switch default to first remaining enabled type
+      const newTypes = enabledTypes.filter(k => k !== key)
+      if (key === defaultDocType && onDefaultChange) {
+        onDefaultChange(newTypes[0])
+      }
+      onChange(newTypes)
     } else {
       onChange([...enabledTypes, key])
     }
@@ -250,35 +255,49 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
         </div>
         <div>
           <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Types</h3>
-          <p className="text-[11px] md:text-xs text-textSecondary">Choose which types appear in your sidebar</p>
+          <p className="text-[11px] md:text-xs text-textSecondary">Choose which types appear in your sidebar. Tap the star to set the default for the "New" button.</p>
         </div>
       </div>
       <div className="p-3 md:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {ALL_INVOICE_TYPES.map((type) => {
             const isEnabled = enabledTypes.includes(type.key)
+            const isDefault = defaultDocType === type.key
             const Icon = type.icon
             return (
-              <button
-                key={type.key}
-                onClick={() => toggleType(type.key)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-lg border transition-all text-left ${
-                  isEnabled
-                    ? 'bg-primary/5 border-primary/30 text-primary'
-                    : 'bg-gray-50 border-border text-textSecondary active:bg-gray-100 md:hover:bg-gray-100'
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isEnabled ? 'text-primary' : 'text-gray-400'}`} />
-                <span className={`text-sm ${isEnabled ? 'font-semibold' : 'font-medium'}`}>{type.label}</span>
-                {isEnabled && (
-                  <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />
+              <div key={type.key} className="relative">
+                <button
+                  onClick={() => toggleType(type.key)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg border transition-all text-left ${
+                    isEnabled
+                      ? 'bg-primary/5 border-primary/30 text-primary'
+                      : 'bg-gray-50 border-border text-textSecondary active:bg-gray-100 md:hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isEnabled ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className={`text-sm flex-1 ${isEnabled ? 'font-semibold' : 'font-medium'}`}>{type.label}</span>
+                  {isEnabled && isDefault && (
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                  )}
+                  {isEnabled && !isDefault && (
+                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                  )}
+                </button>
+                {isEnabled && !isDefault && onDefaultChange && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDefaultChange(type.key) }}
+                    className="absolute top-1 right-1 w-7 h-7 flex items-center justify-center rounded-md text-gray-300 active:text-amber-500 md:hover:text-amber-500 active:bg-amber-50 md:hover:bg-amber-50 transition-all"
+                    title="Set as default for New button"
+                  >
+                    <Star className="w-3 h-3" />
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>
         <p className="text-[11px] text-textSecondary mt-3 ml-1">
-          Selected types will appear in the sidebar for quick access. At least one type must be selected.
+          Selected types will appear in the sidebar for quick access. At least one type must be selected. The starred type opens when you click "New".
         </p>
       </div>
     </div>
@@ -1587,6 +1606,8 @@ export default function SettingsPage() {
                   <InvoiceTypesSection
                     enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
                     onChange={(types) => handleChange('enabledInvoiceTypes', types)}
+                    defaultDocType={formData.defaultDocType || 'invoice'}
+                    onDefaultChange={(docType) => handleChange('defaultDocType', docType)}
                   />
                   <DocumentTypeLabelSection
                     enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}

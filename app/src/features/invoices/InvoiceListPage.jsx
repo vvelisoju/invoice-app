@@ -3,6 +3,7 @@ import { useHistory, useLocation } from 'react-router-dom'
 import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users } from 'lucide-react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { invoiceApi, businessApi, customerApi } from '../../lib/api'
+import { DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import Portal from '../../components/Portal'
 import {
   DataTable,
@@ -191,7 +192,7 @@ export default function InvoiceListPage() {
     }
   })
 
-  const enabledKeys = businessProfile?.enabledInvoiceTypes || ['invoice', 'quote', 'receipt']
+  const enabledKeys = businessProfile?.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES
   const filteredDocTypeOptions = useMemo(
     () => DOC_TYPE_OPTIONS.filter(opt => enabledKeys.includes(opt.key)),
     [enabledKeys]

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Home, FileText, Users, Package, PieChart, Plus } from 'lucide-react'
+import { businessApi } from '../../lib/api'
 import AppHeader from './AppHeader'
 import AppSidebar from './AppSidebar'
 import { getActiveTabKey } from './navigationConfig'
@@ -24,6 +26,15 @@ export default function AppLayout({ children }) {
   const location = useLocation()
   const activeTabKey = getActiveTabKey(location.pathname)
   const isHome = location.pathname === '/home'
+
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
 
   return (
     <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
@@ -64,7 +75,14 @@ export default function AppLayout({ children }) {
             return (
               <button
                 key={item.key}
-                onClick={() => history.push(item.path)}
+                onClick={() => {
+                  if (isNewBtn) {
+                    const docType = businessProfile?.defaultDocType || 'invoice'
+                    history.push(`/invoices/new?type=${docType}`)
+                  } else {
+                    history.push(item.path)
+                  }
+                }}
                 className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors tap-target-auto ${
                   isNewBtn
                     ? ''

@@ -59,6 +59,17 @@ export const config = {
       bucket: process.env.GCS_BUCKET || 'invoice-app-uploads'
     }
   })(),
+  firebase: (() => {
+    let serviceAccount = null
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+      } catch (e) {
+        process.stderr.write(`[config] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${e.message}\n`)
+      }
+    }
+    return { serviceAccount }
+  })(),
   logLevel: process.env.LOG_LEVEL || 'info'
 }
 

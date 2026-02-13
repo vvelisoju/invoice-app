@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown, Crown, Infinity } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown, Crown, Infinity, Star } from 'lucide-react'
 import { plansApi, businessApi } from '../../lib/api'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES, headerTabs, getActiveTabKey } from './navigationConfig'
 import { useAuthStore } from '../../store/authStore'
@@ -38,6 +38,14 @@ export default function AppSidebar({ mobile = false, onClose }) {
 
   const enabledKeys = businessProfile?.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES
   const enabledTypes = ALL_INVOICE_TYPES.filter(t => enabledKeys.includes(t.key))
+  const defaultDocType = businessProfile?.defaultDocType || 'invoice'
+
+  const setDefaultMutation = useMutation({
+    mutationFn: (docType) => businessApi.updateProfile({ defaultDocType: docType }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['business'] })
+    }
+  })
 
   // Plan usage
   const { data: planUsage } = useQuery({
@@ -76,19 +84,33 @@ export default function AppSidebar({ mobile = false, onClose }) {
               const isOnNewPage = location.pathname === '/invoices/new'
               const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
               const isActive = isOnNewPage && urlType === type.key
+              const isDefault = defaultDocType === type.key
               return (
-                <button
-                  key={type.key}
-                  onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
-                    isActive
-                      ? 'text-primary bg-primary/8 font-semibold'
-                      : 'text-textSecondary hover:text-primary hover:bg-primary/5'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
-                  <span>{type.label}</span>
-                </button>
+                <div key={type.key} className="relative group/item flex items-center">
+                  <button
+                    onClick={() => navigate(`/invoices/new?type=${type.key}`)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                      isActive
+                        ? 'text-primary bg-primary/8 font-semibold'
+                        : 'text-textSecondary hover:text-primary hover:bg-primary/5'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
+                    <span className="flex-1 text-left">{type.label}</span>
+                    {isDefault && (
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                    )}
+                  </button>
+                  {!isDefault && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(type.key) }}
+                      className="absolute right-2 opacity-0 group-hover/item:opacity-100 w-6 h-6 flex items-center justify-center rounded hover:bg-amber-50 text-gray-300 hover:text-amber-500 transition-all"
+                      title="Set as default"
+                    >
+                      <Star className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               )
             })}
           </nav>
@@ -255,19 +277,33 @@ export default function AppSidebar({ mobile = false, onClose }) {
                 const isOnNewPage = location.pathname === '/invoices/new'
                 const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
                 const isActiveType = isOnNewPage && urlType === type.key
+                const isDefault = defaultDocType === type.key
                 return (
-                  <button
-                    key={type.key}
-                    onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-                      isActiveType
-                        ? 'text-primary bg-primary/8 font-semibold'
-                        : 'text-textSecondary active:text-primary active:bg-primary/5'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 shrink-0 ${isActiveType ? 'text-primary' : 'text-gray-400'}`} />
-                    <span>{type.label}</span>
-                  </button>
+                  <div key={type.key} className="flex items-center">
+                    <button
+                      onClick={() => navigate(`/invoices/new?type=${type.key}`)}
+                      className={`flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                        isActiveType
+                          ? 'text-primary bg-primary/8 font-semibold'
+                          : 'text-textSecondary active:text-primary active:bg-primary/5'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 shrink-0 ${isActiveType ? 'text-primary' : 'text-gray-400'}`} />
+                      <span className="flex-1 text-left">{type.label}</span>
+                      {isDefault && (
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                      )}
+                    </button>
+                    {!isDefault && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(type.key) }}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-300 active:text-amber-500 active:bg-amber-50 transition-all shrink-0"
+                        title="Set as default"
+                      >
+                        <Star className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 )
               })}
             </nav>

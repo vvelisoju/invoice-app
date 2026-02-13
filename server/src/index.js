@@ -19,6 +19,9 @@ import syncRoutes from './features/sync/routes.js'
 import planRoutes from './features/plans/routes.js'
 import taxRateRoutes from './features/tax-rates/routes.js'
 import adminRoutes from './features/admin/routes.js'
+import notificationRoutes from './features/notifications/routes.js'
+import { startNotificationCron, stopNotificationCron } from './features/notifications/cron.js'
+import { initFirebase } from './common/firebase.js'
 
 const isProduction = config.nodeEnv === 'production'
 
@@ -74,6 +77,7 @@ await fastify.register(syncRoutes, { prefix: '/sync' })
 await fastify.register(planRoutes, { prefix: '/plans' })
 await fastify.register(taxRateRoutes, { prefix: '/tax-rates' })
 await fastify.register(adminRoutes, { prefix: '/admin' })
+await fastify.register(notificationRoutes, { prefix: '/notifications' })
 
 fastify.get('/health', async (request, reply) => {
   try {
@@ -122,6 +126,8 @@ const start = async () => {
     await fastify.listen({ port: config.port, host: '0.0.0.0' })
     fastify.log.info({ port: config.port, env: config.nodeEnv }, 'Server started')
     await cleanupStaleData()
+    initFirebase()
+    startNotificationCron()
   } catch (err) {
     fastify.log.error(err)
     await prisma.$disconnect()
@@ -143,6 +149,7 @@ const gracefulShutdown = async (signal) => {
   forceTimer.unref()
 
   try {
+    stopNotificationCron()
     await fastify.close()
     await prisma.$disconnect()
     fastify.log.info('Shutdown complete')

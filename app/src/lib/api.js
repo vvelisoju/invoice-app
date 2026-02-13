@@ -184,6 +184,16 @@ export const taxRateApi = {
   delete: (id) => api.delete(`/tax-rates/${id}`)
 }
 
+// Notification API (User)
+export const notificationApi = {
+  list: (params) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.post(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  registerDeviceToken: (data) => api.post('/notifications/device-token', data),
+  removeDeviceToken: (data) => api.delete('/notifications/device-token', { data }),
+}
+
 // Admin API (Super Admin only)
 export const adminApi = {
   // Dashboard
@@ -223,4 +233,10 @@ export const adminApi = {
   getBillingProfile: () => api.get('/admin/billing/profile'),
   listSubscriptionInvoices: (params) => api.get('/admin/billing/invoices', { params }),
   getSubscriptionInvoice: (id) => api.get(`/admin/billing/invoices/${id}`),
+
+  // Notifications
+  listNotifications: (params) => api.get('/notifications/admin', { params }),
+  getNotification: (id) => api.get(`/notifications/admin/${id}`),
+  sendNotification: (data) => api.post('/notifications/admin', data),
+  getNotificationTemplates: () => api.get('/notifications/admin/templates'),
 }

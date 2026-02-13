@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Switch, Redirect } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
+import { usePushNotifications } from './features/notifications/usePushNotifications'
 
 import LandingPage from './pages/LandingPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -35,6 +36,7 @@ import AdminPlanListPage from './features/admin/AdminPlanListPage'
 import AdminSettingsPage from './features/admin/AdminSettingsPage'
 import AdminAuditLogPage from './features/admin/AdminAuditLogPage'
 import AdminBillingPage from './features/admin/AdminBillingPage'
+import AdminNotificationsPage from './features/admin/AdminNotificationsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +48,7 @@ const queryClient = new QueryClient({
 })
 
 function AuthenticatedApp() {
+  usePushNotifications()
   return (
     <AppLayout>
       <Switch>
@@ -73,6 +76,7 @@ function AuthenticatedApp() {
 }
 
 function AdminApp() {
+  usePushNotifications()
   return (
     <AdminLayout>
       <Switch>
@@ -83,6 +87,7 @@ function AdminApp() {
         <Route exact path="/admin/users/:id" component={AdminUserDetailPage} />
         <Route exact path="/admin/plans" component={AdminPlanListPage} />
         <Route exact path="/admin/billing" component={AdminBillingPage} />
+        <Route exact path="/admin/notifications" component={AdminNotificationsPage} />
         <Route exact path="/admin/settings" component={AdminSettingsPage} />
         <Route exact path="/admin/audit-logs" component={AdminAuditLogPage} />
         <Route exact path="/">

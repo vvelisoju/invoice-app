@@ -1,6 +1,7 @@
 import { prisma } from '../../common/prisma.js'
 import { NotFoundError, ValidationError } from '../../common/errors.js'
 import { generateToken } from '../../common/auth.js'
+import { emit as emitNotification } from '../notifications/service.js'
 
 // ============================================================================
 // DASHBOARD
@@ -422,7 +423,7 @@ export async function updateBusinessStatus(businessId, status) {
   const business = await prisma.business.findUnique({ where: { id: businessId } })
   if (!business) throw new NotFoundError('Business not found')
 
-  return prisma.business.update({
+  const updated = await prisma.business.update({
     where: { id: businessId },
     data: { status },
     include: {
@@ -430,6 +431,21 @@ export async function updateBusinessStatus(businessId, status) {
       plan: { select: { id: true, displayName: true } }
     }
   })
+
+  // Emit notification for status change
+  if (status === 'SUSPENDED' || status === 'BANNED') {
+    emitNotification('business_suspended', {
+      businessId,
+      data: { action: 'navigate', route: '/settings', entityType: 'business', entityId: businessId },
+    })
+  } else if (status === 'ACTIVE' && (business.status === 'SUSPENDED' || business.status === 'BANNED')) {
+    emitNotification('business_reactivated', {
+      businessId,
+      data: { action: 'navigate', route: '/home', entityType: 'business', entityId: businessId },
+    })
+  }
+
+  return updated
 }
 
 export async function updateBusinessPlan(businessId, planId) {
@@ -441,13 +457,24 @@ export async function updateBusinessPlan(businessId, planId) {
   if (!business) throw new NotFoundError('Business not found')
   if (!plan) throw new NotFoundError('Plan not found')
 
-  return prisma.business.update({
+  const updated = await prisma.business.update({
     where: { id: businessId },
     data: { planId },
     include: {
+      owner: { select: { id: true } },
       plan: { select: { id: true, name: true, displayName: true } }
     }
   })
+
+  // Emit notification for plan change
+  emitNotification('plan_changed_by_admin', {
+    userId: updated.owner.id,
+    businessId,
+    variables: { planName: plan.displayName || plan.name },
+    data: { action: 'navigate', route: '/plans', entityType: 'plan', entityId: planId },
+  })
+
+  return updated
 }
 
 // ============================================================================

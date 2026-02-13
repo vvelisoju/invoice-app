@@ -33,7 +33,7 @@ export const headerTabs = [
  * Quick-action buttons shown after the divider in the header.
  */
 export const headerQuickActions = [
-  { label: 'New Invoice', icon: Plus, path: '/invoices/new' },
+  { label: 'New', icon: Plus, path: '/invoices/new' },
 ]
 
 /**
@@ -61,7 +61,7 @@ export const ALL_INVOICE_TYPES = [
  * Default enabled invoice types when business has no config yet.
  */
 export const DEFAULT_ENABLED_TYPES = [
-  'invoice', 'quote', 'receipt'
+  'invoice', 'tax_invoice', 'receipt', 'quote'
 ]
 
 /**

@@ -4,6 +4,7 @@ import { logger } from '../../common/logger.js'
 import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 import springedge from 'springedge'
+import { emit as emitNotification } from '../notifications/service.js'
 
 const forceSms = () => process.env.FORCE_SMS === 'true' && !!config.sms.springEdgeApiKey
 const isProduction = () => (config.nodeEnv === 'production' || forceSms()) && !!config.sms.springEdgeApiKey
@@ -177,6 +178,14 @@ export const verifyOTP = async (prisma, phone, otp) => {
           ownerUserId: user.id,
           name: `Business ${phone.slice(-4)}` // Temporary name
         }
+      })
+
+      // Emit welcome notification for new users
+      emitNotification('welcome', {
+        userId: user.id,
+        businessId: business.id,
+        variables: { businessName: business.name },
+        data: { action: 'navigate', route: '/settings', entityType: 'business', entityId: business.id },
       })
     }
   }

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { NotFoundError, ValidationError, ForbiddenError } from '../../common/errors.js'
-import { checkCanIssueInvoice, incrementUsageCounter } from '../plans/service.js'
+import { checkCanIssueInvoice, incrementUsageCounter, getBusinessPlanUsage } from '../plans/service.js'
+import { emit as emitNotification } from '../notifications/service.js'
 
 // Default prefixes per document type (server-side mirror of client defaults)
 const DOC_TYPE_DEFAULT_PREFIX = {
@@ -169,6 +170,7 @@ export const createInvoice = async (prisma, businessId, data) => {
   // Increment usage counter when saving directly as PAID
   if (!business.enableStatusWorkflow) {
     await incrementUsageCounter(businessId)
+    checkUsageLimitWarning(businessId, business.ownerUserId)
   }
 
   return invoice
@@ -429,8 +431,39 @@ export const issueInvoice = async (prisma, invoiceId, businessId, templateData) 
 
   // Increment usage counter after successful issuance
   await incrementUsageCounter(businessId)
+  checkUsageLimitWarning(businessId, business.ownerUserId)
 
   return updated
+}
+
+// Fire-and-forget usage limit warning check
+async function checkUsageLimitWarning(businessId, userId) {
+  try {
+    const usage = await getBusinessPlanUsage(businessId)
+    const used = usage.usage.invoicesIssued
+    const limit = usage.plan.monthlyInvoiceLimit
+    if (limit <= 0) return
+
+    const pct = (used / limit) * 100
+
+    if (pct >= 100) {
+      emitNotification('usage_limit_reached', {
+        userId,
+        businessId,
+        variables: { limit: String(limit) },
+        data: { action: 'navigate', route: '/plans' },
+      })
+    } else if (pct >= 80) {
+      emitNotification('usage_limit_warning', {
+        userId,
+        businessId,
+        variables: { used: String(used), limit: String(limit) },
+        data: { action: 'navigate', route: '/plans' },
+      })
+    }
+  } catch {
+    // Non-critical, ignore
+  }
 }
 
 export const updateInvoiceStatus = async (prisma, invoiceId, businessId, status) => {

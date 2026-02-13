@@ -29,6 +29,7 @@ export async function getBusinessProfile(businessId) {
       enableStatusWorkflow: true,
       enabledInvoiceTypes: true,
       documentTypeConfig: true,
+      defaultDocType: true,
       planId: true,
       createdAt: true,
       updatedAt: true
@@ -84,6 +85,7 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.enableStatusWorkflow !== undefined) updateData.enableStatusWorkflow = data.enableStatusWorkflow
   if (data.enabledInvoiceTypes !== undefined) updateData.enabledInvoiceTypes = data.enabledInvoiceTypes
   if (data.documentTypeConfig !== undefined) updateData.documentTypeConfig = data.documentTypeConfig
+  if (data.defaultDocType !== undefined) updateData.defaultDocType = data.defaultDocType
 
   // Next invoice number (with validation)
   if (data.nextInvoiceNumber !== undefined) {
@@ -135,6 +137,7 @@ export async function updateBusinessProfile(businessId, data) {
       enableStatusWorkflow: true,
       enabledInvoiceTypes: true,
       documentTypeConfig: true,
+      defaultDocType: true,
       planId: true,
       createdAt: true,
       updatedAt: true
