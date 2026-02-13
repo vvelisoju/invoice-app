@@ -5,7 +5,8 @@ import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 import springedge from 'springedge'
 
-const isProduction = () => config.nodeEnv === 'production' && !!config.sms.springEdgeApiKey
+const forceSms = () => process.env.FORCE_SMS === 'true' && !!config.sms.springEdgeApiKey
+const isProduction = () => (config.nodeEnv === 'production' || forceSms()) && !!config.sms.springEdgeApiKey
 
 const generateOTP = () => {
   if (!isProduction()) {
@@ -28,21 +29,30 @@ const sendOTP = async (phone, otp) => {
 
   // Production: use SpringEdge SMS gateway
   return new Promise((resolve, reject) => {
+    const apiKey = config.sms.springEdgeApiKey
+    const sender = config.sms.springEdgeSender || 'CODVEL'
     const params = {
-      sender: config.sms.springEdgeSender || 'CODVEL',
-      apikey: config.sms.springEdgeApiKey,
+      sender,
+      apikey: apiKey,
       to: [`91${phone}`],
-      message: `Your OTP for Invoice Baba is ${otp}. Do not share this with anyone.`,
+      message: `Your OTP for Lokalhunt is ${otp}. Do not share this with anyone.`,
       format: 'json'
     }
 
+    logger.info({
+      phone,
+      sender,
+      apiKeyPrefix: apiKey ? `${apiKey.substring(0, 4)}...` : 'MISSING',
+      to: params.to
+    }, '[SpringEdge] Sending SMS with params')
+
     springedge.messages.send(params, 5000, (err, response) => {
       if (err) {
-        logger.error({ err, phone }, '[SpringEdge] SMS send error')
+        logger.error({ err, phone, errMessage: err?.message, errCode: err?.code }, '[SpringEdge] SMS send error')
         reject(new Error('Failed to send OTP via SMS'))
         return
       }
-      logger.info({ phone, status: response?.status }, '[SpringEdge] SMS sent successfully')
+      logger.info({ phone, response: JSON.stringify(response) }, '[SpringEdge] SMS API response')
       resolve(true)
     })
   })
