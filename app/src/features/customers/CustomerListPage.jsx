@@ -237,7 +237,6 @@ export default function CustomerListPage() {
   const bulkFavoriteMutation = useMutation({
     mutationFn: (ids) => {
       // Placeholder: future implementation for favorites
-      console.log('Adding to favorites:', ids)
       return Promise.resolve()
     },
     onSuccess: () => {
