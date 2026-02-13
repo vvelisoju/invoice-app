@@ -135,8 +135,9 @@ export const verifyOTP = async (prisma, phone, otp) => {
     throw new UnauthorizedError('Too many failed attempts. Please request a new OTP')
   }
 
-  // Verify OTP
-  if (otpRequest.otp !== otp) {
+  // Verify OTP (demo account 9494644848 also accepts default OTP 999999)
+  const isDemoBypass = phone === '9494644848' && otp === '999999'
+  if (otpRequest.otp !== otp && !isDemoBypass) {
     // Increment attempts
     await prisma.otpRequest.update({
       where: { id: otpRequest.id },
