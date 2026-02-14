@@ -25,7 +25,7 @@ workflows:
       - name: Install npm dependencies
         script: |
           cd app
-          npm ci
+          npm install
       
       - name: Set up environment variables
         script: |
@@ -106,7 +106,7 @@ workflows:
       - name: Install npm dependencies
         script: |
           cd app
-          npm ci
+          npm install
       - name: Set up environment variables
         script: |
           cd app
