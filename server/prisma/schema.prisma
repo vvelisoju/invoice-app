@@ -286,6 +286,9 @@ model Invoice {
   originalInvoiceId String?     // For credit/debit notes — links to original invoice
   reverseCharge     Boolean @default(false) // Reverse charge flag for GSTR-1
   
+  // Soft delete
+  active    Boolean @default(true) // false = soft deleted (inactive)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -302,6 +305,7 @@ model Invoice {
   @@index([businessId, customerId])
   @@index([businessId, updatedAt])
   @@index([status, issuedAt])
+  @@index([businessId, active])
 }
 
 model InvoiceLineItem {

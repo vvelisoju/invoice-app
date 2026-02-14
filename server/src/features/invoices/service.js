@@ -391,10 +391,12 @@ export const getInvoice = async (prisma, invoiceId, businessId) => {
 }
 
 export const listInvoices = async (prisma, businessId, filters = {}) => {
-  const { search, status, customerId, dateFrom, dateTo, limit = 20, offset = 0 } = filters
+  const { search, status, customerId, dateFrom, dateTo, limit = 20, offset = 0, active } = filters
 
   const where = {
     businessId,
+    // Filter by active status: true (default), false (inactive), or undefined (all)
+    ...(active !== undefined && { active: active === 'true' || active === true }),
     ...(status && { status }),
     ...(customerId && { customerId }),
     ...(dateFrom && { date: { gte: new Date(dateFrom) } }),
@@ -442,15 +444,40 @@ export const deleteInvoice = async (prisma, invoiceId, businessId) => {
     throw new ForbiddenError('Access denied')
   }
 
-  if (invoice.status !== 'DRAFT') {
-    throw new ValidationError('Cannot delete issued invoice')
-  }
-
-  await prisma.invoice.delete({
-    where: { id: invoiceId }
+  // Soft delete: set active = false
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { active: false }
   })
 
   return { message: 'Invoice deleted successfully' }
+}
+
+// Bulk soft delete
+export const bulkDeleteInvoices = async (prisma, invoiceIds, businessId) => {
+  // Verify all invoices belong to this business
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      id: { in: invoiceIds },
+      businessId
+    },
+    select: { id: true }
+  })
+
+  if (invoices.length !== invoiceIds.length) {
+    throw new ForbiddenError('Some invoices not found or access denied')
+  }
+
+  // Soft delete all
+  await prisma.invoice.updateMany({
+    where: {
+      id: { in: invoiceIds },
+      businessId
+    },
+    data: { active: false }
+  })
+
+  return { message: `${invoices.length} invoice(s) deleted successfully`, count: invoices.length }
 }
 
 export const issueInvoice = async (prisma, invoiceId, businessId, templateData) => {

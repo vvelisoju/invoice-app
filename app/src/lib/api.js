@@ -89,6 +89,7 @@ export const invoiceApi = {
   create: (data) => api.post('/invoices', data),
   update: (id, data) => api.patch(`/invoices/${id}`, data),
   delete: (id) => api.delete(`/invoices/${id}`),
+  bulkDelete: (invoiceIds) => api.post('/invoices/bulk-delete', { invoiceIds }),
   issue: (id, templateData) => api.post(`/invoices/${id}/issue`, templateData),
   updateStatus: (id, status) => api.patch(`/invoices/${id}/status`, { status })
 }

@@ -423,17 +423,13 @@ export default function InvoiceDetailPage() {
                         <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                       </button>
                     )}
-                    {statusWorkflow && invoice.status === 'DRAFT' && (
-                      <>
-                        <div className="border-t border-border my-1" />
-                        <button
-                          onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                          className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
-                        </button>
-                      </>
-                    )}
+                    <div className="border-t border-border my-1" />
+                    <button
+                      onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                      className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
+                    </button>
                   </div>
                 </>
               )}
@@ -567,17 +563,13 @@ export default function InvoiceDetailPage() {
                   <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                 </button>
               )}
-              {statusWorkflow && invoice.status === 'DRAFT' && (
-                <>
-                  <div className="border-t border-border my-1 mx-4" />
-                  <button
-                    onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                    className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
-                  </button>
-                </>
-              )}
+              <div className="border-t border-border my-1 mx-4" />
+              <button
+                onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
+              >
+                <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
+              </button>
             </div>
           </div>
         </>
@@ -592,8 +584,9 @@ export default function InvoiceDetailPage() {
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete {docTypeLabel}</h3>
-            <p className="text-sm text-textSecondary text-center mb-6">Are you sure you want to delete this draft {docTypeLabel.toLowerCase()}? This action cannot be undone.</p>
+            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete {docTypeLabel}?</h3>
+            <p className="text-sm text-textSecondary text-center mb-2">This {docTypeLabel.toLowerCase()} will be moved to Inactive. You can view it later by selecting the Inactive filter.</p>
+            <p className="text-xs text-textSecondary text-center mb-6">This action can be reversed by restoring from Inactive.</p>
             <div className="flex gap-3">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors">Cancel</button>
               <button
