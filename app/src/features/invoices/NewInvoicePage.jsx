@@ -72,15 +72,21 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     return params.get('type') || 'invoice'
   })
 
-  // Read ?type= query param and set invoice title on mount / URL change
+  // Read ?type= query param and update document type + title on URL change
   useEffect(() => {
+    // Skip if in edit mode — document type is locked to existing invoice
+    if (isEditMode) return
+    
     const params = new URLSearchParams(location.search)
     const typeKey = params.get('type')
     if (typeKey) {
       const found = ALL_INVOICE_TYPES.find(t => t.key === typeKey)
-      if (found) setInvoiceTitle(found.label)
+      if (found) {
+        setDocumentTypeKey(typeKey)
+        setInvoiceTitle(found.label)
+      }
     }
-  }, [location.search])
+  }, [location.search, isEditMode])
 
   // Pre-populate customer from ?customerId= URL param
   useEffect(() => {

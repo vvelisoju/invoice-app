@@ -136,7 +136,7 @@ export const createInvoice = async (prisma, businessId, data) => {
     if (entries.length > 0) {
       taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
       taxBreakup = entries.sort((a, b) => a.rate - b.rate)
-      taxMode = 'PER_ITEM'
+      taxMode = 'NONE'
     }
   }
 
@@ -300,7 +300,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
       if (entries.length > 0) {
         taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
         taxBreakup = entries.sort((a, b) => a.rate - b.rate)
-        taxMode = 'PER_ITEM'
+        taxMode = 'NONE'
       }
     }
 
