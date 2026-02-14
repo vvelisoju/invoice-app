@@ -25,6 +25,7 @@ workflows:
       - name: Install npm dependencies
         script: |
           cd app
+          rm -rf node_modules
           npm install
       
       - name: Set up environment variables
@@ -106,6 +107,7 @@ workflows:
       - name: Install npm dependencies
         script: |
           cd app
+          rm -rf node_modules
           npm install
       - name: Set up environment variables
         script: |
