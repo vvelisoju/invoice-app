@@ -171,6 +171,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         hsnCode: item.hsnCode || '',
         taxRate: item.taxRate || null,
         taxRateName: item.taxRateName || null,
+        taxComponents: item.taxComponents || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: inv.discountTotal || 0,
@@ -219,6 +220,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             hsnCode: item.hsnCode || '',
             taxRate: item.taxRate || null,
             taxRateName: item.taxRateName || null,
+            taxComponents: item.taxComponents || null,
             productServiceId: item.productServiceId || null
           })),
           discountTotal: inv.discountTotal || 0,
@@ -253,6 +255,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         hsnCode: item.hsnCode || '',
         taxRate: item.taxRate || null,
         taxRateName: item.taxRateName || null,
+        taxComponents: item.taxComponents || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: cloneData.discountTotal || 0,
@@ -275,6 +278,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           hsnCode: item.hsnCode || null,
           taxRate: item.taxRate ? Number(item.taxRate) : null,
           taxRateName: item.taxRateName || null,
+          taxComponents: item.taxComponents || null,
           productServiceId: item.productServiceId || null
         }))
 

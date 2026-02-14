@@ -2,10 +2,22 @@ import { prisma } from '../../common/prisma.js'
 import { NotFoundError, ForbiddenError } from '../../common/errors.js'
 
 export async function listTaxRates(businessId) {
-  return prisma.taxRate.findMany({
+  const taxRates = await prisma.taxRate.findMany({
     where: { businessId },
     orderBy: [{ isDefault: 'desc' }, { rate: 'asc' }]
   })
+
+  // Enrich each tax rate with product usage count
+  const enriched = await Promise.all(
+    taxRates.map(async (tr) => {
+      const productCount = await prisma.productService.count({
+        where: { businessId, taxRateName: tr.name }
+      })
+      return { ...tr, productCount }
+    })
+  )
+
+  return enriched
 }
 
 export async function createTaxRate(businessId, data) {
@@ -22,7 +34,8 @@ export async function createTaxRate(businessId, data) {
       businessId,
       name: data.name,
       rate: data.rate,
-      isDefault: data.isDefault || false
+      isDefault: data.isDefault || false,
+      components: data.components || null
     }
   })
 }
@@ -43,9 +56,15 @@ export async function updateTaxRate(businessId, taxRateId, data) {
     })
   }
 
+  // Ensure components field is explicitly handled
+  const updateData = { ...data }
+  if ('components' in updateData) {
+    updateData.components = updateData.components || null
+  }
+
   return prisma.taxRate.update({
     where: { id: taxRateId },
-    data
+    data: updateData
   })
 }
 
@@ -56,6 +75,17 @@ export async function deleteTaxRate(businessId, taxRateId) {
 
   if (!taxRate) throw new NotFoundError('Tax rate not found')
   if (taxRate.businessId !== businessId) throw new ForbiddenError('Access denied')
+
+  // Check if any products are using this tax rate
+  const productCount = await prisma.productService.count({
+    where: { businessId, taxRateName: taxRate.name }
+  })
+
+  if (productCount > 0) {
+    const err = new Error(`Cannot delete: ${productCount} product(s) use this tax rate`)
+    err.statusCode = 409
+    throw err
+  }
 
   return prisma.taxRate.delete({
     where: { id: taxRateId }

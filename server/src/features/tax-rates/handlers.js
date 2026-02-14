@@ -25,6 +25,13 @@ export async function handleUpdateTaxRate(request, reply) {
 export async function handleDeleteTaxRate(request, reply) {
   const businessId = request.user.businessId
   const { id } = request.params
-  await taxRateService.deleteTaxRate(businessId, id)
-  return { success: true }
+  try {
+    await taxRateService.deleteTaxRate(businessId, id)
+    return { success: true }
+  } catch (err) {
+    if (err.statusCode === 409) {
+      return reply.status(409).send({ error: { message: err.message } })
+    }
+    throw err
+  }
 }

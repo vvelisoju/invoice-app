@@ -308,34 +308,44 @@ function TaxRateModal({ isOpen, onClose, onSelect, taxRates, currentTaxRate }) {
             </div>
           )}
 
-          {taxRates.map((tr) => (
-            <button
-              key={tr.id}
-              onClick={() => { onSelect(tr); handleClose() }}
-              className={`w-full px-5 py-3.5 text-left flex items-center justify-between transition-colors border-b border-border/50 last:border-b-0 ${
-                currentTaxRate && Number(currentTaxRate) === Number(tr.rate)
-                  ? 'bg-blue-50/50'
-                  : 'active:bg-gray-50 md:hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                  tr.isDefault ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {Number(tr.rate)}%
+          {taxRates.map((tr) => {
+            const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+            return (
+              <button
+                key={tr.id}
+                onClick={() => { onSelect(tr); handleClose() }}
+                className={`w-full px-5 py-3.5 text-left flex items-center justify-between transition-colors border-b border-border/50 last:border-b-0 ${
+                  currentTaxRate && Number(currentTaxRate) === Number(tr.rate)
+                    ? 'bg-blue-50/50'
+                    : 'active:bg-gray-50 md:hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                    tr.isDefault ? 'bg-green-100 text-green-700' : isGroup ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {Number(tr.rate)}%
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-textPrimary flex items-center gap-1.5">
+                      {tr.name}
+                      {isGroup && (
+                        <span className="text-[9px] font-semibold text-blue-600 bg-blue-50 px-1 py-0.5 rounded uppercase">Group</span>
+                      )}
+                    </div>
+                    {isGroup ? (
+                      <span className="text-[10px] text-textSecondary">{tr.components.map(c => `${c.name} ${c.rate}%`).join(' + ')}</span>
+                    ) : tr.isDefault ? (
+                      <span className="text-[10px] font-semibold text-green-600 uppercase">Default</span>
+                    ) : null}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-textPrimary">{tr.name}</div>
-                  {tr.isDefault && (
-                    <span className="text-[10px] font-semibold text-green-600 uppercase">Default</span>
-                  )}
-                </div>
-              </div>
-              {currentTaxRate && Number(currentTaxRate) === Number(tr.rate) && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
-            </button>
-          ))}
+                {currentTaxRate && Number(currentTaxRate) === Number(tr.rate) && (
+                  <Check className="w-4 h-4 text-primary" />
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Create new section */}
@@ -415,6 +425,8 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
   const handleSelect = (taxRate) => {
     onUpdate(index, 'taxRate', taxRate ? Number(taxRate.rate) : null)
     onUpdate(index, 'taxRateName', taxRate ? taxRate.name : null)
+    const isGroup = taxRate?.components && Array.isArray(taxRate.components) && taxRate.components.length >= 2
+    onUpdate(index, 'taxComponents', isGroup ? taxRate.components : null)
   }
 
   const label = item.taxRate
@@ -746,12 +758,17 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
     enabled: !demoMode
   })
 
-  // Enrich product with taxRateName from available tax rates before passing to parent
+  // Enrich product with taxRateName and taxComponents from available tax rates before passing to parent
   const handleProductSelect = useCallback((index, product) => {
     if (product?.taxRate && taxRates.length > 0) {
       const matchingTaxRate = taxRates.find(tr => Number(tr.rate) === Number(product.taxRate))
       if (matchingTaxRate) {
-        onProductSelect(index, { ...product, taxRateName: matchingTaxRate.name })
+        const isGroup = matchingTaxRate.components && Array.isArray(matchingTaxRate.components) && matchingTaxRate.components.length >= 2
+        onProductSelect(index, {
+          ...product,
+          taxRateName: matchingTaxRate.name,
+          taxComponents: isGroup ? matchingTaxRate.components : null
+        })
         return
       }
     }

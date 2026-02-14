@@ -85,6 +85,7 @@ export const createInvoice = async (prisma, businessId, data) => {
   let taxMode = 'NONE'
 
   if (data.taxRate && parseFloat(data.taxRate) > 0) {
+    // Invoice-level tax rate (legacy / simple mode)
     const taxableAmount = subtotal - discountTotal
     const taxRate = parseFloat(data.taxRate)
     taxTotal = (taxableAmount * taxRate) / 100
@@ -106,6 +107,36 @@ export const createInvoice = async (prisma, businessId, data) => {
           igstAmount: taxTotal
         }
       }
+    }
+  } else {
+    // Per-line-item taxes: sum tax from each line item individually
+    const breakdown = {}
+    data.lineItems.forEach(item => {
+      if (item.taxRate && parseFloat(item.taxRate) > 0) {
+        const lineTotal = parseFloat(item.quantity) * parseFloat(item.rate)
+        const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+          ? item.taxComponents : null
+        if (comps) {
+          comps.forEach(c => {
+            const key = `${c.name}_${c.rate}`
+            const amt = (lineTotal * Number(c.rate)) / 100
+            if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+            breakdown[key].amount += amt
+          })
+        } else {
+          const rate = parseFloat(item.taxRate)
+          const key = String(rate)
+          const amt = (lineTotal * rate) / 100
+          if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+          breakdown[key].amount += amt
+        }
+      }
+    })
+    const entries = Object.values(breakdown)
+    if (entries.length > 0) {
+      taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
+      taxBreakup = entries.sort((a, b) => a.rate - b.rate)
+      taxMode = 'PER_ITEM'
     }
   }
 
@@ -157,6 +188,9 @@ export const createInvoice = async (prisma, businessId, data) => {
           quantity: parseFloat(item.quantity),
           rate: parseFloat(item.rate),
           lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
+          taxRate: item.taxRate ? parseFloat(item.taxRate) : null,
+          taxRateName: item.taxRateName || null,
+          taxComponents: item.taxComponents || null,
           productServiceId: item.productServiceId || null
         }))
       }
@@ -212,6 +246,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
     let taxMode = invoice.taxMode
 
     if (data.taxRate && parseFloat(data.taxRate) > 0) {
+      // Invoice-level tax rate (legacy / simple mode)
       const taxableAmount = subtotal - discountTotal
       const taxRate = parseFloat(data.taxRate)
       taxTotal = (taxableAmount * taxRate) / 100
@@ -236,6 +271,36 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
             igstAmount: taxTotal
           }
         }
+      }
+    } else {
+      // Per-line-item taxes: sum tax from each line item individually
+      const breakdown = {}
+      data.lineItems.forEach(item => {
+        if (item.taxRate && parseFloat(item.taxRate) > 0) {
+          const lineTotal = parseFloat(item.quantity) * parseFloat(item.rate)
+          const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+            ? item.taxComponents : null
+          if (comps) {
+            comps.forEach(c => {
+              const key = `${c.name}_${c.rate}`
+              const amt = (lineTotal * Number(c.rate)) / 100
+              if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+              breakdown[key].amount += amt
+            })
+          } else {
+            const rate = parseFloat(item.taxRate)
+            const key = String(rate)
+            const amt = (lineTotal * rate) / 100
+            if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+            breakdown[key].amount += amt
+          }
+        }
+      })
+      const entries = Object.values(breakdown)
+      if (entries.length > 0) {
+        taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
+        taxBreakup = entries.sort((a, b) => a.rate - b.rate)
+        taxMode = 'PER_ITEM'
       }
     }
 
@@ -283,6 +348,9 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
             quantity: parseFloat(item.quantity),
             rate: parseFloat(item.rate),
             lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
+            taxRate: item.taxRate ? parseFloat(item.taxRate) : null,
+            taxRateName: item.taxRateName || null,
+            taxComponents: item.taxComponents || null,
             ...(item.productServiceId ? { productService: { connect: { id: item.productServiceId } } } : {})
           }))
         }

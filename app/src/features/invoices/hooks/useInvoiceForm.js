@@ -250,6 +250,7 @@ export function useInvoiceForm(invoiceId = null) {
         productServiceId: product?.id || null,
         taxRate: product?.taxRate || null,
         taxRateName: product?.taxRateName || newLineItems[index].taxRateName || null,
+        taxComponents: product?.taxComponents || null,
         lineTotal: (parseFloat(newLineItems[index].quantity) || 0) * (parseFloat(product?.defaultRate) || 0)
       }
 
@@ -282,6 +283,7 @@ export function useInvoiceForm(invoiceId = null) {
           rate: updatedRate,
           taxRate: product.taxRate != null ? product.taxRate : item.taxRate,
           taxRateName: product.taxRateName || item.taxRateName || null,
+          taxComponents: product.taxComponents !== undefined ? product.taxComponents : item.taxComponents || null,
           lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(updatedRate) || 0)
         }
       })

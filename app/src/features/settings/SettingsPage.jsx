@@ -25,7 +25,11 @@ import {
   User,
   Phone,
   Mail,
-  Pencil
+  Pencil,
+  Layers,
+  AlertTriangle,
+  Info,
+  Package
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
@@ -1122,8 +1126,12 @@ export default function SettingsPage() {
     const section = params.get('section')
     return section && SETTINGS_TABS.some(t => t.key === section) ? section : 'business'
   })
-  const [newTaxRate, setNewTaxRate] = useState({ name: '', rate: '', isDefault: false })
-  const [showAddTaxRate, setShowAddTaxRate] = useState(false)
+  const emptyTaxForm = { name: '', rate: '', isDefault: false, isGroup: false, components: [{ name: '', rate: '' }, { name: '', rate: '' }] }
+  const [taxForm, setTaxForm] = useState(emptyTaxForm)
+  const [showTaxForm, setShowTaxForm] = useState(false) // 'add' | 'edit' | false
+  const [editingTaxId, setEditingTaxId] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, name, productCount }
+  const [deleteError, setDeleteError] = useState('')
   const tabsRef = useRef(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
 
@@ -1177,36 +1185,103 @@ export default function SettingsPage() {
     mutationFn: (data) => taxRateApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['taxRates'] })
-      setNewTaxRate({ name: '', rate: '', isDefault: false })
-      setShowAddTaxRate(false)
+      closeTaxForm()
     }
   })
 
   const updateTaxRateMutation = useMutation({
     mutationFn: ({ id, data }) => taxRateApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+      closeTaxForm()
+    }
   })
 
   const deleteTaxRateMutation = useMutation({
     mutationFn: (id) => taxRateApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+      setDeleteConfirm(null)
+      setDeleteError('')
+    },
+    onError: (err) => {
+      setDeleteError(err.response?.data?.error?.message || 'Failed to delete')
+    }
   })
 
-  const handleAddTaxRate = () => {
-    if (!newTaxRate.name.trim() || !newTaxRate.rate) return
-    createTaxRateMutation.mutate({
-      name: newTaxRate.name.trim(),
-      rate: parseFloat(newTaxRate.rate),
-      isDefault: newTaxRate.isDefault
+  const closeTaxForm = () => {
+    setShowTaxForm(false)
+    setEditingTaxId(null)
+    setTaxForm(emptyTaxForm)
+  }
+
+  const openAddForm = () => {
+    setTaxForm(emptyTaxForm)
+    setEditingTaxId(null)
+    setShowTaxForm('add')
+  }
+
+  const openEditForm = (tr) => {
+    const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+    setTaxForm({
+      name: tr.name,
+      rate: String(Number(tr.rate)),
+      isDefault: tr.isDefault,
+      isGroup,
+      components: isGroup
+        ? tr.components.map(c => ({ name: c.name, rate: String(c.rate) }))
+        : [{ name: '', rate: '' }, { name: '', rate: '' }]
     })
+    setEditingTaxId(tr.id)
+    setShowTaxForm('edit')
+  }
+
+  const handleSaveTaxRate = () => {
+    if (!taxForm.name.trim()) return
+    if (taxForm.isGroup) {
+      const validComponents = taxForm.components.filter(c => c.name.trim() && c.rate !== '' && parseFloat(c.rate) >= 0)
+      if (validComponents.length < 2) return
+      const totalRate = validComponents.reduce((sum, c) => sum + parseFloat(c.rate), 0)
+      const payload = {
+        name: taxForm.name.trim(),
+        rate: Math.round(totalRate * 100) / 100,
+        isDefault: taxForm.isDefault,
+        components: validComponents.map(c => ({ name: c.name.trim(), rate: parseFloat(c.rate) }))
+      }
+      if (showTaxForm === 'edit' && editingTaxId) {
+        updateTaxRateMutation.mutate({ id: editingTaxId, data: payload })
+      } else {
+        createTaxRateMutation.mutate(payload)
+      }
+    } else {
+      if (!taxForm.rate) return
+      const payload = {
+        name: taxForm.name.trim(),
+        rate: parseFloat(taxForm.rate),
+        isDefault: taxForm.isDefault,
+        components: null
+      }
+      if (showTaxForm === 'edit' && editingTaxId) {
+        updateTaxRateMutation.mutate({ id: editingTaxId, data: payload })
+      } else {
+        createTaxRateMutation.mutate(payload)
+      }
+    }
   }
 
   const handleSetDefault = (taxRate) => {
     updateTaxRateMutation.mutate({ id: taxRate.id, data: { isDefault: true } })
   }
 
-  const handleDeleteTaxRate = (id) => {
-    deleteTaxRateMutation.mutate(id)
+  const confirmDelete = (tr) => {
+    setDeleteError('')
+    setDeleteConfirm({ id: tr.id, name: tr.name, productCount: tr.productCount || 0 })
+  }
+
+  const executeDelete = () => {
+    if (deleteConfirm) {
+      deleteTaxRateMutation.mutate(deleteConfirm.id)
+    }
   }
 
   const handleChange = (field, value) => {
@@ -1380,141 +1455,393 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* GST Settings Tab — Tax Rates Management */}
+          {/* GST Settings Tab — Tax Rates & Tax Groups Management */}
           {activeTab === 'gst' && (
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                    <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Configure reusable tax rates</p>
-                  </div>
-                </div>
-                {!showAddTaxRate && (
-                  <button
-                    onClick={() => setShowAddTaxRate(true)}
-                    className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
-                  >
-                    <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    Add
-                  </button>
-                )}
-              </div>
-              <div className="p-4 md:p-6 space-y-3 md:space-y-4">
-                {/* Add new tax rate form */}
-                {showAddTaxRate && (
-                  <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-lg space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <input
-                        type="text"
-                        value={newTaxRate.name}
-                        onChange={(e) => setNewTaxRate(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., GST 18%"
-                        autoFocus
-                        className="px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={newTaxRate.rate}
-                        onChange={(e) => setNewTaxRate(prev => ({ ...prev, rate: e.target.value }))}
-                        placeholder="Rate %"
-                        className="px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      />
-                      <label className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-border rounded-lg cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newTaxRate.isDefault}
-                          onChange={(e) => setNewTaxRate(prev => ({ ...prev, isDefault: e.target.checked }))}
-                          className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
-                        />
-                        <span className="text-sm text-textPrimary">Set as default</span>
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleAddTaxRate}
-                        disabled={createTaxRateMutation.isPending || !newTaxRate.name.trim() || !newTaxRate.rate}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                      >
-                        {createTaxRateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                        Add
-                      </button>
-                      <button
-                        onClick={() => { setShowAddTaxRate(false); setNewTaxRate({ name: '', rate: '', isDefault: false }) }}
-                        className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+            <>
+              {/* GST Info Toggle */}
+                
 
-                {/* Tax rates list */}
-                {taxRatesLoading ? (
-                  <div className="flex justify-center py-6">
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              {/* Tax Rates & Groups Card */}
+              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 md:gap-3">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                      <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates & Groups</h3>
+                      <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Create taxes to apply on your products and invoices</p>
+                    </div>
                   </div>
-                ) : taxRates.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Percent className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-textSecondary">No tax rates configured yet</p>
-                    <p className="text-xs text-textSecondary mt-1">Add tax rates to use them on products and invoices</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {taxRates.map((tr) => (
-                      <div
-                        key={tr.id}
-                        className="flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-border transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                            tr.isDefault ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {Number(tr.rate)}%
+                  {!showTaxForm && (
+                    <button
+                      onClick={openAddForm}
+                      className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
+                    >
+                      <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                      Add
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 md:p-6 space-y-3 md:space-y-4">
+
+                  {/* Add / Edit tax rate form */}
+                  {showTaxForm && (
+                    <div className={`p-4 rounded-xl border space-y-4 ${showTaxForm === 'edit' ? 'bg-amber-50/50 border-amber-200' : 'bg-blue-50/50 border-blue-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-textPrimary uppercase tracking-wider">
+                          {showTaxForm === 'edit' ? 'Edit Tax' : 'New Tax'}
+                        </h4>
+                        <button onClick={closeTaxForm} className="w-7 h-7 flex items-center justify-center text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-100 md:hover:bg-gray-100 rounded-lg transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Type toggle */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTaxForm(prev => ({ ...prev, isGroup: false }))}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+                            !taxForm.isGroup
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white text-textSecondary border border-border active:bg-gray-50 md:hover:bg-gray-50'
+                          }`}
+                        >
+                          <Percent className="w-3 h-3" />
+                          Single Tax
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTaxForm(prev => ({ ...prev, isGroup: true }))}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+                            taxForm.isGroup
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white text-textSecondary border border-border active:bg-gray-50 md:hover:bg-gray-50'
+                          }`}
+                        >
+                          <Layers className="w-3 h-3" />
+                          Tax Group
+                        </button>
+                      </div>
+
+                      {/* Helpful hint */}
+                      <p className="text-[11px] text-textSecondary leading-relaxed">
+                        {taxForm.isGroup
+                          ? 'A tax group combines multiple taxes (e.g., CGST 9% + SGST 9% = GST 18%). Each component shows separately on invoices.'
+                          : 'A single tax rate like IGST 18% or VAT 5%. Use this for simple, flat-rate taxes.'
+                        }
+                      </p>
+
+                      {!taxForm.isGroup ? (
+                        /* Simple Tax Rate Form */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={taxForm.name}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="e.g., IGST 18%"
+                              autoFocus
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-textPrimary flex items-center gap-2">
-                              {tr.name}
-                              {tr.isDefault && (
-                                <span className="text-[10px] font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-textSecondary">{Number(tr.rate)}% tax rate</div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Rate (%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              value={taxForm.rate}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, rate: e.target.value }))}
+                              placeholder="e.g., 18"
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          {!tr.isDefault && (
+                      ) : (
+                        /* Tax Group Form */
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Group Name</label>
+                            <input
+                              type="text"
+                              value={taxForm.name}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="e.g., GST 18%"
+                              autoFocus
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
+                          </div>
+
+                          {/* Component taxes */}
+                          <div className="space-y-2">
+                            <label className="block text-[11px] font-semibold text-textSecondary">Components</label>
+                            {taxForm.components.map((comp, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={comp.name}
+                                  onChange={(e) => {
+                                    const updated = [...taxForm.components]
+                                    updated[idx] = { ...updated[idx], name: e.target.value }
+                                    setTaxForm(prev => ({ ...prev, components: updated }))
+                                  }}
+                                  placeholder={idx === 0 ? 'e.g., CGST' : idx === 1 ? 'e.g., SGST' : 'Tax name'}
+                                  className="flex-1 px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                />
+                                <div className="relative w-24 shrink-0">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    value={comp.rate}
+                                    onChange={(e) => {
+                                      const updated = [...taxForm.components]
+                                      updated[idx] = { ...updated[idx], rate: e.target.value }
+                                      setTaxForm(prev => ({ ...prev, components: updated }))
+                                    }}
+                                    placeholder="Rate"
+                                    className="w-full px-3 py-2 pr-7 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-right"
+                                  />
+                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-textSecondary pointer-events-none">%</span>
+                                </div>
+                                {taxForm.components.length > 2 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = taxForm.components.filter((_, i) => i !== idx)
+                                      setTaxForm(prev => ({ ...prev, components: updated }))
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                             <button
-                              onClick={() => handleSetDefault(tr)}
-                              title="Set as default"
-                              className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                              type="button"
+                              onClick={() => setTaxForm(prev => ({ ...prev, components: [...prev.components, { name: '', rate: '' }] }))}
+                              className="text-xs font-medium text-primary active:text-primaryHover md:hover:text-primaryHover flex items-center gap-1 py-1"
                             >
-                              <Star className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
+                              Add another component
                             </button>
-                          )}
+                          </div>
+
+                          {/* Auto-calculated total */}
+                          {(() => {
+                            const validComps = taxForm.components.filter(c => c.rate !== '' && parseFloat(c.rate) >= 0)
+                            const totalRate = validComps.reduce((sum, c) => sum + parseFloat(c.rate || 0), 0)
+                            return validComps.length >= 2 ? (
+                              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-green-200 rounded-lg">
+                                <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                <span className="text-xs text-textSecondary">Total:</span>
+                                <span className="text-sm font-bold text-green-700">{Math.round(totalRate * 100) / 100}%</span>
+                                <span className="text-[10px] text-textSecondary hidden sm:inline">
+                                  ({taxForm.components.filter(c => c.name.trim() && c.rate).map(c => `${c.name} ${c.rate}%`).join(' + ')})
+                                </span>
+                              </div>
+                            ) : null
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Default checkbox + action buttons */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={taxForm.isDefault}
+                            onChange={(e) => setTaxForm(prev => ({ ...prev, isDefault: e.target.checked }))}
+                            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
+                          />
+                          <span className="text-xs text-textPrimary">Use as default for new items</span>
+                        </label>
+                        <div className="flex items-center gap-2 sm:ml-auto">
                           <button
-                            onClick={() => handleDeleteTaxRate(tr.id)}
-                            title="Delete"
-                            className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            onClick={closeTaxForm}
+                            className="px-4 py-2 text-xs font-medium text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-100 md:hover:bg-gray-100 rounded-lg transition-colors"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveTaxRate}
+                            disabled={(createTaxRateMutation.isPending || updateTaxRateMutation.isPending) || !taxForm.name.trim() || (!taxForm.isGroup && !taxForm.rate) || (taxForm.isGroup && taxForm.components.filter(c => c.name.trim() && c.rate !== '' && parseFloat(c.rate) >= 0).length < 2)}
+                            className="px-4 py-2 text-xs font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+                          >
+                            {(createTaxRateMutation.isPending || updateTaxRateMutation.isPending) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            {showTaxForm === 'edit' ? 'Save Changes' : taxForm.isGroup ? 'Add Group' : 'Add Tax'}
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                  {/* Tax rates & groups list */}
+                  {taxRatesLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    </div>
+                  ) : taxRates.length === 0 && !showTaxForm ? (
+                    <div className="text-center py-10">
+                      <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+                        <Percent className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <p className="text-sm font-medium text-textPrimary">No taxes set up yet</p>
+                      <p className="text-xs text-textSecondary mt-1 max-w-xs mx-auto">Create a tax rate (e.g., IGST 18%) or a tax group (e.g., CGST 9% + SGST 9%) to use on your products and invoices.</p>
+                      <button
+                        onClick={openAddForm}
+                        className="mt-4 px-4 py-2 text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-blue-100"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Create your first tax
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {taxRates.map((tr) => {
+                        const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+                        const isEditing = editingTaxId === tr.id && showTaxForm === 'edit'
+                        const hasProducts = (tr.productCount || 0) > 0
+                        if (isEditing) return null // form is shown above
+                        return (
+                          <div
+                            key={tr.id}
+                            className="px-4 py-3 bg-gray-50/80 active:bg-gray-100 md:hover:bg-gray-100 rounded-xl border border-border/80 transition-colors group"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                                  isGroup ? 'bg-blue-100 text-blue-700' : tr.isDefault ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {isGroup
+                                    ? <Layers className="w-4 h-4" />
+                                    : <span className="text-xs font-bold">{Number(tr.rate)}%</span>
+                                  }
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-sm font-semibold text-textPrimary">{tr.name}</span>
+                                    {tr.isDefault && (
+                                      <span className="text-[9px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                        Default
+                                      </span>
+                                    )}
+                                    {isGroup && (
+                                      <span className="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                        Group
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-textSecondary mt-0.5">
+                                    {isGroup
+                                      ? tr.components.map(c => `${c.name} ${c.rate}%`).join(' + ') + ` = ${Number(tr.rate)}%`
+                                      : `${Number(tr.rate)}% tax rate`
+                                    }
+                                  </div>
+                                  {hasProducts && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <Package className="w-3 h-3 text-gray-400" />
+                                      <span className="text-[10px] text-textSecondary">{tr.productCount} product{tr.productCount !== 1 ? 's' : ''} using this</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                {!tr.isDefault && (
+                                  <button
+                                    onClick={() => handleSetDefault(tr)}
+                                    title="Set as default"
+                                    className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-yellow-600 md:hover:text-yellow-600 active:bg-yellow-50 md:hover:bg-yellow-50 rounded-lg transition-colors"
+                                  >
+                                    <Star className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => openEditForm(tr)}
+                                  title="Edit"
+                                  className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-primary md:hover:text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => confirmDelete(tr)}
+                                  title="Delete"
+                                  className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {/* Delete Confirmation Dialog */}
+              {deleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setDeleteConfirm(null); setDeleteError('') }} />
+                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+                    <div className="p-5 text-center">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                        deleteConfirm.productCount > 0 ? 'bg-amber-100' : 'bg-red-100'
+                      }`}>
+                        <AlertTriangle className={`w-6 h-6 ${deleteConfirm.productCount > 0 ? 'text-amber-600' : 'text-red-600'}`} />
+                      </div>
+                      <h3 className="text-base font-bold text-textPrimary mb-1">Delete "{deleteConfirm.name}"?</h3>
+                      {deleteConfirm.productCount > 0 ? (
+                        <p className="text-sm text-textSecondary">
+                          This tax is used by <strong className="text-amber-700">{deleteConfirm.productCount} product{deleteConfirm.productCount !== 1 ? 's' : ''}</strong>. Remove it from those products first before deleting.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-textSecondary">
+                          This will permanently remove this tax. This action cannot be undone.
+                        </p>
+                      )}
+                      {deleteError && (
+                        <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                          {deleteError}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex border-t border-border">
+                      <button
+                        onClick={() => { setDeleteConfirm(null); setDeleteError('') }}
+                        className="flex-1 px-4 py-3 text-sm font-medium text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      {deleteConfirm.productCount > 0 ? (
+                        <button
+                          onClick={() => { setDeleteConfirm(null); setDeleteError('') }}
+                          className="flex-1 px-4 py-3 text-sm font-semibold text-amber-700 active:bg-amber-50 md:hover:bg-amber-50 border-l border-border transition-colors"
+                        >
+                          Understood
+                        </button>
+                      ) : (
+                        <button
+                          onClick={executeDelete}
+                          disabled={deleteTaxRateMutation.isPending}
+                          className="flex-1 px-4 py-3 text-sm font-semibold text-red-600 active:bg-red-50 md:hover:bg-red-50 border-l border-border transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                        >
+                          {deleteTaxRateMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Bank & Payment Tab */}

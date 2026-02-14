@@ -53,6 +53,56 @@ const formatDate = (dateString) => {
   })
 }
 
+// Format per-line-item tax label for display in the table
+const formatItemTax = (item) => {
+  if (!item.taxRate && !item.taxRateName) return ''
+  const rate = Number(item.taxRate)
+  if (rate && item.taxRateName) return `${rate}% ${item.taxRateName}`
+  if (rate) return `${rate}%`
+  return item.taxRateName
+}
+
+// Check if any line item has per-item tax data
+const hasLineItemTax = (lineItems) => lineItems?.some(item => item.taxRate || item.taxRateName)
+
+// Compute per-rate tax breakdown from line items
+function computeTaxBreakdown(lineItems) {
+  const breakdown = {}
+  ;(lineItems || []).forEach((item) => {
+    if (item.taxRate && Number(item.taxRate) > 0) {
+      const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)
+      const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+        ? item.taxComponents : null
+      if (comps) {
+        comps.forEach((c) => {
+          const key = `${c.name}_${c.rate}`
+          const amt = (lineTotal * Number(c.rate)) / 100
+          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+          breakdown[key].amount += amt
+        })
+      } else {
+        const rate = Number(item.taxRate)
+        const key = String(rate)
+        const amt = (lineTotal * rate) / 100
+        if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+        breakdown[key].amount += amt
+      }
+    }
+  })
+  const entries = Object.values(breakdown).sort((a, b) => a.rate - b.rate)
+  const totalTax = entries.reduce((sum, e) => sum + e.amount, 0)
+  return { entries, totalTax }
+}
+
+// Compute the correct invoice total, accounting for per-item taxes
+function computeInvoiceTotal(invoice) {
+  const subtotal = parseFloat(invoice.subtotal) || 0
+  const discount = parseFloat(invoice.discountTotal) || 0
+  const { totalTax } = computeTaxBreakdown(invoice.lineItems)
+  const tax = totalTax > 0 ? totalTax : (parseFloat(invoice.taxTotal) || 0)
+  return subtotal - discount + tax
+}
+
 const getLogoUrl = (invoice) => invoice.logoUrl || invoice.business?.logoUrl
 const getSignatureUrl = (invoice) => invoice.signatureUrl || invoice.business?.signatureUrl
 
@@ -605,12 +655,14 @@ function AddressSection({ invoice, doc, palette, layout }) {
 function TableSection({ invoice, doc, palette, layout }) {
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
   const showSno = layout.showSerialNo
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
 
   const colSno = { width: 25 }
   const colName = { flex: 3 }
   const colNameBasic = { flex: 4 }
   const colQty = { flex: 1, textAlign: 'center' }
   const colRate = { flex: 1, textAlign: 'right' }
+  const colTax = { flex: 1, textAlign: 'center' }
   const colTotal = { flex: 1, textAlign: 'right' }
 
   // Table header styles vary by tableStyle
@@ -625,6 +677,7 @@ function TableSection({ invoice, doc, palette, layout }) {
         <Text style={[headerStyles.text, isBasic ? colNameBasic : colName]}>{doc.descriptionCol}</Text>
         {!isBasic && <Text style={[headerStyles.text, colQty]}>{doc.qtyCol}</Text>}
         {!isBasic && <Text style={[headerStyles.text, colRate]}>{doc.unitPriceCol}</Text>}
+        {showTaxCol && <Text style={[headerStyles.text, colTax]}>{doc.taxCol}</Text>}
         <Text style={[headerStyles.text, colTotal]}>{doc.amountCol}</Text>
       </View>
       {/* Data Rows */}
@@ -639,6 +692,7 @@ function TableSection({ invoice, doc, palette, layout }) {
             </View>
             {!isBasic && <Text style={colQty}>{item.quantity}</Text>}
             {!isBasic && <Text style={colRate}>{formatCurrency(item.rate)}</Text>}
+            {showTaxCol && <Text style={[colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
             <Text style={colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
           </View>
         )
@@ -726,17 +780,32 @@ function TotalsSection({ invoice, doc, palette, layout }) {
           <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>-{formatCurrency(invoice.discountTotal)}</Text>
         </View>
       )}
-      {/* Tax */}
-      {doc.showTax && invoice.taxTotal > 0 && (
-        <View style={{ flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 }}>
-          <Text style={{ fontSize: 9, color: palette.textLight }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-          <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatCurrency(invoice.taxTotal)}</Text>
-        </View>
-      )}
+      {/* Tax — expand tax group components into individual lines */}
+      {doc.showTax && (() => {
+        const { entries } = computeTaxBreakdown(invoice.lineItems)
+        if (entries.length > 0) {
+          return entries.map((entry, i) => (
+            <View key={i} style={{ flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 }}>
+              <Text style={{ fontSize: 9, color: palette.textLight }}>{entry.name} ({entry.rate}%)</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatCurrency(entry.amount)}</Text>
+            </View>
+          ))
+        }
+        // Fallback: invoice-level tax
+        if (invoice.taxTotal > 0) {
+          return (
+            <View style={{ flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 }}>
+              <Text style={{ fontSize: 9, color: palette.textLight }}>Tax{invoice.taxRate ? ` (${invoice.taxRate}%)` : ''}</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatCurrency(invoice.taxTotal)}</Text>
+            </View>
+          )
+        }
+        return null
+      })()}
       {/* Grand Total */}
       <View style={grandStyle.container}>
         <Text style={grandStyle.label}>TOTAL</Text>
-        <Text style={grandStyle.value}>{formatCurrency(invoice.total)}</Text>
+        <Text style={grandStyle.value}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
       </View>
     </View>
   )

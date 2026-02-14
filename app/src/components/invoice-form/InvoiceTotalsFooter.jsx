@@ -169,20 +169,39 @@ export default function InvoiceTotalsFooter({
   const showTerms = docTypeConfig?.fields?.showTerms !== false
   const showSignature = docTypeConfig?.fields?.showSignature !== false
   // Compute per-tax-rate breakdown from line items
+  // When a line item has taxComponents (tax group), expand into individual component lines
   const taxBreakdown = useMemo(() => {
     const breakdown = {}
     lineItems.forEach((item) => {
       if (item.taxRate && item.taxRate > 0) {
-        const rate = Number(item.taxRate)
-        const key = String(rate)
         const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)
-        const taxAmount = (lineTotal * rate) / 100
-        if (!breakdown[key]) {
-          breakdown[key] = { rate, name: item.taxRateName || `Tax ${rate}%`, amount: 0 }
-        } else if (!breakdown[key].name.includes(item.taxRateName) && item.taxRateName) {
-          breakdown[key].name = item.taxRateName
+        const components = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+          ? item.taxComponents
+          : null
+
+        if (components) {
+          // Expand tax group into individual component taxes
+          components.forEach((comp) => {
+            const compRate = Number(comp.rate)
+            const key = `${comp.name}_${compRate}`
+            const compAmount = (lineTotal * compRate) / 100
+            if (!breakdown[key]) {
+              breakdown[key] = { rate: compRate, name: comp.name, amount: 0 }
+            }
+            breakdown[key].amount += compAmount
+          })
+        } else {
+          // Simple flat tax rate
+          const rate = Number(item.taxRate)
+          const key = String(rate)
+          const taxAmount = (lineTotal * rate) / 100
+          if (!breakdown[key]) {
+            breakdown[key] = { rate, name: item.taxRateName || `Tax ${rate}%`, amount: 0 }
+          } else if (!breakdown[key].name.includes(item.taxRateName) && item.taxRateName) {
+            breakdown[key].name = item.taxRateName
+          }
+          breakdown[key].amount += taxAmount
         }
-        breakdown[key].amount += taxAmount
       }
     })
     return Object.values(breakdown).sort((a, b) => a.rate - b.rate)
