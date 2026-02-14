@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-query': ['@tanstack/react-query', 'zustand', 'axios'],
             'vendor-pdf': ['@react-pdf/renderer'],
+            'vendor-pdfjs': ['pdfjs-dist'],
             'vendor-icons': ['lucide-react'],
           },
         },

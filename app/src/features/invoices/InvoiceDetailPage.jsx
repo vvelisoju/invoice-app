@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useHistory } from 'react-router-dom'
 import {
   Share2,
@@ -27,6 +27,7 @@ import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import Portal from '../../components/Portal'
+const MobilePdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -504,13 +505,20 @@ export default function InvoiceDetailPage() {
               className="hidden md:block w-full h-full border-0"
               title={`Invoice ${invoice.invoiceNumber} PDF`}
             />
-            {/* Mobile: embedded PDF with proper scaling */}
-            <iframe
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-              className="md:hidden w-full border-0"
-              style={{ height: 'calc(100dvh - 160px)', minHeight: 500 }}
-              title={`Invoice ${invoice.invoiceNumber} PDF`}
-            />
+            {/* Mobile: canvas-based PDF viewer (iframes don't render blob PDFs on many mobile browsers) */}
+            <div className="md:hidden w-full h-full">
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  <p className="text-xs text-textSecondary">Loading viewer...</p>
+                </div>
+              }>
+                <MobilePdfViewer
+                  blob={pdfBlob}
+                  className="w-full h-full"
+                />
+              </Suspense>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">

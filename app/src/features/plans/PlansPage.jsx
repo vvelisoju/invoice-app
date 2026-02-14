@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -21,6 +21,7 @@ import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
 import { downloadPDF } from '../invoices/utils/pdfGenerator.jsx'
 import SubscriptionInvoicePdf from './SubscriptionInvoicePdf'
+const MobilePdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
 const PLANS_TABS = [
   { key: 'plans', label: 'Plans & Pricing', mobileLabel: 'Plans', icon: Crown },
@@ -282,13 +283,20 @@ function BillingInvoiceDetail({ invoice, onBack }) {
               className="hidden md:block w-full h-full border-0"
               title={`Subscription Invoice ${invoice.invoiceNumber} PDF`}
             />
-            {/* Mobile: embedded PDF with proper scaling */}
-            <iframe
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-              className="md:hidden w-full border-0"
-              style={{ height: 'calc(100dvh - 160px)', minHeight: 500 }}
-              title={`Subscription Invoice ${invoice.invoiceNumber} PDF`}
-            />
+            {/* Mobile: canvas-based PDF viewer (iframes don't render blob PDFs on many mobile browsers) */}
+            <div className="md:hidden w-full h-full">
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  <p className="text-xs text-textSecondary">Loading viewer...</p>
+                </div>
+              }>
+                <MobilePdfViewer
+                  blob={pdfBlob}
+                  className="w-full h-full"
+                />
+              </Suspense>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
