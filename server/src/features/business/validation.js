@@ -35,7 +35,7 @@ export const updateBusinessSchema = z.object({
   
   // Invoice defaults
   invoicePrefix: z.preprocess(
-    (val) => (val === '' || val === null || val === undefined) ? undefined : val,
+    (val) => (val === null || val === undefined) ? undefined : val,
     z.string().max(10).optional()
   ),
   nextInvoiceNumber: z.preprocess(

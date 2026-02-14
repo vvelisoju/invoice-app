@@ -78,7 +78,7 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.signatureUrl !== undefined) updateData.signatureUrl = data.signatureUrl
   if (data.signatureName !== undefined) updateData.signatureName = data.signatureName
 
-  // Invoice defaults (invoicePrefix and defaultDocType are NOT nullable in DB)
+  // Invoice defaults (invoicePrefix and defaultDocType are NOT nullable in DB — but empty string is valid)
   if (data.invoicePrefix !== undefined && data.invoicePrefix !== null) updateData.invoicePrefix = data.invoicePrefix
   if (data.defaultNotes !== undefined) updateData.defaultNotes = data.defaultNotes
   if (data.defaultTerms !== undefined) updateData.defaultTerms = data.defaultTerms

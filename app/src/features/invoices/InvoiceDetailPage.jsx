@@ -287,6 +287,7 @@ export default function InvoiceDetailPage() {
   }
 
   const status = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.DRAFT
+  const docTypeLabel = (DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label
 
   return (
     <div className="h-full flex flex-col">
@@ -303,7 +304,7 @@ export default function InvoiceDetailPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm md:text-base font-bold text-textPrimary truncate">
-                  {(DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label} #{invoice.invoiceNumber}
+                  {docTypeLabel} #{invoice.invoiceNumber}
                 </h1>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${status.bg} ${status.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
@@ -386,7 +387,7 @@ export default function InvoiceDetailPage() {
                       onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
                       className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
                     >
-                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit {docTypeLabel}
                     </button>
                     <button
                       onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
@@ -411,7 +412,7 @@ export default function InvoiceDetailPage() {
                         onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
                         className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
                       >
-                        <Ban className="w-4 h-4" /> Cancel Invoice
+                        <Ban className="w-4 h-4" /> Cancel {docTypeLabel}
                       </button>
                     )}
                     {statusWorkflow && invoice.status === 'PAID' && (
@@ -429,7 +430,7 @@ export default function InvoiceDetailPage() {
                           onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
                           className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
                         >
-                          <Trash2 className="w-4 h-4" /> Delete Invoice
+                          <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
                         </button>
                       </>
                     )}
@@ -530,7 +531,7 @@ export default function InvoiceDetailPage() {
                 onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
                 className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
               >
-                <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                <Pencil className="w-4 h-4 text-textSecondary" /> Edit {docTypeLabel}
               </button>
               <button
                 onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
@@ -555,7 +556,7 @@ export default function InvoiceDetailPage() {
                   onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
                   className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
                 >
-                  <Ban className="w-4 h-4" /> Cancel Invoice
+                  <Ban className="w-4 h-4" /> Cancel {docTypeLabel}
                 </button>
               )}
               {statusWorkflow && invoice.status === 'PAID' && (
@@ -573,7 +574,7 @@ export default function InvoiceDetailPage() {
                     onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
                     className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete Invoice
+                    <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
                   </button>
                 </>
               )}
@@ -591,8 +592,8 @@ export default function InvoiceDetailPage() {
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete Invoice</h3>
-            <p className="text-sm text-textSecondary text-center mb-6">Are you sure you want to delete this draft invoice? This action cannot be undone.</p>
+            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete {docTypeLabel}</h3>
+            <p className="text-sm text-textSecondary text-center mb-6">Are you sure you want to delete this draft {docTypeLabel.toLowerCase()}? This action cannot be undone.</p>
             <div className="flex gap-3">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors">Cancel</button>
               <button
@@ -629,11 +630,11 @@ export default function InvoiceDetailPage() {
             </div>
             <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">
               {pendingStatus === 'PAID' ? 'Mark as Paid' :
-               pendingStatus === 'CANCELLED' ? 'Cancel Invoice' :
+               pendingStatus === 'CANCELLED' ? `Cancel ${docTypeLabel}` :
                'Change Status'}
             </h3>
             <p className="text-sm text-textSecondary text-center mb-6">
-              Are you sure you want to mark this invoice as {STATUS_CONFIG[pendingStatus]?.label || pendingStatus}?
+              Are you sure you want to mark this {docTypeLabel.toLowerCase()} as {STATUS_CONFIG[pendingStatus]?.label || pendingStatus}?
             </p>
             <div className="flex gap-3">
               <button onClick={() => { setShowStatusConfirm(false); setPendingStatus(null) }} className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors">Cancel</button>

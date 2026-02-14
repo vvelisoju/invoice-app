@@ -11,7 +11,7 @@ import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
-import { getDocTypeConfig } from '../../config/documentTypeDefaults'
+import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
 import ImageUploadModal from '../../components/settings/ImageUploadModal'
 import {
@@ -66,11 +66,11 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     try { localStorage.setItem(FORM_MODE_KEY, mode) } catch {}
   }
 
-  // Derive document type key from URL param
-  const documentTypeKey = (() => {
+  // Document type key — from URL param initially, overridden by existing invoice in edit mode
+  const [documentTypeKey, setDocumentTypeKey] = useState(() => {
     const params = new URLSearchParams(location.search)
     return params.get('type') || 'invoice'
-  })()
+  })
 
   // Read ?type= query param and set invoice title on mount / URL change
   useEffect(() => {
@@ -180,6 +180,12 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     })
     if (inv.customer) {
       setSelectedCustomer(inv.customer)
+    }
+    // Set document type from existing invoice
+    if (inv.documentType) {
+      setDocumentTypeKey(inv.documentType)
+      const docLabel = (DOCUMENT_TYPE_DEFAULTS[inv.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label
+      setInvoiceTitle(docLabel)
     }
     setEditLoaded(true)
     defaultsAppliedRef.current = true
@@ -403,14 +409,14 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     let prefix, nextNum
     if (documentTypeKey === 'invoice' && typeConfig.prefix === undefined && typeConfig.nextNumber === undefined) {
       // Legacy: use business-level invoicePrefix + nextInvoiceNumber for plain invoices
-      prefix = businessProfile.invoicePrefix
+      prefix = businessProfile.invoicePrefix ?? ''
       nextNum = businessProfile.nextInvoiceNumber
     } else {
-      prefix = typeConfig.prefix || docTypeConfig.prefix || businessProfile.invoicePrefix
+      prefix = typeConfig.prefix ?? docTypeConfig.prefix ?? businessProfile.invoicePrefix ?? ''
       nextNum = typeConfig.nextNumber || 1
     }
 
-    if (prefix != null && nextNum != null) {
+    if (nextNum != null) {
       updateField('invoiceNumber', `${prefix}${String(nextNum).padStart(4, '0')}`)
     }
   }, [businessProfile, isEditMode, documentTypeKey])
