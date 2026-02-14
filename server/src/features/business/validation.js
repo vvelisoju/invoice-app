@@ -34,7 +34,10 @@ export const updateBusinessSchema = z.object({
   enableStatusWorkflow: z.boolean().optional(),
   
   // Invoice defaults
-  invoicePrefix: z.preprocess(emptyToNull, z.string().max(10).optional().nullable()),
+  invoicePrefix: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined) ? undefined : val,
+    z.string().max(10).optional()
+  ),
   nextInvoiceNumber: z.preprocess(
     (val) => (val === '' || val === null || val === undefined) ? undefined : Number(val),
     z.number().int().positive().optional()
@@ -53,7 +56,7 @@ export const updateBusinessSchema = z.object({
     })).optional()
   ),
   defaultDocType: z.preprocess(
-    (val) => (val === '' || val === null || val === undefined) ? undefined : val,
+    (val) => (val === '' || val === null || val === undefined) ? undefined : String(val),
     z.string().max(50).optional()
   )
 }).strip()

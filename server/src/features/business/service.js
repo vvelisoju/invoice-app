@@ -78,14 +78,14 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.signatureUrl !== undefined) updateData.signatureUrl = data.signatureUrl
   if (data.signatureName !== undefined) updateData.signatureName = data.signatureName
 
-  // Invoice defaults
-  if (data.invoicePrefix !== undefined) updateData.invoicePrefix = data.invoicePrefix
+  // Invoice defaults (invoicePrefix and defaultDocType are NOT nullable in DB)
+  if (data.invoicePrefix !== undefined && data.invoicePrefix !== null) updateData.invoicePrefix = data.invoicePrefix
   if (data.defaultNotes !== undefined) updateData.defaultNotes = data.defaultNotes
   if (data.defaultTerms !== undefined) updateData.defaultTerms = data.defaultTerms
   if (data.enableStatusWorkflow !== undefined) updateData.enableStatusWorkflow = data.enableStatusWorkflow
   if (data.enabledInvoiceTypes !== undefined) updateData.enabledInvoiceTypes = data.enabledInvoiceTypes
   if (data.documentTypeConfig !== undefined) updateData.documentTypeConfig = data.documentTypeConfig
-  if (data.defaultDocType !== undefined) updateData.defaultDocType = data.defaultDocType
+  if (data.defaultDocType !== undefined && data.defaultDocType !== null) updateData.defaultDocType = data.defaultDocType
 
   // Next invoice number (with validation)
   if (data.nextInvoiceNumber !== undefined) {

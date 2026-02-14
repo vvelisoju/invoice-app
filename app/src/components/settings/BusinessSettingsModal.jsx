@@ -41,8 +41,25 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
   }
 
   const handleSave = () => {
-    const { id, createdAt, updatedAt, ...editableData } = formData
-    updateMutation.mutate(editableData)
+    // Only send known editable fields — exclude server-only fields
+    const {
+      name, phone, email, website, address, logoUrl,
+      gstEnabled, gstin, stateCode, defaultTaxRate,
+      bankName, accountNumber, ifscCode, upiId,
+      signatureUrl, signatureName,
+      enableStatusWorkflow,
+      invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms,
+      enabledInvoiceTypes, documentTypeConfig, defaultDocType
+    } = formData
+    updateMutation.mutate({
+      name, phone, email, website, address, logoUrl,
+      gstEnabled, gstin, stateCode, defaultTaxRate,
+      bankName, accountNumber, ifscCode, upiId,
+      signatureUrl, signatureName,
+      enableStatusWorkflow,
+      invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms,
+      enabledInvoiceTypes, documentTypeConfig, defaultDocType
+    })
   }
 
   if (!isOpen) return null

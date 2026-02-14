@@ -21,6 +21,7 @@ export async function updateProfile(request, reply) {
     }
     throw err
   }
+  request.log.info({ validatedKeys: Object.keys(validated) }, 'Business update payload')
   const business = await businessService.updateBusinessProfile(request.businessId, validated)
   return { data: business }
 }

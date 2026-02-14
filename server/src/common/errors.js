@@ -78,7 +78,7 @@ export const errorHandler = (error, request, reply) => {
       prismaCode: error.code || 'N/A',
       prismaTarget: error.meta?.target || error.meta?.modelName || 'N/A',
       prismaCause: error.meta?.cause || 'N/A',
-      message: error.message?.slice(0, 300),
+      message: error.message?.slice(0, 800),
       method: request.method,
       url: request.url,
       requestId: request.id,
