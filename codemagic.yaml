@@ -1,78 +1,67 @@
 workflows:
   ios-workflow:
-    name: iOS Workflow
-    max_build_duration: 120
-    instance_type: mac_mini_m1
+    name: iOS Build - Invoice Baba
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
     integrations:
       app_store_connect: Lokalhunt - API Key
+    
     environment:
+      vars:
+        BUNDLE_ID: com.codevel.invoicebaba
+        APP_STORE_APP_ID: 6759199018
+      
+      xcode: latest
+      cocoapods: default
+      
+      # Automatic Signing Configuration
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.codevel.invoicebaba
-      vars:
-        XCODE_WORKSPACE: "app/ios/App/App.xcworkspace"
-        XCODE_SCHEME: "App"
-        BUNDLE_ID: "com.codevel.invoicebaba"
-        APP_STORE_APPLE_ID: 6759199018 # Replace with your Apple ID
-      node: v20.11.0
-      xcode: 15.2
-      cocoapods: default
+    
     scripts:
-      - name: Install npm dependencies
+      - name: Install Node dependencies and Build
         script: |
           cd app
           npm ci
-      - name: Set up environment variables
-        script: |
-          cd app
-          # Create .env file from Codemagic environment variables
-          echo "VITE_API_URL=$VITE_API_URL" > .env
-          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
-          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
-          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
-          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
-          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
-          echo "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" >> .env
-      - name: Build web app
-        script: |
-          cd app
           npm run build
-      - name: Update dependencies and build Capacitor iOS project
+      
+      - name: Sync Capacitor
         script: |
           cd app
           npx cap sync ios
+      
+      - name: Install CocoaPods dependencies
+        script: |
+          cd app/ios/App
+          pod install
+      
       - name: Set up code signing settings on Xcode project
         script: |
           cd app/ios/App
           xcode-project use-profiles
+      
       - name: Increment build number
         script: |
           cd app/ios/App
-          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
+          agvtool new-version -all $BUILD_NUMBER
+      
       - name: Build ipa for distribution
         script: |
           cd app/ios/App
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --workspace "App.xcworkspace" \
+            --scheme "App"
+    
     artifacts:
       - app/ios/App/build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - app/ios/App/*.mobileprovision
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    
     publishing:
-      email:
-        recipients:
-          - your-email@example.com # Replace with your email
-        notify:
-          success: true
-          failure: true
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
-        submit_to_app_store: false
 
   android-workflow:
     name: Android Workflow
