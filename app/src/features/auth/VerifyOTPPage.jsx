@@ -6,6 +6,7 @@ import { authApi, customerApi, productApi, businessApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { DEMO_INVOICE_KEY } from '../invoices/NewInvoicePage'
 import { clearAllDemoData } from '../../lib/demoStorage'
+import { isNative } from '../../lib/capacitor'
 
 export default function VerifyOTPPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -15,6 +16,7 @@ export default function VerifyOTPPage() {
   const location = useLocation()
   const inputRefs = useRef([])
   const setAuth = useAuthStore((state) => state.setAuth)
+  const isMobileApp = isNative()
 
   const phone = location.state?.phone
 
@@ -186,7 +188,7 @@ export default function VerifyOTPPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bgPrimary flex items-center justify-center p-4">
+    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <div className="w-full max-w-md">
         {/* Header — matches login screen */}
         <div className="text-center mb-10">

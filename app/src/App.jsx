@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
 import { usePushNotifications } from './features/notifications/usePushNotifications'
 import { setApiNavigate } from './lib/api'
+import { isNative } from './lib/capacitor'
 
 import LandingPage from './pages/LandingPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -147,6 +148,7 @@ function App() {
   const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
   const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const isMobileApp = isNative()
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -154,7 +156,7 @@ function App() {
         <ApiNavigateWirer />
         {!token ? (
           <Switch>
-            <Route exact path="/" component={LandingPage} />
+            <Route exact path="/" component={isMobileApp ? PhonePage : LandingPage} />
             <Route exact path="/terms" component={TermsOfServicePage} />
             <Route exact path="/privacy" component={PrivacyPolicyPage} />
             <Route exact path="/refund-policy" component={RefundPolicyPage} />
