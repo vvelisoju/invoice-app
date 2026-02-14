@@ -130,6 +130,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     removeLineItem,
     setCustomer,
     setProductForLineItem,
+    updateProductInLineItems,
     saveToLocal,
     resetForm,
     setInvoiceData
@@ -618,7 +619,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           initialName={createProductName}
           demoMode
           onCreated={(product) => {
-            if (createProductLineIndex !== null) {
+            if (editProduct) {
+              updateProductInLineItems(product)
+            } else if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
             setEditProduct(null)
@@ -631,7 +634,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           product={editProduct}
           initialName={createProductName}
           onCreated={(product) => {
-            if (createProductLineIndex !== null) {
+            if (editProduct) {
+              updateProductInLineItems(product)
+            } else if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
             setEditProduct(null)

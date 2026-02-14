@@ -265,6 +265,33 @@ export function useInvoiceForm(invoiceId = null) {
     setIsDirty(true)
   }, [calculateTotals])
 
+  // Update all line items that reference a specific product (after editing product via modal)
+  const updateProductInLineItems = useCallback((product) => {
+    if (!product?.id) return
+    setInvoice(prev => {
+      const hasMatch = prev.lineItems.some(item => item.productServiceId === product.id)
+      if (!hasMatch) return prev
+
+      const newLineItems = prev.lineItems.map(item => {
+        if (item.productServiceId !== product.id) return item
+        const updatedRate = product.defaultRate != null ? product.defaultRate : item.rate
+        return {
+          ...item,
+          name: product.name || item.name,
+          hsnCode: product.hsnCode || '',
+          rate: updatedRate,
+          taxRate: product.taxRate != null ? product.taxRate : item.taxRate,
+          taxRateName: product.taxRateName || item.taxRateName || null,
+          lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(updatedRate) || 0)
+        }
+      })
+
+      const totals = calculateTotals(newLineItems, prev.discountTotal, prev.taxRate)
+      return { ...prev, lineItems: newLineItems, ...totals, updatedAt: new Date().toISOString() }
+    })
+    setIsDirty(true)
+  }, [calculateTotals])
+
   // Save to local DB
   const saveToLocal = useCallback(async () => {
     if (!isDirty) return
@@ -350,6 +377,7 @@ export function useInvoiceForm(invoiceId = null) {
     removeLineItem,
     setCustomer,
     setProductForLineItem,
+    updateProductInLineItems,
     saveToLocal,
     resetForm,
     setInvoiceData
