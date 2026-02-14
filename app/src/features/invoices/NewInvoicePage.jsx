@@ -104,14 +104,15 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     }
   }, [location.search])
 
-  // Fetch business profile — show cached data instantly, refetch in background
+  // Fetch business profile — always fetch fresh data to get latest nextNumber for each document type
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data?.data || response.data
     },
-    enabled: !isDemo
+    enabled: !isDemo,
+    staleTime: 0 // Always fetch fresh data to get updated nextNumber after creating documents
   })
 
   // Compute resolved config (defaults merged with business overrides)
