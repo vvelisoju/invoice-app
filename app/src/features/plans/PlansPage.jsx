@@ -21,7 +21,7 @@ import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
 import { downloadPDF } from '../invoices/utils/pdfGenerator.jsx'
 import SubscriptionInvoicePdf from './SubscriptionInvoicePdf'
-const MobilePdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
+const PdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
 const PLANS_TABS = [
   { key: 'plans', label: 'Plans & Pricing', mobileLabel: 'Plans', icon: Crown },
@@ -268,36 +268,22 @@ function BillingInvoiceDetail({ invoice, onBack }) {
         </button>
       </div>
 
-      {/* PDF Viewer Area — fills remaining space, same as InvoiceDetailPage */}
-      <div className="flex-1 bg-gray-100 pb-mobile-nav overflow-auto">
+      {/* PDF Viewer Area — fills remaining space */}
+      <div className="flex-1 bg-gray-100 pb-mobile-nav">
         {isGeneratingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-textSecondary">Generating PDF preview...</p>
           </div>
-        ) : pdfUrl ? (
-          <>
-            {/* Desktop: full iframe viewer */}
-            <iframe
-              src={pdfUrl}
-              className="hidden md:block w-full h-full border-0"
-              title={`Subscription Invoice ${invoice.invoiceNumber} PDF`}
-            />
-            {/* Mobile: canvas-based PDF viewer (iframes don't render blob PDFs on many mobile browsers) */}
-            <div className="md:hidden w-full h-full">
-              <Suspense fallback={
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                  <p className="text-xs text-textSecondary">Loading viewer...</p>
-                </div>
-              }>
-                <MobilePdfViewer
-                  blob={pdfBlob}
-                  className="w-full h-full"
-                />
-              </Suspense>
+        ) : pdfBlob ? (
+          <Suspense fallback={
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <p className="text-xs text-textSecondary">Loading viewer...</p>
             </div>
-          </>
+          }>
+            <PdfViewer blob={pdfBlob} className="w-full h-full" />
+          </Suspense>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-sm text-textSecondary">PDF preview unavailable</p>

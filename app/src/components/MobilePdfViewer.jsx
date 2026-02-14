@@ -9,15 +9,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString()
 
 /**
- * Mobile PDF Viewer — renders PDF blob pages onto <canvas> elements using pdf.js.
- * Replaces <iframe> on mobile browsers that can't render blob: PDF URLs inline.
+ * Universal PDF Viewer — renders PDF blob pages onto <canvas> elements using pdf.js.
+ * Works consistently across all browsers (desktop & mobile).
  *
  * Props:
  *  - blob: PDF Blob object (required)
  *  - className: optional wrapper className
  *  - style: optional wrapper style
  */
-export default function MobilePdfViewer({ blob, className = '', style = {} }) {
+export default function PdfViewer({ blob, className = '', style = {} }) {
   const [pdfDoc, setPdfDoc] = useState(null)
   const [pages, setPages] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -25,6 +25,7 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
   const [scale, setScale] = useState(1)
   const containerRef = useRef(null)
   const canvasRefs = useRef([])
+  const renderTasksRef = useRef([])
 
   // Load the PDF document from blob
   useEffect(() => {
@@ -58,7 +59,11 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
   const renderPages = useCallback(async () => {
     if (!pdfDoc || !containerRef.current) return
 
-    const containerWidth = containerRef.current.clientWidth - 16 // 8px padding each side
+    // Cancel any in-progress render tasks
+    renderTasksRef.current.forEach(task => { try { task.cancel() } catch {} })
+    renderTasksRef.current = []
+
+    const containerWidth = containerRef.current.clientWidth - 32 // 16px padding each side
 
     for (let i = 0; i < pdfDoc.numPages; i++) {
       const canvas = canvasRefs.current[i]
@@ -72,8 +77,8 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
         const finalScale = fitScale * scale
         const viewport = page.getViewport({ scale: finalScale })
 
-        // Use devicePixelRatio for sharp rendering
-        const dpr = window.devicePixelRatio || 1
+        // Use devicePixelRatio for sharp rendering (capped at 2 for performance)
+        const dpr = Math.min(window.devicePixelRatio || 1, 2)
         canvas.width = viewport.width * dpr
         canvas.height = viewport.height * dpr
         canvas.style.width = `${viewport.width}px`
@@ -82,9 +87,13 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
         const ctx = canvas.getContext('2d')
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-        await page.render({ canvasContext: ctx, viewport }).promise
+        const renderTask = page.render({ canvasContext: ctx, viewport })
+        renderTasksRef.current.push(renderTask)
+        await renderTask.promise
       } catch (err) {
-        console.error(`Failed to render page ${i + 1}:`, err)
+        if (err?.name !== 'RenderingCancelled') {
+          console.error(`Failed to render page ${i + 1}:`, err)
+        }
       }
     }
   }, [pdfDoc, scale])
@@ -93,12 +102,12 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
     renderPages()
   }, [renderPages])
 
-  // Re-render on window resize
+  // Re-render on window resize (debounced)
   useEffect(() => {
     let timeout
     const handleResize = () => {
       clearTimeout(timeout)
-      timeout = setTimeout(renderPages, 200)
+      timeout = setTimeout(renderPages, 250)
     }
     window.addEventListener('resize', handleResize)
     return () => {
@@ -106,6 +115,25 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
       clearTimeout(timeout)
     }
   }, [renderPages])
+
+  // Keyboard shortcuts: Ctrl/Cmd + / - for zoom
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        setScale(s => Math.min(3, +(s + 0.25).toFixed(2)))
+      } else if (e.key === '-') {
+        e.preventDefault()
+        setScale(s => Math.max(0.5, +(s - 0.25).toFixed(2)))
+      } else if (e.key === '0') {
+        e.preventDefault()
+        setScale(1)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   if (isLoading) {
     return (
@@ -124,28 +152,40 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
     )
   }
 
+  const totalPages = pdfDoc?.numPages || 0
+
   return (
-    <div className={`relative ${className}`} style={style}>
-      {/* Zoom controls */}
-      {pdfDoc && pdfDoc.numPages > 0 && (
-        <div className="sticky top-2 z-10 flex justify-end px-3 pb-1">
-          <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-1.5 py-1">
+    <div className={`relative flex flex-col ${className}`} style={style}>
+      {/* Toolbar */}
+      {totalPages > 0 && (
+        <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-1.5 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200">
+          {/* Page count */}
+          <span className="text-[11px] font-medium text-gray-500">
+            {totalPages} {totalPages === 1 ? 'page' : 'pages'}
+          </span>
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-0.5">
             <button
-              onClick={() => setScale(s => Math.max(0.5, s - 0.25))}
+              onClick={() => setScale(s => Math.max(0.5, +(s - 0.25).toFixed(2)))}
               disabled={scale <= 0.5}
-              className="p-1.5 rounded text-gray-500 active:bg-gray-100 disabled:opacity-30"
-              aria-label="Zoom out"
+              className="p-1.5 rounded text-gray-500 active:bg-gray-200 md:hover:bg-gray-200 disabled:opacity-30 transition-colors"
+              title="Zoom out (Ctrl −)"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[10px] font-medium text-gray-500 min-w-[32px] text-center">
-              {Math.round(scale * 100)}%
-            </span>
             <button
-              onClick={() => setScale(s => Math.min(3, s + 0.25))}
+              onClick={() => setScale(1)}
+              className="px-1.5 py-0.5 rounded text-[11px] font-medium text-gray-600 active:bg-gray-200 md:hover:bg-gray-200 min-w-[40px] text-center transition-colors"
+              title="Reset zoom (Ctrl 0)"
+            >
+              {Math.round(scale * 100)}%
+            </button>
+            <button
+              onClick={() => setScale(s => Math.min(3, +(s + 0.25).toFixed(2)))}
               disabled={scale >= 3}
-              className="p-1.5 rounded text-gray-500 active:bg-gray-100 disabled:opacity-30"
-              aria-label="Zoom in"
+              className="p-1.5 rounded text-gray-500 active:bg-gray-200 md:hover:bg-gray-200 disabled:opacity-30 transition-colors"
+              title="Zoom in (Ctrl +)"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
@@ -154,13 +194,13 @@ export default function MobilePdfViewer({ blob, className = '', style = {} }) {
       )}
 
       {/* Canvas pages */}
-      <div ref={containerRef} className="overflow-auto px-2 pb-4">
-        <div className="flex flex-col items-center gap-3">
+      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 px-4 py-4">
+        <div className="flex flex-col items-center gap-4">
           {pages.map((pageNum, idx) => (
             <canvas
               key={pageNum}
               ref={el => { canvasRefs.current[idx] = el }}
-              className="shadow-md bg-white rounded"
+              className="shadow-lg bg-white"
             />
           ))}
         </div>
