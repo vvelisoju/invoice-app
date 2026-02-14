@@ -1,5 +1,5 @@
 {
-  "appId": "com.invoicebaba.app",
+  "appId": "com.codevel.invoicebaba",
   "appName": "Invoice Baba",
   "webDir": "dist",
   "server": {

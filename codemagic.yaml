@@ -13,7 +13,7 @@ workflows:
         XCODE_WORKSPACE: "app/ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.codevel.invoicebaba"
-        APP_STORE_APPLE_ID: 1234567890 # Replace with your Apple ID
+        APP_STORE_APPLE_ID: 6759199018 # Replace with your Apple ID
       node: v20.11.0
       xcode: 15.2
       cocoapods: default
