@@ -26,6 +26,12 @@ api.interceptors.request.use(
 // Guard to prevent multiple 401 redirects firing at once
 let isRedirectingTo401 = false
 
+// Navigation callback for 401 redirect — set by App.jsx via setApiNavigate().
+// Uses React Router instead of window.location.href so Capacitor WebView
+// doesn't do a full page reload (which would restart the entire app).
+let _navigateTo = null
+export function setApiNavigate(fn) { _navigateTo = fn }
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
@@ -54,7 +60,11 @@ api.interceptors.response.use(
         // Clear all browser storage to prevent stale data leaking between sessions
         localStorage.clear()
         sessionStorage.clear()
-        window.location.href = '/auth/phone'
+        if (_navigateTo) {
+          _navigateTo('/auth/phone')
+        } else {
+          window.location.href = '/auth/phone'
+        }
       }
     }
     return Promise.reject(error)

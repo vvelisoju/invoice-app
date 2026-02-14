@@ -1,45 +1,63 @@
-import { useState } from 'react'
-import { X, Loader2, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Loader2, UserPlus, Pencil } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import Portal from '../Portal'
 import { addDemoCustomer } from '../../lib/demoStorage'
 
+const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' }
+
 /**
- * Reusable modal for creating a new customer.
+ * Reusable modal for creating or editing a customer.
  * Props:
  * - isOpen: boolean
  * - onClose: () => void
- * - onCreated: (customer) => void — called with the newly created customer
- * - initialName?: string — pre-fill the name field
+ * - onCreated: (customer) => void — called with the newly created/updated customer
+ * - customer?: object — if provided, modal is in edit mode
+ * - initialName?: string — pre-fill the name field (create mode only)
  */
-export default function CreateCustomerModal({ isOpen, onClose, onCreated, initialName = '', demoMode }) {
+export default function CreateCustomerModal({ isOpen, onClose, onCreated, customer = null, initialName = '', demoMode }) {
   const queryClient = useQueryClient()
-  const [formData, setFormData] = useState({
-    name: initialName,
-    phone: '',
-    email: '',
-    gstin: '',
-    stateCode: '',
-    address: ''
-  })
+  const isEdit = !!customer
+  const [formData, setFormData] = useState(EMPTY_FORM)
   const [error, setError] = useState('')
 
-  const createMutation = useMutation({
-    mutationFn: (data) => customerApi.create(data),
+  useEffect(() => {
+    if (isOpen) {
+      if (customer) {
+        setFormData({
+          name: customer.name || '',
+          phone: customer.phone || '',
+          email: customer.email || '',
+          gstin: customer.gstin || '',
+          stateCode: customer.stateCode || '',
+          address: customer.address || '',
+        })
+      } else {
+        setFormData({ ...EMPTY_FORM, name: initialName || '' })
+      }
+      setError('')
+    }
+  }, [isOpen, customer, initialName])
+
+  const mutation = useMutation({
+    mutationFn: (data) => {
+      if (isEdit) return customerApi.update(customer.id, data)
+      return customerApi.create(data)
+    },
     onSuccess: (response) => {
-      const customer = response.data?.data || response.data
+      const result = response.data?.data || response.data
       queryClient.invalidateQueries({ queryKey: ['customers'] })
-      onCreated?.(customer)
+      onCreated?.(result)
       handleClose()
     },
     onError: (err) => {
-      setError(err.response?.data?.error?.message || 'Failed to create customer')
+      setError(err.response?.data?.error?.message || (isEdit ? 'Failed to update customer' : 'Failed to create customer'))
     }
   })
 
   const handleClose = () => {
-    setFormData({ name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' })
+    setFormData(EMPTY_FORM)
     setError('')
     onClose()
   }
@@ -64,17 +82,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
       ...(formData.address && { address: formData.address.trim() })
     }
     if (demoMode) {
-      const customer = addDemoCustomer(payload)
-      onCreated?.(customer)
+      const result = addDemoCustomer(payload)
+      onCreated?.(result)
       handleClose()
       return
     }
-    createMutation.mutate(payload)
-  }
-
-  // Sync initialName when modal opens
-  if (isOpen && initialName && !formData.name && initialName !== formData.name) {
-    setFormData(prev => ({ ...prev, name: initialName }))
+    mutation.mutate(payload)
   }
 
   if (!isOpen) return null
@@ -90,12 +103,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-              <UserPlus className="w-4.5 h-4.5 text-primary" />
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isEdit ? 'bg-orange-50' : 'bg-blue-50'}`}>
+              {isEdit ? <Pencil className="w-4.5 h-4.5 text-orange-600" /> : <UserPlus className="w-4.5 h-4.5 text-primary" />}
             </div>
             <div>
-              <h2 className="text-base font-semibold text-textPrimary">New Customer</h2>
-              <p className="text-xs text-textSecondary">Add a new customer to your business</p>
+              <h2 className="text-base font-semibold text-textPrimary">{isEdit ? 'Edit Customer' : 'New Customer'}</h2>
+              <p className="text-xs text-textSecondary">{isEdit ? 'Update customer details' : 'Add a new customer to your business'}</p>
             </div>
           </div>
           <button
@@ -108,9 +121,9 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
+          {(error || mutation.isError) && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {error}
+              {error || mutation.error?.response?.data?.error?.message || mutation.error?.message || 'Something went wrong'}
             </div>
           )}
 
@@ -202,15 +215,17 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, initia
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={mutation.isPending}
               className="px-5 py-2.5 text-sm font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
             >
-              {createMutation.isPending ? (
+              {mutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isEdit ? (
+                <Pencil className="w-4 h-4" />
               ) : (
                 <UserPlus className="w-4 h-4" />
               )}
-              Create Customer
+              {isEdit ? 'Save Changes' : 'Create Customer'}
             </button>
           </div>
         </form>

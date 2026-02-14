@@ -5,7 +5,8 @@ import {
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
 import { getStateName } from '../../config/indianStates'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0)
@@ -122,11 +123,7 @@ function printGSTR3B(data) {
       </tbody>
     </table>
     </body></html>`
-  const w = window.open('', '_blank', 'width=900,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 900, height: 700, autoPrint: true })
 }
 
 // ── Collapsible Section ───────────────────────────────

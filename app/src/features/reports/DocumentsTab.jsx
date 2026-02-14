@@ -7,7 +7,8 @@ import { useQuery } from '@tanstack/react-query'
 import { reportsApi, invoiceApi } from '../../lib/api'
 import { generatePDF } from '../invoices/utils/pdfGenerator'
 import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 import Portal from '../../components/Portal'
 
 const DOC_TYPE_LABELS = {
@@ -128,11 +129,7 @@ function printReport(documents, totals) {
       <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=900,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print(); w.close() }, 400)
+  openPrintWindow(html, { width: 900, height: 700, autoPrint: true, autoClose: true })
 }
 
 // ── Export: Summary PDF (HTML → print‑to‑PDF) ────────────
@@ -169,11 +166,7 @@ function exportSummaryPDF(documents, totals) {
       <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=1100,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 1100, height: 700, autoPrint: true })
 }
 
 // ── Progress Modal ───────────────────────────────────────

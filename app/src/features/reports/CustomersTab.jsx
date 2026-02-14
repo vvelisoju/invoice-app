@@ -4,7 +4,7 @@ import {
   Calendar, Search, Loader2, Users, FileSpreadsheet, Printer
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0)

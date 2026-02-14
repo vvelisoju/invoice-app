@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp, Calendar, Pencil } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import LogoUpload from './LogoUpload'
@@ -14,6 +14,7 @@ export default function InvoiceHeaderSection({
   selectedCustomer,
   onCustomerSelect,
   onCreateNewCustomer,
+  onEditCustomer,
   shipTo,
   onShipToChange,
   invoiceNumber,
@@ -434,6 +435,17 @@ export default function InvoiceHeaderSection({
                             {customer.email && <span>{customer.email}</span>}
                           </div>
                         </div>
+                        {onEditCustomer && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { e.stopPropagation(); setShowSuggestions(false); onEditCustomer(customer) }}
+                            className="p-1.5 rounded-md text-gray-400 active:text-primary active:bg-blue-50 md:hover:text-primary md:hover:bg-blue-50 transition-colors shrink-0"
+                            title="Edit customer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -533,6 +545,17 @@ export default function InvoiceHeaderSection({
                               {customer.email && <span>{customer.email}</span>}
                             </div>
                           </div>
+                          {onEditCustomer && (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={(e) => { e.stopPropagation(); setShowShipSuggestions(false); onEditCustomer(customer) }}
+                              className="p-1.5 rounded-md text-gray-400 active:text-primary active:bg-blue-50 md:hover:text-primary md:hover:bg-blue-50 transition-colors shrink-0"
+                              title="Edit customer"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
                         </button>
                       ))}
                     </div>

@@ -42,9 +42,11 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const [showCreateCustomer, setShowCreateCustomer] = useState(false)
   const [createCustomerName, setCreateCustomerName] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [editCustomer, setEditCustomer] = useState(null)
   const [showCreateProduct, setShowCreateProduct] = useState(false)
   const [createProductName, setCreateProductName] = useState('')
   const [createProductLineIndex, setCreateProductLineIndex] = useState(null)
+  const [editProduct, setEditProduct] = useState(null)
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
   const [showPlanLimit, setShowPlanLimit] = useState(false)
   const [planLimitData, setPlanLimitData] = useState(null)
@@ -483,6 +485,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
               setCreateCustomerName(name || '')
               setShowCreateCustomer(true)
             }}
+            onEditCustomer={(customer) => {
+              setEditCustomer(customer)
+              setShowCreateCustomer(true)
+            }}
             shipTo={invoice.shipTo || ''}
             onShipToChange={(val) => updateField('shipTo', val)}
             invoiceNumber={invoice.invoiceNumber || ''}
@@ -513,6 +519,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             onCreateProduct={(index, name) => {
               setCreateProductLineIndex(index)
               setCreateProductName(name || '')
+              setShowCreateProduct(true)
+            }}
+            onEditProduct={(product) => {
+              setEditProduct(product)
               setShowCreateProduct(true)
             }}
             docTypeConfig={docTypeConfig}
@@ -571,52 +581,60 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
       </div>
 
-      {/* Create Customer Modal */}
+      {/* Create / Edit Customer Modal */}
       {isDemo ? (
         <CreateCustomerModal
           isOpen={showCreateCustomer}
-          onClose={() => setShowCreateCustomer(false)}
+          onClose={() => { setShowCreateCustomer(false); setEditCustomer(null) }}
+          customer={editCustomer}
           initialName={createCustomerName}
           demoMode
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            setEditCustomer(null)
           }}
         />
       ) : (
         <CreateCustomerModal
           isOpen={showCreateCustomer}
-          onClose={() => setShowCreateCustomer(false)}
+          onClose={() => { setShowCreateCustomer(false); setEditCustomer(null) }}
+          customer={editCustomer}
           initialName={createCustomerName}
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            setEditCustomer(null)
           }}
         />
       )}
 
-      {/* Create Product Modal */}
+      {/* Create / Edit Product Modal */}
       {isDemo ? (
         <ProductAddEditModal
           isOpen={showCreateProduct}
-          onClose={() => setShowCreateProduct(false)}
+          onClose={() => { setShowCreateProduct(false); setEditProduct(null) }}
+          product={editProduct}
           initialName={createProductName}
           demoMode
           onCreated={(product) => {
             if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
+            setEditProduct(null)
           }}
         />
       ) : (
         <ProductAddEditModal
           isOpen={showCreateProduct}
-          onClose={() => setShowCreateProduct(false)}
+          onClose={() => { setShowCreateProduct(false); setEditProduct(null) }}
+          product={editProduct}
           initialName={createProductName}
           onCreated={(product) => {
             if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
+            setEditProduct(null)
           }}
         />
       )}

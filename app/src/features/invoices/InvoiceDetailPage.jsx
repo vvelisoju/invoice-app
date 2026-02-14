@@ -21,8 +21,10 @@ import {
   Palette
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Capacitor } from '@capacitor/core'
 import { invoiceApi, templateApi, businessApi } from '../../lib/api'
-import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
+import { generatePDF, downloadPDF, sharePDF, printPDF } from './utils/pdfGenerator.jsx'
+import { openExternalUrl } from '../../lib/nativeBrowser.js'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
@@ -183,44 +185,47 @@ export default function InvoiceDetailPage() {
     }
   }, [pdfBlob, invoice])
 
-  const handlePrint = useCallback(() => {
-    if (!pdfBlob) return
-    const url = URL.createObjectURL(pdfBlob)
-    const printWindow = window.open(url, '_blank')
-    if (printWindow) {
-      printWindow.onload = () => printWindow.print()
+  const handlePrint = useCallback(async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      await printPDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`)
+    } catch (err) {
+      console.error('Print failed:', err)
     }
-  }, [pdfBlob])
+  }, [pdfBlob, invoice])
 
   const handleShare = useCallback(async () => {
     if (!pdfBlob || !invoice) return
     try {
-      if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
-        const shareText = `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Invoice ${invoice.invoiceNumber}`,
-            text: shareText,
-            files: [file]
-          })
-          return
-        }
-      }
-      await handleDownload()
+      await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`,
+      })
     } catch (err) {
       if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
-  }, [pdfBlob, invoice, handleDownload])
+  }, [pdfBlob, invoice])
 
   const handleWhatsAppShare = useCallback(async () => {
     if (!invoice) return
-    const message = encodeURIComponent(
-      `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
-    )
-    window.open(`https://wa.me/?text=${message}`, '_blank')
-    await handleDownload()
-  }, [invoice, handleDownload])
+    if (Capacitor.isNativePlatform() && pdfBlob) {
+      // On native, share the PDF directly — WhatsApp will be in the share sheet
+      try {
+        await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+          title: `Invoice ${invoice.invoiceNumber}`,
+          text: `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`,
+        })
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Share failed:', err)
+      }
+    } else {
+      const message = encodeURIComponent(
+        `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
+      )
+      await openExternalUrl(`https://wa.me/?text=${message}`)
+      await handleDownload()
+    }
+  }, [invoice, pdfBlob, handleDownload])
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(window.location.href)

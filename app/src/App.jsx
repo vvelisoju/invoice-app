@@ -1,8 +1,10 @@
-import { BrowserRouter, Route, Switch, Redirect } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { BrowserRouter, Route, Switch, Redirect, useHistory } from 'react-router-dom'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
 import { usePushNotifications } from './features/notifications/usePushNotifications'
+import { setApiNavigate } from './lib/api'
 
 import LandingPage from './pages/LandingPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -47,8 +49,49 @@ const queryClient = new QueryClient({
   }
 })
 
+/**
+ * Hook to handle Capacitor-specific events inside the Router context:
+ * - app:deeplink → navigate via React Router
+ * - app:resume  → invalidate stale queries so data refreshes
+ */
+function useCapacitorListeners() {
+  const history = useHistory()
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    const handleDeepLink = (e) => {
+      const path = e.detail?.path
+      if (path) history.push(path)
+    }
+    const handleResume = () => {
+      qc.invalidateQueries()
+    }
+    document.addEventListener('app:deeplink', handleDeepLink)
+    document.addEventListener('app:resume', handleResume)
+    return () => {
+      document.removeEventListener('app:deeplink', handleDeepLink)
+      document.removeEventListener('app:resume', handleResume)
+    }
+  }, [history, qc])
+}
+
+/**
+ * Wires React Router history into the Axios 401 interceptor so that
+ * auth redirects use history.push() instead of window.location.href.
+ * This prevents a full page reload in Capacitor WebView.
+ */
+function ApiNavigateWirer() {
+  const history = useHistory()
+  useEffect(() => {
+    setApiNavigate((path) => history.push(path))
+    return () => setApiNavigate(null)
+  }, [history])
+  return null
+}
+
 function AuthenticatedApp() {
   usePushNotifications()
+  useCapacitorListeners()
   return (
     <AppLayout>
       <Switch>
@@ -77,6 +120,7 @@ function AuthenticatedApp() {
 
 function AdminApp() {
   usePushNotifications()
+  useCapacitorListeners()
   return (
     <AdminLayout>
       <Switch>
@@ -107,6 +151,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ApiNavigateWirer />
         {!token ? (
           <Switch>
             <Route exact path="/" component={LandingPage} />

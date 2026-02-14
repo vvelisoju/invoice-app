@@ -3,7 +3,7 @@ import {
   FileText, BarChart3, Users, Receipt, CalendarRange, Download, Loader2, ChevronDown, X
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
 import SalesRegisterTab from './SalesRegisterTab'
 import GSTReturnsTab from './GSTReturnsTab'
 import DocumentsTab from './DocumentsTab'

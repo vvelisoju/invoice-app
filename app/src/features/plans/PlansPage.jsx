@@ -19,7 +19,7 @@ import {
 import { pdf } from '@react-pdf/renderer'
 import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
-import { downloadPDF } from '../invoices/utils/pdfGenerator.jsx'
+import { downloadPDF, sharePDF, printPDF } from '../invoices/utils/pdfGenerator.jsx'
 import SubscriptionInvoicePdf from './SubscriptionInvoicePdf'
 const PdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
@@ -127,44 +127,38 @@ function BillingInvoiceDetail({ invoice, onBack }) {
     }
   }, [pdfBlob, invoice])
 
-  const handlePrint = useCallback(() => {
-    if (!pdfBlob) return
-    const url = URL.createObjectURL(pdfBlob)
-    const printWindow = window.open(url, '_blank')
-    if (printWindow) {
-      printWindow.onload = () => printWindow.print()
+  const handlePrint = useCallback(async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      await printPDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`)
+    } catch (err) {
+      console.error('Print failed:', err)
     }
-  }, [pdfBlob])
+  }, [pdfBlob, invoice])
 
   const handleShare = useCallback(async () => {
     if (!pdfBlob || !invoice) return
     try {
-      if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], `Subscription-Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
-        const shareText = `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}`
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Invoice ${invoice.invoiceNumber}`,
-            text: shareText,
-            files: [file]
-          })
-          return
-        }
-      }
-      await handleDownload()
+      await sharePDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}`,
+      })
     } catch (err) {
       if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
-  }, [pdfBlob, invoice, handleDownload])
+  }, [pdfBlob, invoice])
 
   const handleWhatsAppShare = useCallback(async () => {
-    if (!invoice) return
-    const message = encodeURIComponent(
-      `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}\nDate: ${formatDate(invoice.createdAt)}`
-    )
-    window.open(`https://wa.me/?text=${message}`, '_blank')
-    await handleDownload()
-  }, [invoice, handleDownload])
+    if (!pdfBlob || !invoice) return
+    try {
+      await sharePDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}\nDate: ${formatDate(invoice.createdAt)}`,
+      })
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('WhatsApp share failed:', err)
+    }
+  }, [pdfBlob, invoice])
 
   return (
     <div className="h-full flex flex-col">

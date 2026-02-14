@@ -4,7 +4,8 @@ import {
   Calendar, Search, Loader2, FileText, FileSpreadsheet, Printer, Download, ChevronDown
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 
 const DOC_TYPE_LABELS = {
   invoice: 'Invoice', tax_invoice: 'Tax Invoice', proforma: 'Proforma',
@@ -126,11 +127,7 @@ function printReport(rows, totals) {
       <tfoot><tr><td colspan="5">Total</td><td style="text-align:right">${formatCurrency(totals.taxableValue)}</td><td></td><td style="text-align:right">${formatCurrency(totals.cgst)}</td><td style="text-align:right">${formatCurrency(totals.sgst)}</td><td style="text-align:right">${formatCurrency(totals.igst)}</td><td style="text-align:right">${formatCurrency(totals.totalInvoiceValue)}</td><td></td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=1100,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 1100, height: 700, autoPrint: true })
 }
 
 // ── Main Component ────────────────────────────────────

@@ -1,4 +1,4 @@
-import { X, Plus, List, Loader2, PackagePlus, Percent, Check, Package } from 'lucide-react'
+import { X, Plus, List, Loader2, PackagePlus, Percent, Check, Package, Pencil } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
@@ -31,7 +31,7 @@ function AutoResizeTextarea({ value, onChange, placeholder, className, onFocus, 
   )
 }
 
-function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, placeholder, hsnCode }) {
+function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, onEditProduct, placeholder, hsnCode }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const inputRef = useRef(null)
@@ -139,32 +139,47 @@ function ProductTypeaheadInput({ value, onChange, onProductSelect, onCreateNew, 
           {!isFetching && suggestions.length > 0 && (
             <div className="max-h-48 overflow-y-auto">
               {suggestions.map((product, index) => (
-                <button
+                <div
                   key={product.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(product)}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
-                    highlightedIndex === index
-                      ? 'bg-blue-50 text-primary'
-                      : 'hover:bg-gray-50 text-textPrimary'
-                  }`}
+                  className="group/row relative"
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{product.name}</div>
-                    <div className="text-xs text-textSecondary flex items-center gap-2">
-                      {product.hsnCode && <span className="font-mono text-violet-600">HSN: {product.hsnCode}</span>}
-                      {product.defaultRate && <span>{formatRate(product.defaultRate)}</span>}
-                      {product.taxRate && <span className="text-orange-600">{Number(product.taxRate)}% tax</span>}
-                      {product.unit && <span>{product.unit}</span>}
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleSelect(product)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
+                      highlightedIndex === index
+                        ? 'bg-blue-50 text-primary'
+                        : 'hover:bg-gray-50 text-textPrimary'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{product.name}</div>
+                      <div className="text-xs text-textSecondary flex items-center gap-2">
+                        {product.hsnCode && <span className="font-mono text-violet-600">HSN: {product.hsnCode}</span>}
+                        {product.defaultRate && <span>{formatRate(product.defaultRate)}</span>}
+                        {product.taxRate && <span className="text-orange-600">{Number(product.taxRate)}% tax</span>}
+                        {product.unit && <span>{product.unit}</span>}
+                      </div>
                     </div>
-                  </div>
-                  {product.defaultRate && (
-                    <span className="text-xs font-semibold text-primary shrink-0">
-                      {formatRate(product.defaultRate)}
-                    </span>
+                    {product.defaultRate && (
+                      <span className="text-xs font-semibold text-primary shrink-0">
+                        {formatRate(product.defaultRate)}
+                      </span>
+                    )}
+                  </button>
+                  {onEditProduct && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => { e.stopPropagation(); setShowSuggestions(false); onEditProduct(product) }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-300 opacity-0 md:group-hover/row:opacity-100 active:opacity-100 focus:opacity-100 md:hover:text-primary md:hover:bg-blue-50 active:text-primary active:bg-blue-50 transition-all"
+                      title="Edit product"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -430,7 +445,7 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
   )
 }
 
-function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
+function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, onEditProduct, taxRates }) {
   return (
     <div className="group relative bg-white border border-transparent active:border-border md:hover:border-border active:shadow-soft md:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_-1px_rgba(0,0,0,0.02)] rounded-lg transition-all p-1 -mx-1">
       {/* ── Desktop: columnar grid ── */}
@@ -441,6 +456,7 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
             onChange={(val) => onUpdate(index, 'name', val)}
             onProductSelect={(product) => onProductSelect(index, product)}
             onCreateNew={(name) => onCreateProduct(index, name)}
+            onEditProduct={onEditProduct}
             placeholder="Description"
             hsnCode={item.hsnCode}
           />
@@ -477,6 +493,7 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
               onChange={(val) => onUpdate(index, 'name', val)}
               onProductSelect={(product) => onProductSelect(index, product)}
               onCreateNew={(name) => onCreateProduct(index, name)}
+              onEditProduct={onEditProduct}
               placeholder="Item name or description"
               hsnCode={item.hsnCode}
             />
@@ -506,7 +523,7 @@ function BasicLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSe
   )
 }
 
-function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, taxRates }) {
+function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProductSelect, onCreateProduct, onEditProduct, taxRates }) {
   const formatAmount = (val) => {
     if (!val) return ''
     return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(val)
@@ -522,6 +539,7 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
             onChange={(val) => onUpdate(index, 'name', val)}
             onProductSelect={(product) => onProductSelect(index, product)}
             onCreateNew={(name) => onCreateProduct(index, name)}
+            onEditProduct={onEditProduct}
             placeholder="Description"
             hsnCode={item.hsnCode}
           />
@@ -576,6 +594,7 @@ function AdvancedLineItem({ item, index, onUpdate, onRemove, canRemove, onProduc
               onChange={(val) => onUpdate(index, 'name', val)}
               onProductSelect={(product) => onProductSelect(index, product)}
               onCreateNew={(name) => onCreateProduct(index, name)}
+              onEditProduct={onEditProduct}
               placeholder="Item name or description"
               hsnCode={item.hsnCode}
             />
@@ -701,7 +720,7 @@ function SavedItemsModal({ isOpen, onClose, onSelect }) {
   )
 }
 
-export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct, docTypeConfig, demoMode }) {
+export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, onAddItem, onRemoveItem, onProductSelect, onCreateProduct, onEditProduct, docTypeConfig, demoMode }) {
   const layout = docTypeConfig?.fields?.lineItemsLayout || 'full'
   // When config layout is 'basic', force basic mode regardless of formMode
   // When config layout is 'full', respect formMode toggle
@@ -787,6 +806,7 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
               canRemove={lineItems.length > 1}
               onProductSelect={handleProductSelect}
               onCreateProduct={onCreateProduct}
+              onEditProduct={onEditProduct}
               taxRates={taxRates}
             />
           ) : (
@@ -799,6 +819,7 @@ export default function InvoiceLineItems({ formMode, lineItems, onUpdateItem, on
               canRemove={lineItems.length > 1}
               onProductSelect={handleProductSelect}
               onCreateProduct={onCreateProduct}
+              onEditProduct={onEditProduct}
               taxRates={taxRates}
             />
           )

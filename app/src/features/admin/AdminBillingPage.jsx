@@ -9,7 +9,8 @@ import {
 } from 'lucide-react'
 import Portal from '../../components/Portal'
 import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 
 // ── Constants ──────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -154,9 +155,7 @@ function printReport(invoices, totals) {
       <tfoot><tr><td colspan="3">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.taxTotal)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td><td colspan="2"></td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=900,height=700')
-  w.document.write(html); w.document.close(); w.focus()
-  setTimeout(() => { w.print(); w.close() }, 400)
+  openPrintWindow(html, { width: 900, height: 700, autoPrint: true, autoClose: true })
 }
 
 // ── Export: Summary PDF ────────────────────────────────────────────
@@ -192,9 +191,7 @@ function exportSummaryPDF(invoices, totals) {
       <tfoot><tr><td colspan="3">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.taxTotal)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td><td colspan="2"></td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=1100,height=700')
-  w.document.write(html); w.document.close(); w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 1100, height: 700, autoPrint: true })
 }
 
 // ── Export Progress Modal ──────────────────────────────────────────
