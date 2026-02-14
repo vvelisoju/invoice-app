@@ -12,6 +12,7 @@ workflows:
         BUNDLE_ID: com.codevel.invoicebaba
         APP_STORE_APP_ID: 6759199018
       
+      node: v20.11.0
       xcode: latest
       cocoapods: default
       
