@@ -70,9 +70,25 @@ export const errorHandler = (error, request, reply) => {
     })
   }
 
+  // Handle Prisma errors with concise logging (Railway truncates large objects)
+  const isPrismaError = error.constructor?.name?.startsWith('PrismaClient')
+  if (isPrismaError) {
+    request.log.error({
+      prismaErrorName: error.constructor.name,
+      prismaCode: error.code || 'N/A',
+      prismaTarget: error.meta?.target || error.meta?.modelName || 'N/A',
+      prismaCause: error.meta?.cause || 'N/A',
+      message: error.message?.slice(0, 300),
+      method: request.method,
+      url: request.url,
+      requestId: request.id,
+    }, 'Prisma error')
+  }
+
   // Log full error context for unexpected errors
   request.log.error({
-    err: error,
+    errName: error.constructor?.name || error.name,
+    errMessage: error.message?.slice(0, 500),
     method: request.method,
     url: request.url,
     requestId: request.id,
