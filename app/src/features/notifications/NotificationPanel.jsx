@@ -154,7 +154,7 @@ export default function NotificationPanel({ open, onClose }) {
 
       {/* Mobile: Full-screen slide-over via Portal */}
       <Portal>
-        <div className="md:hidden fixed inset-x-0 top-0 z-30" style={{ bottom: '64px' }}>
+        <div className="md:hidden fixed inset-0 z-50">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 transition-opacity"

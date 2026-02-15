@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users, Trash2, AlertTriangle, Search } from 'lucide-react'
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { invoiceApi, businessApi, customerApi } from '../../lib/api'
 import { DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
@@ -60,8 +60,18 @@ const TABLE_COLUMNS = [
 // ── Customer Single-Select Filter ────────────────────────────────────
 function CustomerSelectFilter({ customers, selectedId, onChange, compact = false }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const anchorRef = useRef(null)
   const dropdownRef = useRef(null)
+  const searchInputRef = useRef(null)
+
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    if (!search) return customers
+    return customers.filter(c => 
+      c.name?.toLowerCase().includes(search.toLowerCase())
+    )
+  }, [customers, search])
 
   // Close on outside click
   useEffect(() => {
@@ -72,6 +82,7 @@ function CustomerSelectFilter({ customers, selectedId, onChange, compact = false
         dropdownRef.current && !dropdownRef.current.contains(e.target)
       ) {
         setOpen(false)
+        setSearch('')
       }
     }
     document.addEventListener('mousedown', handler)
@@ -79,6 +90,13 @@ function CustomerSelectFilter({ customers, selectedId, onChange, compact = false
     return () => {
       document.removeEventListener('mousedown', handler)
       document.removeEventListener('touchstart', handler)
+    }
+  }, [open])
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (open && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 50)
     }
   }, [open])
 
@@ -117,33 +135,57 @@ function CustomerSelectFilter({ customers, selectedId, onChange, compact = false
         <Portal>
           <div
             ref={dropdownRef}
-            className="fixed z-50 bg-white border border-border rounded-lg shadow-xl overflow-y-auto"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 280 }}
+            className="fixed z-50 bg-white border border-border rounded-lg shadow-xl overflow-hidden"
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 320 }}
           >
-            <button
-              onClick={() => { onChange(null); setOpen(false) }}
-              className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 flex items-center gap-2 ${
-                !selectedId ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
-              }`}
-            >
-              <span className="flex-1">All Customers</span>
-              {!selectedId && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
-            </button>
-            {customers.map(c => {
-              const isSelected = c.id === selectedId
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => { onChange(c.id); setOpen(false) }}
-                  className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 ${
-                    isSelected ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
-                  }`}
-                >
-                  <span className="truncate flex-1">{c.name}</span>
-                  {isSelected && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
-                </button>
-              )
-            })}
+            {/* Search Input */}
+            <div className="sticky top-0 bg-white border-b border-border/30 p-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search customers..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Customer List */}
+            <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
+              <button
+                onClick={() => { onChange(null); setOpen(false); setSearch('') }}
+                className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 flex items-center gap-2 ${
+                  !selectedId ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
+                }`}
+              >
+                <span className="flex-1">All Customers</span>
+                {!selectedId && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
+              </button>
+              {filteredCustomers.length === 0 ? (
+                <div className="px-3 py-4 text-xs text-gray-400 text-center">
+                  No customers found
+                </div>
+              ) : (
+                filteredCustomers.map(c => {
+                  const isSelected = c.id === selectedId
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => { onChange(c.id); setOpen(false); setSearch('') }}
+                      className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 ${
+                        isSelected ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
+                      }`}
+                    >
+                      <span className="truncate flex-1">{c.name}</span>
+                      {isSelected && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
+                    </button>
+                  )
+                })
+              )}
+            </div>
           </div>
         </Portal>
       )}

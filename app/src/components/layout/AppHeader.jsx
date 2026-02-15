@@ -197,7 +197,7 @@ export default function AppHeader({ onMenuToggle }) {
       {/* Mobile Bottom Sheet */}
       {settingsOpen && (
         <Portal>
-        <div className="md:hidden fixed inset-x-0 top-0 z-30" style={{ bottom: '64px' }} ref={sheetRef}>
+        <div className="md:hidden fixed inset-0 z-50" ref={sheetRef}>
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 transition-opacity"
