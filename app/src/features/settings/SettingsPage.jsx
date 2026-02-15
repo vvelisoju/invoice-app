@@ -47,6 +47,7 @@ const SETTINGS_TABS = [
   { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
   { key: 'templates', label: 'Invoice Templates', mobileLabel: 'Templates', icon: Palette },
+  { key: 'subscription', label: 'Manage Subscription', mobileLabel: 'Subscription', icon: Crown },
 ]
 
 function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
@@ -806,7 +807,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
           </div>
         </div>
 
-        {/* Text Signature — always visible below */}
+        {/* Text Signature — hidden, not currently used
         <div className="pt-3 border-t border-border space-y-3">
           <p className="text-xs font-medium text-textSecondary">Or use a text signature</p>
           <FieldInput
@@ -828,6 +829,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
             </div>
           )}
         </div>
+        */}
       </div>
     </div>
   )
@@ -1458,7 +1460,7 @@ export default function SettingsPage() {
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
               className={`px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors ${
                 active
                   ? 'text-primary bg-blue-50 border border-blue-200'
@@ -1504,7 +1506,7 @@ export default function SettingsPage() {
                 return (
                   <button
                     key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
                       active
                         ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'

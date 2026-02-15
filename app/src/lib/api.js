@@ -101,7 +101,9 @@ export const customerApi = {
   get: (id) => api.get(`/customers/${id}`),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.patch(`/customers/${id}`, data),
-  delete: (id) => api.delete(`/customers/${id}`)
+  delete: (id) => api.delete(`/customers/${id}`),
+  listDeleted: () => api.get('/customers/deleted'),
+  restore: (id) => api.patch(`/customers/${id}/restore`)
 }
 
 // Product API
@@ -112,7 +114,9 @@ export const productApi = {
   create: (data) => api.post('/products', data),
   update: (id, data) => api.patch(`/products/${id}`, data),
   delete: (id) => api.delete(`/products/${id}`),
-  listUnits: () => api.get('/products/units')
+  listUnits: () => api.get('/products/units'),
+  listDeleted: () => api.get('/products/deleted'),
+  restore: (id) => api.patch(`/products/${id}/restore`)
 }
 
 // Business API

@@ -150,9 +150,9 @@ export default function AppHeader({ onMenuToggle }) {
                 const docType = businessProfile?.defaultDocType || 'invoice'
                 history.push(`/invoices/new?type=${docType}`)
               }}
-              className="px-4 py-2 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-md transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-sm font-semibold text-primary bg-primary/8 hover:bg-primary/15 border border-primary/20 rounded-md transition-colors flex items-center gap-2"
             >
-              <action.icon className="w-4 h-4 text-gray-400" />
+              <action.icon className="w-4 h-4 text-primary" />
               {action.label}
             </button>
           ))}

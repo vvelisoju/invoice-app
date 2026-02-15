@@ -38,48 +38,51 @@ export async function getMonthlyTrend(request, reply) {
 }
 
 export async function getGSTR3BSummary(request, reply) {
-  const { month } = request.query
+  const { month, documentType } = request.query
   const summary = await reportsService.getGSTR3BSummary(
     request.businessId,
-    month
+    month,
+    documentType
   )
   return { data: summary }
 }
 
 export async function getGSTR1B2B(request, reply) {
-  const { month } = request.query
+  const { month, documentType } = request.query
   const result = await reportsService.getGSTR1B2B(
     request.businessId,
-    month
+    month,
+    documentType
   )
   return { data: result }
 }
 
 export async function getSalesRegister(request, reply) {
-  const { dateFrom, dateTo } = request.query
+  const { dateFrom, dateTo, documentType } = request.query
   const result = await reportsService.getSalesRegister(
     request.businessId,
     dateFrom,
-    dateTo
+    dateTo,
+    documentType
   )
   return { data: result }
 }
 
 export async function getGSTR1B2CLarge(request, reply) {
-  const { month } = request.query
-  const result = await reportsService.getGSTR1B2CLarge(request.businessId, month)
+  const { month, documentType } = request.query
+  const result = await reportsService.getGSTR1B2CLarge(request.businessId, month, undefined, documentType)
   return { data: result }
 }
 
 export async function getGSTR1B2CSmall(request, reply) {
-  const { month } = request.query
-  const result = await reportsService.getGSTR1B2CSmall(request.businessId, month)
+  const { month, documentType } = request.query
+  const result = await reportsService.getGSTR1B2CSmall(request.businessId, month, undefined, documentType)
   return { data: result }
 }
 
 export async function getGSTR1NilExempt(request, reply) {
-  const { month } = request.query
-  const result = await reportsService.getGSTR1NilExempt(request.businessId, month)
+  const { month, documentType } = request.query
+  const result = await reportsService.getGSTR1NilExempt(request.businessId, month, documentType)
   return { data: result }
 }
 
@@ -96,8 +99,8 @@ export async function getGSTR1DocSummary(request, reply) {
 }
 
 export async function getCustomerSummary(request, reply) {
-  const { dateFrom, dateTo } = request.query
-  const result = await reportsService.getCustomerSummary(request.businessId, dateFrom, dateTo)
+  const { dateFrom, dateTo, documentType } = request.query
+  const result = await reportsService.getCustomerSummary(request.businessId, dateFrom, dateTo, documentType)
   return { data: result }
 }
 
@@ -121,14 +124,14 @@ export async function getCustomerLedger(request, reply) {
 }
 
 export async function getAnnualSummary(request, reply) {
-  const { fy } = request.query
-  const result = await reportsService.getAnnualSummary(request.businessId, fy)
+  const { fy, documentType } = request.query
+  const result = await reportsService.getAnnualSummary(request.businessId, fy, documentType)
   return { data: result }
 }
 
 export async function getGSTR9Data(request, reply) {
-  const { fy } = request.query
-  const result = await reportsService.getGSTR9Data(request.businessId, fy)
+  const { fy, documentType } = request.query
+  const result = await reportsService.getGSTR9Data(request.businessId, fy, documentType)
   return { data: result }
 }
 

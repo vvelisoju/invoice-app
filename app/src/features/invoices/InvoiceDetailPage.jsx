@@ -423,6 +423,7 @@ export default function InvoiceDetailPage() {
                         <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                       </button>
                     )}
+                    {/* Delete option hidden — not currently used
                     <div className="border-t border-border my-1" />
                     <button
                       onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
@@ -430,6 +431,7 @@ export default function InvoiceDetailPage() {
                     >
                       <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
                     </button>
+                    */}
                   </div>
                 </>
               )}
@@ -563,6 +565,7 @@ export default function InvoiceDetailPage() {
                   <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                 </button>
               )}
+              {/* Delete option hidden — not currently used
               <div className="border-t border-border my-1 mx-4" />
               <button
                 onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
@@ -570,6 +573,7 @@ export default function InvoiceDetailPage() {
               >
                 <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
               </button>
+              */}
             </div>
           </div>
         </>

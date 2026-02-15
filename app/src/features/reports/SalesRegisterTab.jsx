@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, Search, Loader2, FileText, FileSpreadsheet, Printer, Download, ChevronDown
@@ -132,18 +132,28 @@ function printReport(rows, totals) {
 
 // ── Main Component ────────────────────────────────────
 
-export default function SalesRegisterTab() {
+export default function SalesRegisterTab({ documentType }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [activeQuick, setActiveQuick] = useState('')
   const [searchParams, setSearchParams] = useState({})
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['reports', 'sales-register', searchParams],
-    queryFn: async () => {
-      const res = await reportsApi.getSalesRegister(searchParams)
-      return res.data.data || res.data
+  // Update searchParams when documentType changes
+  useEffect(() => {
+    if (documentType) {
+      setSearchParams(prev => ({ ...prev, documentType }))
     }
+  }, [documentType])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports', 'sales-register', searchParams, documentType],
+    queryFn: async () => {
+      const params = { ...searchParams }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getSalesRegister(params)
+      return res.data.data || res.data
+    },
+    enabled: !!documentType
   })
 
   const rows = data?.rows || []
@@ -153,6 +163,7 @@ export default function SalesRegisterTab() {
     const params = {}
     if (dateFrom) params.dateFrom = dateFrom
     if (dateTo) params.dateTo = dateTo
+    if (documentType) params.documentType = documentType
     setActiveQuick('')
     setSearchParams(params)
   }
@@ -162,7 +173,9 @@ export default function SalesRegisterTab() {
     setDateFrom(range.from)
     setDateTo(range.to)
     setActiveQuick(key)
-    setSearchParams({ dateFrom: range.from, dateTo: range.to })
+    const params = { dateFrom: range.from, dateTo: range.to }
+    if (documentType) params.documentType = documentType
+    setSearchParams(params)
   }
 
   return (

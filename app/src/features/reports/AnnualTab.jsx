@@ -222,7 +222,7 @@ function exportAnnualCSV(data) {
 
 // ── Main Component ────────────────────────────────────
 
-export default function AnnualTab() {
+export default function AnnualTab({ documentType }) {
   const [fy, setFY] = useState(getCurrentFY())
 
   const fyOptions = useMemo(() => {
@@ -237,21 +237,25 @@ export default function AnnualTab() {
   }, [])
 
   const { data: annualData, isLoading: annualLoading } = useQuery({
-    queryKey: ['reports', 'annual-summary', fy],
+    queryKey: ['reports', 'annual-summary', fy, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getAnnualSummary(fy)
+      const params = { fy }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getAnnualSummary(params.fy, params)
       return res.data.data || res.data
     },
-    enabled: !!fy
+    enabled: !!fy && !!documentType
   })
 
   const { data: gstr9Data, isLoading: gstr9Loading } = useQuery({
-    queryKey: ['reports', 'gstr9', fy],
+    queryKey: ['reports', 'gstr9', fy, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR9Data(fy)
+      const params = { fy }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR9Data(params.fy, params)
       return res.data.data || res.data
     },
-    enabled: !!fy
+    enabled: !!fy && !!documentType
   })
 
   return (

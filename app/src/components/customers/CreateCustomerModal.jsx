@@ -57,6 +57,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
         setPlanLimitData(errorData.details?.usage || errorData.usage)
+        onClose()
         return
       }
       setError(errorData?.message || (isEdit ? 'Failed to update customer' : 'Failed to create customer'))

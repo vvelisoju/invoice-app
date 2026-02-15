@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Search, Calendar, ChevronDown, FileText, FileSpreadsheet, Printer,
   Loader2, FolderArchive, Download, ChevronRight, X
@@ -250,7 +250,7 @@ function ExportMenu({ documents, totals, onExportZip }) {
 
 // ── Main Component ───────────────────────────────────────
 
-export default function DocumentsTab() {
+export default function DocumentsTab({ documentType }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -258,18 +258,28 @@ export default function DocumentsTab() {
   const [quickFilter, setQuickFilter] = useState('all')
   const [searchParams, setSearchParams] = useState({})
 
+  // Update searchParams when documentType changes
+  useEffect(() => {
+    if (documentType) {
+      setSearchParams(prev => ({ ...prev, documentType }))
+    }
+  }, [documentType])
+
   // ZIP export progress
   const [zipExporting, setZipExporting] = useState(false)
   const [zipProgress, setZipProgress] = useState(0)
   const [zipTotal, setZipTotal] = useState(0)
   const [zipStatus, setZipStatus] = useState('')
 
-  const { data: reportData, isLoading } = useQuery({
-    queryKey: ['reports', 'documents', searchParams],
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports', 'documents', searchParams, documentType],
     queryFn: async () => {
-      const response = await reportsApi.getDocuments(searchParams)
-      return response.data.data || response.data
-    }
+      const params = { ...searchParams }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getDocuments(params)
+      return res.data.data || res.data
+    },
+    enabled: !!documentType
   })
 
   // GST summary query
@@ -281,8 +291,8 @@ export default function DocumentsTab() {
     }
   })
 
-  const documents = reportData?.documents || []
-  const totals = reportData?.totals || {}
+  const documents = data?.documents || []
+  const totals = data?.totals || {}
   const gstSummary = gstData?.summary || null
 
   const handleSearch = () => {
@@ -290,7 +300,7 @@ export default function DocumentsTab() {
     if (dateFrom) params.dateFrom = dateFrom
     if (dateTo) params.dateTo = dateTo
     if (statusFilter !== 'all') params.status = statusFilter
-    if (docTypeFilter !== 'all') params.documentType = docTypeFilter
+    if (documentType) params.documentType = documentType
     setSearchParams(params)
   }
 
@@ -300,18 +310,24 @@ export default function DocumentsTab() {
       const range = getLastMonthRange()
       setDateFrom(range.from)
       setDateTo(range.to)
-      setSearchParams({ dateFrom: range.from, dateTo: range.to })
+      const params = { dateFrom: range.from, dateTo: range.to }
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     } else if (key === 'lastQuarter') {
       const range = getLastQuarterRange()
       setDateFrom(range.from)
       setDateTo(range.to)
-      setSearchParams({ dateFrom: range.from, dateTo: range.to })
+      const params = { dateFrom: range.from, dateTo: range.to }
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     } else {
       setDateFrom('')
       setDateTo('')
       setStatusFilter('all')
       setDocTypeFilter('all')
-      setSearchParams({})
+      const params = {}
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     }
   }
 

@@ -140,6 +140,7 @@ export default function ProductAddEditModal({
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
         setPlanLimitData(errorData.details?.usage || errorData.usage)
+        onClose()
         return
       }
       setErrors({ submit: errorData?.message || (isEdit ? 'Failed to update product' : 'Failed to create product') })

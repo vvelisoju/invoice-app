@@ -1,4 +1,4 @@
-import { handleSearchCustomers, handleListCustomers, handleCreateCustomer, handleGetCustomer, handleUpdateCustomer, handleDeleteCustomer } from './handlers.js'
+import { handleSearchCustomers, handleListCustomers, handleCreateCustomer, handleGetCustomer, handleUpdateCustomer, handleDeleteCustomer, handleRestoreCustomer, handleListDeletedCustomers } from './handlers.js'
 import { authMiddleware } from '../../common/auth.js'
 
 export const customerRoutes = async (fastify) => {
@@ -12,7 +12,12 @@ export const customerRoutes = async (fastify) => {
 
   fastify.post('/customers', handleCreateCustomer)
 
+  // Static routes must come before parameterized routes
+  fastify.get('/customers/deleted', handleListDeletedCustomers)
+
   fastify.get('/customers/:id', handleGetCustomer)
+
+  fastify.patch('/customers/:id/restore', handleRestoreCustomer)
 
   fastify.patch('/customers/:id', handleUpdateCustomer)
 

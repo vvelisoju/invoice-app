@@ -147,10 +147,8 @@ export const createInvoice = async (prisma, businessId, data) => {
   // When true, invoices start as DRAFT and go through Issue → Paid flow
   const initialStatus = business.enableStatusWorkflow ? 'DRAFT' : 'PAID'
 
-  // If saving directly as PAID (no workflow), check plan limits and count usage
-  if (!business.enableStatusWorkflow) {
-    await checkCanIssueInvoice(businessId)
-  }
+  // Check plan limits regardless of workflow mode — drafts count toward the limit too
+  await checkCanIssueInvoice(businessId)
 
   // Create invoice with line items
   const invoice = await prisma.invoice.create({
@@ -201,11 +199,9 @@ export const createInvoice = async (prisma, businessId, data) => {
     }
   })
 
-  // Increment usage counter when saving directly as PAID
-  if (!business.enableStatusWorkflow) {
-    await incrementUsageCounter(businessId)
-    checkUsageLimitWarning(businessId, business.ownerUserId)
-  }
+  // Increment usage counter for every new invoice (drafts count too)
+  await incrementUsageCounter(businessId)
+  checkUsageLimitWarning(businessId, business.ownerUserId)
 
   return invoice
 }
@@ -524,8 +520,7 @@ export const issueInvoice = async (prisma, invoiceId, businessId, templateData) 
     }
   })
 
-  // Increment usage counter after successful issuance
-  await incrementUsageCounter(businessId)
+  // Usage already counted at creation time — just fire warning check
   checkUsageLimitWarning(businessId, business.ownerUserId)
 
   return updated

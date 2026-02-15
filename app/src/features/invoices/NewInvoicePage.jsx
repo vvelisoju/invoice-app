@@ -355,10 +355,30 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
 
   const handleSave = () => {
     setError('')
+
+    // Validate invoice number
+    if (!invoice.invoiceNumber || !invoice.invoiceNumber.trim()) {
+      setError('Invoice number is required')
+      return
+    }
+
+    // Validate line items
     const validItems = invoice.lineItems.filter(item => item.name && item.rate > 0)
     if (validItems.length === 0) {
       setError('Please add at least one item with a name and rate')
       return
+    }
+
+    // Validate amounts are valid numbers
+    for (const item of validItems) {
+      if (isNaN(Number(item.rate)) || Number(item.rate) < 0) {
+        setError(`Invalid rate for "${item.name}". Please enter a valid positive amount.`)
+        return
+      }
+      if (item.quantity && (isNaN(Number(item.quantity)) || Number(item.quantity) <= 0)) {
+        setError(`Invalid quantity for "${item.name}". Please enter a valid positive number.`)
+        return
+      }
     }
 
     // Demo mode: save ALL data to localStorage and redirect to signup

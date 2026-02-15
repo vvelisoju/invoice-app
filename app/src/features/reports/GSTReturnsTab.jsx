@@ -543,7 +543,7 @@ function DocSummaryTable({ data, isLoading }) {
 
 // ── Main Component ────────────────────────────────────
 
-export default function GSTReturnsTab() {
+export default function GSTReturnsTab({ documentType }) {
   const [month, setMonth] = useState(getCurrentMonth())
 
   // Build month options (last 18 months)
@@ -560,48 +560,58 @@ export default function GSTReturnsTab() {
   }, [])
 
   const { data: gstr3bData, isLoading: gstr3bLoading } = useQuery({
-    queryKey: ['reports', 'gstr3b', month],
+    queryKey: ['reports', 'gstr3b', month, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR3B(month)
+      const params = { month }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR3B(params.month, params)
       return res.data.data || res.data
     },
-    enabled: !!month
+    enabled: !!month && !!documentType
   })
 
   const { data: b2bData, isLoading: b2bLoading } = useQuery({
-    queryKey: ['reports', 'gstr1-b2b', month],
+    queryKey: ['reports', 'gstr1-b2b', month, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR1B2B(month)
+      const params = { month }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR1B2B(params.month, params)
       return res.data.data || res.data
     },
-    enabled: !!month
+    enabled: !!month && !!documentType
   })
 
   const { data: b2clData, isLoading: b2clLoading } = useQuery({
-    queryKey: ['reports', 'gstr1-b2c-large', month],
+    queryKey: ['reports', 'gstr1-b2c-large', month, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR1B2CLarge(month)
+      const params = { month }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR1B2CLarge(params.month, params)
       return res.data.data || res.data
     },
-    enabled: !!month
+    enabled: !!month && !!documentType
   })
 
   const { data: b2csData, isLoading: b2csLoading } = useQuery({
-    queryKey: ['reports', 'gstr1-b2c-small', month],
+    queryKey: ['reports', 'gstr1-b2c-small', month, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR1B2CSmall(month)
+      const params = { month }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR1B2CSmall(params.month, params)
       return res.data.data || res.data
     },
-    enabled: !!month
+    enabled: !!month && !!documentType
   })
 
   const { data: nilData, isLoading: nilLoading } = useQuery({
-    queryKey: ['reports', 'gstr1-nil-exempt', month],
+    queryKey: ['reports', 'gstr1-nil-exempt', month, documentType],
     queryFn: async () => {
-      const res = await reportsApi.getGSTR1NilExempt(month)
+      const params = { month }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getGSTR1NilExempt(params.month, params)
       return res.data.data || res.data
     },
-    enabled: !!month
+    enabled: !!month && !!documentType
   })
 
   const { data: cnData, isLoading: cnLoading } = useQuery({

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen } from 'lucide-react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen, RotateCcw } from 'lucide-react'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import {
   DataTable,
@@ -25,7 +25,7 @@ const STATUS_FILTERS = [
   { key: 'all', label: 'All Customers' },
   { key: 'active', label: 'Active' },
   { key: 'outstanding', label: 'Outstanding Balance', badgeColor: 'bg-accentOrange' },
-  { key: 'inactive', label: 'Inactive', badgeColor: 'bg-gray-400' },
+  { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
 
 const TABLE_COLUMNS = [
@@ -156,37 +156,48 @@ export default function CustomerListPage() {
   const allCustomers = data?.pages.flatMap(p => p.customers || []) || []
   const totalCount = data?.pages[0]?.total || 0
 
+  // Fetch deleted customers
+  const { data: deletedCustomersData } = useQuery({
+    queryKey: ['customers', 'deleted'],
+    queryFn: async () => {
+      const response = await customerApi.listDeleted()
+      return response.data || []
+    }
+  })
+  const deletedCustomers = deletedCustomersData || []
+
+  // Restore mutation
+  const restoreMutation = useMutation({
+    mutationFn: (id) => customerApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+    }
+  })
+
   // Client-side filtering based on statusFilter
   const customers = useMemo(() => {
     switch (statusFilter) {
       case 'active':
-        // Customers who have at least one invoice
         return allCustomers.filter(c => c.invoices && c.invoices.length > 0)
       case 'outstanding':
         return allCustomers.filter(c => computeBalance(c) > 0)
-      case 'inactive':
-        // Customers with no invoices at all
-        return allCustomers.filter(c => !c.invoices || c.invoices.length === 0)
+      case 'deleted':
+        return deletedCustomers
       default:
-        // All customers
         return allCustomers
     }
-  }, [allCustomers, statusFilter])
+  }, [allCustomers, deletedCustomers, statusFilter])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    let active = 0, outstanding = 0, inactive = 0
+    let active = 0, outstanding = 0
     allCustomers.forEach((cust) => {
       const balance = computeBalance(cust)
       if (balance > 0) outstanding++
-      if (!cust.invoices || cust.invoices.length === 0) {
-        inactive++
-      } else {
-        active++
-      }
+      if (cust.invoices && cust.invoices.length > 0) active++
     })
-    return { all: allCustomers.length, active, outstanding, inactive }
-  }, [allCustomers])
+    return { all: allCustomers.length, active, outstanding, deleted: deletedCustomers.length }
+  }, [allCustomers, deletedCustomers])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
 
@@ -326,36 +337,50 @@ export default function CustomerListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push(`/invoices?customerId=${customer.id}`) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="View Documents"
-        >
-          <FolderOpen className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Create Invoice"
-        >
-          <FileText className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleEdit(customer) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Edit Customer"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(customer) }}
-          className="w-6 h-6 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
-          title="Delete Customer"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>,
+      statusFilter === 'deleted' ? (
+        <div key="actions" className="flex justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(customer.id) }}
+            disabled={restoreMutation.isPending}
+            className="px-2.5 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 flex items-center gap-1 transition-colors disabled:opacity-50"
+            title="Restore Customer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Restore
+          </button>
+        </div>
+      ) : (
+        <div key="actions" className="flex justify-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push(`/invoices?customerId=${customer.id}`) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="View Documents"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Create Invoice"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(customer) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Edit Customer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(customer) }}
+            className="w-6 h-6 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
+            title="Delete Customer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
     ]
   }
 

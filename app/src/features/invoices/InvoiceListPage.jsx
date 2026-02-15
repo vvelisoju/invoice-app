@@ -31,7 +31,6 @@ const STATUS_FILTERS = [
   { key: 'ISSUED', label: 'Unpaid', badgeColor: 'bg-accentOrange' },
   { key: 'PAID', label: 'Paid', badgeColor: 'bg-green-600' },
   { key: 'DRAFT', label: 'Draft', badgeColor: 'bg-gray-400' },
-  { key: 'inactive', label: 'Inactive', badgeColor: 'bg-gray-400' },
 ]
 
 const DOC_TYPE_OPTIONS = [
@@ -108,7 +107,7 @@ function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compac
       {/* Tag-input style container */}
       <div
         onClick={() => inputRef.current?.focus()}
-        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[32px] px-2 py-1' : 'min-h-[38px] px-2.5 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
+        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[34px] px-2.5 py-1' : 'min-h-[40px] px-3 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
       >
         <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-gray-400 shrink-0`} />
         {/* Selected chips inside the input */}
@@ -202,11 +201,18 @@ export default function InvoiceListPage() {
     [enabledKeys]
   )
 
-  const [docTypeFilters, setDocTypeFilters] = useState(() => {
+  const [docTypeFilters, setDocTypeFilters] = useState({})
+  const [docTypeInitialized, setDocTypeInitialized] = useState(false)
+
+  // Initialize doc type filter to show only the default document type
+  useEffect(() => {
+    if (docTypeInitialized || !businessProfile) return
+    const defaultDocType = businessProfile.defaultDocType || 'invoice'
     const initial = {}
-    DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = true })
-    return initial
-  })
+    DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = opt.key === defaultDocType })
+    setDocTypeFilters(initial)
+    setDocTypeInitialized(true)
+  }, [businessProfile, docTypeInitialized])
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -301,10 +307,11 @@ export default function InvoiceListPage() {
     })
   }, [invoices, docTypeFilters, selectedCustomerIds])
 
-  // Compute counts for filter pills
+  // Compute counts for filter pills — use doc-type+customer filtered invoices across ALL statuses
   const counts = useMemo(() => {
-    const c = { all: filteredInvoices.length, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0, inactive: 0 }
+    const c = { all: 0, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0 }
     filteredInvoices.forEach((inv) => {
+      c.all++
       if (inv.status === 'ISSUED') c.ISSUED++
       else if (inv.status === 'PAID') c.PAID++
       else if (inv.status === 'OVERDUE') c.OVERDUE++

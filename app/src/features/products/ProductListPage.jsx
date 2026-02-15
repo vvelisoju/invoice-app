@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2, Download, X, SlidersHorizontal } from 'lucide-react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2, Download, X, SlidersHorizontal, RotateCcw } from 'lucide-react'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productApi } from '../../lib/api'
 import {
   DataTable,
@@ -24,7 +24,7 @@ const AVATAR_COLORS = [
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Products' },
   { key: 'active', label: 'Active', badgeColor: 'bg-green-500' },
-  { key: 'archived', label: 'Inactive', badgeColor: 'bg-gray-400' },
+  { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
 
 const TABLE_COLUMNS = [
@@ -147,29 +147,44 @@ export default function ProductListPage() {
   const allProducts = data?.pages.flatMap(p => p.products || []) || []
   const totalCount = data?.pages[0]?.total || 0
 
+  // Fetch deleted products
+  const { data: deletedProductsData } = useQuery({
+    queryKey: ['products', 'deleted'],
+    queryFn: async () => {
+      const response = await productApi.listDeleted()
+      return response.data || []
+    }
+  })
+  const deletedProducts = deletedProductsData || []
+
+  // Restore mutation
+  const restoreMutation = useMutation({
+    mutationFn: (id) => productApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    }
+  })
+
   // Client-side filtering based on statusFilter
   const products = useMemo(() => {
     switch (statusFilter) {
       case 'active':
-        // Products with a defaultRate set (considered active/priced)
         return allProducts.filter(p => p.defaultRate != null && Number(p.defaultRate) > 0)
-      case 'archived':
-        // Products with no rate (placeholder for archived logic)
-        return allProducts.filter(p => p.defaultRate == null || Number(p.defaultRate) === 0)
+      case 'deleted':
+        return deletedProducts
       default:
         return allProducts
     }
-  }, [allProducts, statusFilter])
+  }, [allProducts, deletedProducts, statusFilter])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    const c = { all: allProducts.length, active: 0, archived: 0 }
+    const c = { all: allProducts.length, active: 0, deleted: deletedProducts.length }
     allProducts.forEach((p) => {
       if (p.defaultRate != null && Number(p.defaultRate) > 0) c.active++
-      else c.archived++
     })
     return c
-  }, [allProducts])
+  }, [allProducts, deletedProducts])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
 
@@ -242,29 +257,43 @@ export default function ProductListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push('/invoices/new') }}
-          className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Create Invoice"
-        >
-          <FileText className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
-          className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Edit Product"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
-          className="w-7 h-7 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
-          title="Delete Product"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>,
+      statusFilter === 'deleted' ? (
+        <div key="actions" className="flex justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(product.id) }}
+            disabled={restoreMutation.isPending}
+            className="px-2.5 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 flex items-center gap-1 transition-colors disabled:opacity-50"
+            title="Restore Product"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Restore
+          </button>
+        </div>
+      ) : (
+        <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push('/invoices/new') }}
+            className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Create Invoice"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
+            className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Edit Product"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
+            className="w-7 h-7 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
+            title="Delete Product"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ),
     ]
   }
 

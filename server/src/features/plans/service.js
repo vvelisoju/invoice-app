@@ -32,12 +32,11 @@ export async function getBusinessPlanUsage(businessId) {
     }
   })
 
-  // Count issued invoices this month (fixed — not affected by deletes)
+  // Count invoices this month (fixed — not affected by deletes, drafts count too)
   const issuedThisMonth = usageCounter?.invoicesIssuedCount || await prisma.invoice.count({
     where: {
       businessId,
-      status: { not: 'DRAFT' },
-      issuedAt: {
+      createdAt: {
         gte: startOfMonth,
         lte: endOfMonth
       }

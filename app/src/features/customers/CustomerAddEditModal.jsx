@@ -3,6 +3,7 @@ import { X, Loader2, User, Phone, Mail, MapPin, FileText, Hash, Trash2, AlertTri
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import Portal from '../../components/Portal'
+import PlanLimitModal from '../../components/PlanLimitModal'
 
 const INDIAN_STATES = [
   { code: '01', name: 'Jammu & Kashmir' }, { code: '02', name: 'Himachal Pradesh' },
@@ -31,6 +32,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   const deleteMutation = useMutation({
     mutationFn: () => customerApi.delete(customer.id),
@@ -73,6 +75,16 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       onSuccess?.()
       onClose()
+    },
+    onError: (err) => {
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        const usagePayload = errorData.details?.usage || errorData.usage
+        setPlanLimitData(usagePayload)
+        onClose()
+        return
+      }
+      setErrors({ submit: errorData?.message || (isEdit ? 'Failed to update customer' : 'Failed to create customer') })
     }
   })
 
@@ -236,9 +248,9 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
           </div>
 
           {/* Error banner */}
-          {mutation.isError && (
+          {errors.submit && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{mutation.error?.response?.data?.error?.message || mutation.error?.message || 'Something went wrong'}</p>
+              <p className="text-sm text-red-600">{errors.submit}</p>
             </div>
           )}
         </form>
@@ -311,6 +323,13 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
         </div>
       </div>
     </div>
+    {/* Plan Limit Modal */}
+    <PlanLimitModal
+      isOpen={!!planLimitData}
+      onClose={() => setPlanLimitData(null)}
+      resourceType="customer"
+      usage={planLimitData}
+    />
     </Portal>
   )
 }
