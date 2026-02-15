@@ -181,6 +181,7 @@ export const syncApi = {
 // Plans API
 export const plansApi = {
   list: () => api.get('/plans'),
+  listPublic: () => api.get('/public/plans'),
   getUsage: () => api.get('/plans/usage'),
   createOrder: (data) => api.post('/plans/create-order', data),
   verifyPayment: (data) => api.post('/plans/verify-payment', data),

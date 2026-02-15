@@ -65,6 +65,30 @@ fastify.decorate('prisma', prisma)
 
 fastify.setErrorHandler(errorHandler)
 
+// Public routes (no authentication required)
+fastify.get('/public/plans', async (request, reply) => {
+  try {
+    const plans = await prisma.plan.findMany({
+      where: { active: true },
+      orderBy: { priceMonthly: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        description: true,
+        priceMonthly: true,
+        priceYearly: true,
+        entitlements: true
+      }
+    })
+    return { data: plans }
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to fetch public plans')
+    reply.status(500)
+    return { error: { message: 'Failed to fetch plans' } }
+  }
+})
+
 // Register routes
 await fastify.register(authRoutes)
 await fastify.register(invoiceRoutes)
