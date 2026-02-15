@@ -10,6 +10,7 @@ import { InvoiceFormToolbar, InvoiceHeaderSection, InvoiceLineItems, InvoiceTota
 import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
@@ -48,8 +49,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const [createProductLineIndex, setCreateProductLineIndex] = useState(null)
   const [editProduct, setEditProduct] = useState(null)
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
-  const [showPlanLimit, setShowPlanLimit] = useState(false)
-  const [planLimitData, setPlanLimitData] = useState(null)
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
   const [showBusinessSettings, setShowBusinessSettings] = useState(false)
   const [showLogoUpload, setShowLogoUpload] = useState(false)
   const [showSignatureUpload, setShowSignatureUpload] = useState(false)
@@ -345,16 +345,21 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
         const usagePayload = errorData.details?.usage || errorData.usage
-        setPlanLimitData(usagePayload)
-        setShowPlanLimit(true)
+        setPlanLimitData({ type: 'invoice', usage: usagePayload })
         return
       }
       setError(errorData?.message || err.message || (isEditMode ? 'Failed to update invoice' : 'Failed to create invoice'))
     }
   })
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('')
+
+    // Pre-check invoice plan limit (only for new invoices, not edits)
+    if (!isEditMode && !isDemo) {
+      const blocked = await checkLimit('invoice')
+      if (blocked) return
+    }
 
     // Validate invoice number
     if (!invoice.invoiceNumber || !invoice.invoiceNumber.trim()) {
@@ -520,7 +525,11 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
               setSelectedCustomer(customer)
               setCustomer(customer)
             }}
-            onCreateNewCustomer={(name) => {
+            onCreateNewCustomer={async (name) => {
+              if (!isDemo) {
+                const blocked = await checkLimit('customer')
+                if (blocked) return
+              }
               setCreateCustomerName(name || '')
               setShowCreateCustomer(true)
             }}
@@ -555,7 +564,11 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             onProductSelect={(index, product) => {
               setProductForLineItem(index, product)
             }}
-            onCreateProduct={(index, name) => {
+            onCreateProduct={async (index, name) => {
+              if (!isDemo) {
+                const blocked = await checkLimit('product')
+                if (blocked) return
+              }
               setCreateProductLineIndex(index)
               setCreateProductName(name || '')
               setShowCreateProduct(true)
@@ -572,6 +585,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           <InvoiceTotalsFooter
             subtotal={invoice.subtotal}
             discountTotal={invoice.discountTotal}
+            onDiscountChange={(val) => updateField('discountTotal', val)}
             taxRate={invoice.taxRate}
             taxTotal={invoice.taxTotal}
             total={invoice.total}
@@ -684,10 +698,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
 
       {/* Plan Limit Modal */}
       <PlanLimitModal
-        isOpen={showPlanLimit}
-        onClose={() => setShowPlanLimit(false)}
-        resourceType="invoice"
-        usage={planLimitData}
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'invoice'}
+        usage={planLimitData?.usage}
       />
 
       {/* Business Settings Modal */}

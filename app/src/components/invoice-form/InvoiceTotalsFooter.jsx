@@ -92,7 +92,7 @@ function SignatureSection({ signatureUrl, signatureName, onSignatureClick, colla
   )
 }
 
-function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBreakdown, totalTaxFromItems, currency, formatCurrency }) {
+function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBreakdown, totalTaxFromItems, currency, formatCurrency, onDiscountChange }) {
   return (
     <div>
       <div className="space-y-3">
@@ -100,12 +100,28 @@ function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBre
           <span className="text-sm font-medium text-textSecondary">Subtotal</span>
           <span className="text-sm font-semibold text-textPrimary">{formatCurrency(subtotal)}</span>
         </div>
-        {discountTotal > 0 && (
+        {onDiscountChange ? (
+          <div className="flex justify-between items-center px-2">
+            <span className="text-sm font-medium text-textSecondary">Discount</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-red-500">-</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discountTotal || ''}
+                onChange={(e) => onDiscountChange(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="w-24 text-right text-sm font-semibold text-red-500 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        ) : discountTotal > 0 ? (
           <div className="flex justify-between items-center px-2">
             <span className="text-sm font-medium text-textSecondary">Discount</span>
             <span className="text-sm font-semibold text-red-500">-{formatCurrency(discountTotal)}</span>
           </div>
-        )}
+        ) : null}
 
         {/* Per-tax-rate breakdown from line items */}
         {taxBreakdown.length > 0 && (
@@ -164,7 +180,8 @@ export default function InvoiceTotalsFooter({
   signatureUrl,
   signatureName,
   onSignatureClick,
-  docTypeConfig
+  docTypeConfig,
+  onDiscountChange
 }) {
   const showTerms = docTypeConfig?.fields?.showTerms !== false
   const showSignature = docTypeConfig?.fields?.showSignature !== false
@@ -223,6 +240,7 @@ export default function InvoiceTotalsFooter({
             subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
             taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
             totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
+            onDiscountChange={onDiscountChange}
           />
           {showSignature && (
             <div className="mt-6">
@@ -241,6 +259,7 @@ export default function InvoiceTotalsFooter({
           subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
           taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
           totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
+          onDiscountChange={onDiscountChange}
         />
         {showSignature && (
           <SignatureSection

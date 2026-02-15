@@ -9,6 +9,8 @@ import {
   PageToolbar
 } from '../../components/data-table'
 import ProductAddEditModal from './ProductAddEditModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import Portal from '../../components/Portal'
 
 const AVATAR_COLORS = [
@@ -23,7 +25,6 @@ const AVATAR_COLORS = [
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Products' },
-  { key: 'active', label: 'Active', badgeColor: 'bg-green-500' },
   { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
 
@@ -93,6 +94,15 @@ export default function ProductListPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Plan limit pre-check
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
+
+  const handleAddProduct = useCallback(async () => {
+    const blocked = await checkLimit('product')
+    if (blocked) return
+    setShowAddModal(true)
+  }, [checkLimit])
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -316,7 +326,7 @@ export default function ProductListPage() {
               <SlidersHorizontal className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddProduct}
               className="w-10 h-10 flex items-center justify-center text-white bg-[#2563eb] active:bg-[#1d4ed8] rounded-lg shadow-sm"
             >
               <Plus className="w-5 h-5" />
@@ -336,7 +346,7 @@ export default function ProductListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddProduct}
               className="px-4 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -630,6 +640,14 @@ export default function ProductListPage() {
         </div>
         </Portal>
       )}
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'product'}
+        usage={planLimitData?.usage}
+      />
     </div>
   )
 }

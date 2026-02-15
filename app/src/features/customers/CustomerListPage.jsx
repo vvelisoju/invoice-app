@@ -9,6 +9,8 @@ import {
   PageToolbar
 } from '../../components/data-table'
 import CustomerAddEditModal from './CustomerAddEditModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import Portal from '../../components/Portal'
 
 const AVATAR_COLORS = [
@@ -23,7 +25,6 @@ const AVATAR_COLORS = [
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Customers' },
-  { key: 'active', label: 'Active' },
   { key: 'outstanding', label: 'Outstanding Balance', badgeColor: 'bg-accentOrange' },
   { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
@@ -102,6 +103,15 @@ export default function CustomerListPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Plan limit pre-check
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
+
+  const handleAddCustomer = useCallback(async () => {
+    const blocked = await checkLimit('customer')
+    if (blocked) return
+    setShowAddModal(true)
+  }, [checkLimit])
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -403,7 +413,7 @@ export default function CustomerListPage() {
               <SlidersHorizontal className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddCustomer}
               className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
             >
               <Plus className="w-5 h-5" />
@@ -423,7 +433,7 @@ export default function CustomerListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddCustomer}
               className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -782,6 +792,14 @@ export default function CustomerListPage() {
         </div>
         </Portal>
       )}
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'customer'}
+        usage={planLimitData?.usage}
+      />
     </div>
   )
 }
