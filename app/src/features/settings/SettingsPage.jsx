@@ -1113,6 +1113,16 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             Manage Subscription
           </button>
           <button
+            onClick={() => {
+              queryClient.clear()
+              window.location.reload()
+            }}
+            className="px-5 py-2.5 text-sm font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 md:hover:bg-amber-100 rounded-lg border border-amber-100 flex items-center gap-2 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear Cache
+          </button>
+          <button
             onClick={onLogout}
             className="px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-100 flex items-center gap-2 transition-colors"
           >

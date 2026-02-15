@@ -38,8 +38,10 @@ export default function usePlanLimitCheck() {
       const usage = await queryClient.fetchQuery({
         queryKey: PLAN_USAGE_QUERY_KEY,
         queryFn: async () => {
-          const { data } = await plansApi.getUsage()
-          return data
+          const response = await plansApi.getUsage()
+          // Server returns { data: { plan, usage, canCreateProduct, ... } }
+          // Axios wraps it as response.data = { data: { ... } }
+          return response.data.data || response.data
         },
         staleTime: PLAN_USAGE_STALE_TIME,
       })
