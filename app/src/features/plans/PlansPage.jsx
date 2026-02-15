@@ -427,6 +427,7 @@ export default function PlansPage() {
             queryClient.invalidateQueries(['plans', 'usage'])
             queryClient.invalidateQueries(['plans', 'list'])
             queryClient.invalidateQueries(['plans', 'subscription'])
+            queryClient.invalidateQueries(['plan-usage'])
             setProcessingPlan(null)
           } catch (err) {
             alert('Payment verification failed. Please contact support.')
@@ -468,6 +469,7 @@ export default function PlansPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['plans', 'usage'])
       queryClient.invalidateQueries(['plans', 'subscription'])
+      queryClient.invalidateQueries(['plan-usage'])
       setShowCancelConfirm(false)
     },
     onError: (err) => {
