@@ -21,6 +21,7 @@ import taxRateRoutes from './features/tax-rates/routes.js'
 import adminRoutes from './features/admin/routes.js'
 import notificationRoutes from './features/notifications/routes.js'
 import { startNotificationCron, stopNotificationCron } from './features/notifications/cron.js'
+import { startSubscriptionCron, stopSubscriptionCron } from './features/plans/subscriptionCron.js'
 import { initFirebase } from './common/firebase.js'
 
 const isProduction = config.nodeEnv === 'production'
@@ -152,6 +153,7 @@ const start = async () => {
     await cleanupStaleData()
     initFirebase()
     startNotificationCron()
+    startSubscriptionCron()
   } catch (err) {
     fastify.log.error(err)
     await prisma.$disconnect()
@@ -174,6 +176,7 @@ const gracefulShutdown = async (signal) => {
 
   try {
     stopNotificationCron()
+    stopSubscriptionCron()
     await fastify.close()
     await prisma.$disconnect()
     fastify.log.info('Shutdown complete')

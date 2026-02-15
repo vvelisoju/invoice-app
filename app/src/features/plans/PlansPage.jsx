@@ -14,7 +14,11 @@ import {
   Download,
   Printer,
   Share2,
-  MessageCircle
+  MessageCircle,
+  XCircle,
+  CalendarClock,
+  RefreshCw,
+  CreditCard
 } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import { plansApi } from '../../lib/api'
@@ -410,7 +414,7 @@ export default function PlansPage() {
         amount: order.amount,
         currency: order.currency,
         name: 'Invoice Baba',
-        description: `${selectedPlan?.displayName || 'Plan'} - Yearly Subscription`,
+        description: `${selectedPlan?.displayName || 'Plan'} - ${order.billingPeriod === 'yearly' ? 'Yearly' : 'Monthly'} Subscription`,
         order_id: order.razorpayOrderId,
         handler: async function (response) {
           try {
@@ -422,6 +426,7 @@ export default function PlansPage() {
             })
             queryClient.invalidateQueries(['plans', 'usage'])
             queryClient.invalidateQueries(['plans', 'list'])
+            queryClient.invalidateQueries(['plans', 'subscription'])
             setProcessingPlan(null)
           } catch (err) {
             alert('Payment verification failed. Please contact support.')
@@ -452,6 +457,23 @@ export default function PlansPage() {
     setProcessingPlan(planId)
     subscribeMutation.mutate({ planId, period: billingPeriod })
   }
+
+  // Cancel subscription
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      const res = await plansApi.cancelSubscription({ reason: 'user_requested' })
+      return res.data.data || res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['plans', 'usage'])
+      queryClient.invalidateQueries(['plans', 'subscription'])
+      setShowCancelConfirm(false)
+    },
+    onError: (err) => {
+      alert(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to cancel subscription.')
+    }
+  })
 
   const currentPlanId = planUsage?.plan?.id
   const currentPlanName = planUsage?.plan?.name || 'Free'
@@ -575,15 +597,35 @@ export default function PlansPage() {
                   <h2 className="text-base md:text-lg font-semibold text-textPrimary">
                     Current Plan: {currentPlanName}
                   </h2>
-                  {subscription?.status === 'ACTIVE' && (
+                  {subscription?.status === 'ACTIVE' && !subscription?.cancelledAt && (
                     <p className="text-xs text-green-600 mt-1 flex items-center gap-1 flex-wrap">
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       Active
+                      {subscription?.billingPeriod && (
+                        <span className="text-textSecondary capitalize">· {subscription.billingPeriod}</span>
+                      )}
                       {subscription?.renewAt && (
                         <span className="text-textSecondary">
                           · Renews {new Date(subscription.renewAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       )}
+                    </p>
+                  )}
+                  {subscription?.status === 'ACTIVE' && subscription?.cancelledAt && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1 flex-wrap">
+                      <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                      Cancelling
+                      {subscription?.renewAt && (
+                        <span className="text-textSecondary">
+                          · Active until {new Date(subscription.renewAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {(subscription?.status === 'EXPIRED' || subscription?.status === 'CANCELLED') && (
+                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
+                      {subscription.status === 'EXPIRED' ? 'Expired' : 'Cancelled'}
                     </p>
                   )}
                 </div>
@@ -625,6 +667,72 @@ export default function PlansPage() {
                 </div>
               </div>
             </div>
+
+            {/* Subscription Management — only show for active paid subscriptions */}
+            {subscription?.status === 'ACTIVE' && subscription?.amount > 0 && (
+              <div className="bg-white rounded-xl border border-border shadow-sm p-4 md:p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <CreditCard className="w-4 h-4 text-textSecondary" />
+                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Subscription Management</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-textSecondary mb-0.5">Billing</p>
+                    <p className="text-xs md:text-sm font-semibold text-textPrimary capitalize">{subscription.billingPeriod || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-textSecondary mb-0.5">Amount</p>
+                    <p className="text-xs md:text-sm font-semibold text-textPrimary">₹{Number(subscription.amount || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-textSecondary mb-0.5">Started</p>
+                    <p className="text-xs md:text-sm font-semibold text-textPrimary">
+                      {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-textSecondary mb-0.5">{subscription.cancelledAt ? 'Expires' : 'Renews'}</p>
+                    <p className="text-xs md:text-sm font-semibold text-textPrimary">
+                      {subscription.renewAt ? new Date(subscription.renewAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {!subscription.cancelledAt ? (
+                    <>
+                      <button
+                        onClick={() => handleSubscribe(currentPlanId)}
+                        disabled={!!processingPlan}
+                        className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Renew Now
+                      </button>
+                      <button
+                        onClick={() => setShowCancelConfirm(true)}
+                        className="px-3 py-2 text-xs font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg border border-red-200 flex items-center gap-1.5"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Cancel Subscription
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <p className="text-xs text-amber-700">
+                        Your subscription will remain active until{' '}
+                        <span className="font-semibold">
+                          {subscription.renewAt ? new Date(subscription.renewAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'end of period'}
+                        </span>
+                        . After that, you'll be moved to the Free plan.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Plan Cards */}
             <div>
@@ -807,6 +915,14 @@ export default function PlansPage() {
                   <p className="text-xs md:text-sm font-medium text-textPrimary">Can I upgrade anytime?</p>
                   <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">Yes! Upgrade at any time and your new plan takes effect immediately.</p>
                 </div>
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">How do I cancel my subscription?</p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">You can cancel anytime from the Subscription Management section above. Your plan stays active until the end of the current billing period — no partial refunds.</p>
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-textPrimary">What happens after cancellation?</p>
+                  <p className="text-[11px] md:text-xs text-textSecondary mt-0.5">After your billing period ends, you'll be moved to the Free plan. Your data is never deleted — you can re-subscribe anytime.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -817,6 +933,83 @@ export default function PlansPage() {
       {activeTab === 'billing' && (
         <div className="flex-1 px-3 py-4 md:px-8 md:py-6 pb-mobile-nav overflow-y-auto">
           <BillingHistoryTab />
+        </div>
+      )}
+
+      {/* Cancel Subscription Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCancelConfirm(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 md:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm md:text-base font-bold text-textPrimary">Cancel Subscription?</h3>
+                <p className="text-xs text-textSecondary mt-0.5">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <p className="text-xs text-amber-800">
+                Your <span className="font-semibold">{currentPlanName}</span> plan will remain active until{' '}
+                <span className="font-semibold">
+                  {subscription?.renewAt
+                    ? new Date(subscription.renewAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : 'the end of your billing period'}
+                </span>
+                . After that, you'll be moved to the Free plan with limited features.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 mb-5">
+              <p className="text-xs text-textSecondary">After cancellation:</p>
+              <ul className="text-xs text-textSecondary space-y-1 ml-3">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-red-400 mt-0.5">•</span>
+                  Invoice limit will drop to 10/month
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-red-400 mt-0.5">•</span>
+                  Template access will be limited
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-green-500 mt-0.5">•</span>
+                  Your existing data will be preserved
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-green-500 mt-0.5">•</span>
+                  You can re-subscribe anytime
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 py-2.5 text-xs md:text-sm font-semibold text-textPrimary bg-gray-100 active:bg-gray-200 md:hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Keep Subscription
+              </button>
+              <button
+                onClick={() => cancelMutation.mutate()}
+                disabled={cancelMutation.isPending}
+                className="flex-1 py-2.5 text-xs md:text-sm font-semibold text-white bg-red-600 active:bg-red-700 md:hover:bg-red-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {cancelMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  'Yes, Cancel'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

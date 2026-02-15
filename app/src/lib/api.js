@@ -185,6 +185,8 @@ export const plansApi = {
   getUsage: () => api.get('/plans/usage'),
   createOrder: (data) => api.post('/plans/create-order', data),
   verifyPayment: (data) => api.post('/plans/verify-payment', data),
+  getSubscription: () => api.get('/plans/subscription'),
+  cancelSubscription: (data) => api.post('/plans/cancel-subscription', data || {}),
   getBillingHistory: () => api.get('/plans/billing-history'),
 }
 

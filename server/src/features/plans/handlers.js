@@ -109,6 +109,35 @@ export async function verifyPayment(request, reply) {
   return { data: result }
 }
 
+export async function getSubscriptionDetails(request, reply) {
+  const details = await planService.getSubscriptionDetails(request.businessId)
+  return { data: details }
+}
+
+export async function cancelSubscription(request, reply) {
+  const reason = request.body?.reason || 'user_requested'
+  const result = await planService.cancelSubscription(request.businessId, reason)
+
+  // Emit notification
+  try {
+    const plan = await planService.getPlanById(result.planId)
+    const planName = plan?.displayName || plan?.name || 'Plan'
+    emitNotification('subscription_cancelled', {
+      userId: request.user.userId,
+      businessId: request.businessId,
+      variables: {
+        planName,
+        endDate: result.renewAt ? new Date(result.renewAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'end of period',
+      },
+      data: { action: 'navigate', route: '/plans', entityType: 'subscription', entityId: result.id },
+    })
+  } catch (err) {
+    logger.error({ err: err.message }, '[Plans] Failed to emit cancellation notification')
+  }
+
+  return { data: result }
+}
+
 export async function getBillingHistory(request, reply) {
   const invoices = await getBusinessSubscriptionInvoices(request.businessId)
   return { data: invoices }
