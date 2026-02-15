@@ -5,6 +5,7 @@ const API_BASE_URL = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -25,10 +26,28 @@ api.interceptors.request.use(
 // Guard to prevent multiple 401 redirects firing at once
 let isRedirectingTo401 = false
 
+// Navigation callback for 401 redirect — set by App.jsx via setApiNavigate().
+// Uses React Router instead of window.location.href so Capacitor WebView
+// doesn't do a full page reload (which would restart the entire app).
+let _navigateTo = null
+export function setApiNavigate(fn) { _navigateTo = fn }
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Network errors (no response from server)
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        error.message = 'Request timed out. Please check your connection and try again.'
+      } else if (!navigator.onLine) {
+        error.message = 'You are offline. Please check your internet connection.'
+      } else {
+        error.message = 'Unable to reach the server. Please try again later.'
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401) {
       // Don't logout on 401 from auth endpoints that intentionally return 401
       // (e.g. wrong OTP during phone change, invalid OTP during verify)
@@ -41,7 +60,11 @@ api.interceptors.response.use(
         // Clear all browser storage to prevent stale data leaking between sessions
         localStorage.clear()
         sessionStorage.clear()
-        window.location.href = '/auth/phone'
+        if (_navigateTo) {
+          _navigateTo('/auth/phone')
+        } else {
+          window.location.href = '/auth/phone'
+        }
       }
     }
     return Promise.reject(error)
@@ -50,19 +73,7 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  requestOTP: (phone) => {
-    console.log('API: Requesting OTP for phone:', phone)
-    console.log('API: Base URL:', API_BASE_URL)
-    return api.post('/auth/request-otp', { phone })
-      .then(response => {
-        console.log('API: OTP request successful', response)
-        return response
-      })
-      .catch(error => {
-        console.error('API: OTP request failed', error)
-        throw error
-      })
-  },
+  requestOTP: (phone) => api.post('/auth/request-otp', { phone }),
   verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/profile', data),
@@ -78,6 +89,7 @@ export const invoiceApi = {
   create: (data) => api.post('/invoices', data),
   update: (id, data) => api.patch(`/invoices/${id}`, data),
   delete: (id) => api.delete(`/invoices/${id}`),
+  bulkDelete: (invoiceIds) => api.post('/invoices/bulk-delete', { invoiceIds }),
   issue: (id, templateData) => api.post(`/invoices/${id}/issue`, templateData),
   updateStatus: (id, status) => api.patch(`/invoices/${id}/status`, { status })
 }
@@ -89,7 +101,9 @@ export const customerApi = {
   get: (id) => api.get(`/customers/${id}`),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.patch(`/customers/${id}`, data),
-  delete: (id) => api.delete(`/customers/${id}`)
+  delete: (id) => api.delete(`/customers/${id}`),
+  listDeleted: () => api.get('/customers/deleted'),
+  restore: (id) => api.patch(`/customers/${id}/restore`)
 }
 
 // Product API
@@ -100,26 +114,34 @@ export const productApi = {
   create: (data) => api.post('/products', data),
   update: (id, data) => api.patch(`/products/${id}`, data),
   delete: (id) => api.delete(`/products/${id}`),
-  listUnits: () => api.get('/products/units')
+  listUnits: () => api.get('/products/units'),
+  listDeleted: () => api.get('/products/deleted'),
+  restore: (id) => api.patch(`/products/${id}/restore`)
 }
 
 // Business API
 export const businessApi = {
   getProfile: () => api.get('/business'),
   updateProfile: (data) => api.patch('/business', data),
+  updateBusinessInfo: (data) => api.patch('/business/info', data),
+  updateGstSettings: (data) => api.patch('/business/gst', data),
+  updateBankSettings: (data) => api.patch('/business/bank', data),
+  updateInvoiceSettings: (data) => api.patch('/business/invoice-settings', data),
   getStats: () => api.get('/business/stats'),
   uploadLogo: (file) => {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/business/logo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     })
   },
   uploadSignature: (file) => {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/business/signature', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     })
   }
 }
@@ -167,9 +189,12 @@ export const syncApi = {
 // Plans API
 export const plansApi = {
   list: () => api.get('/plans'),
+  listPublic: () => api.get('/public/plans'),
   getUsage: () => api.get('/plans/usage'),
   createOrder: (data) => api.post('/plans/create-order', data),
   verifyPayment: (data) => api.post('/plans/verify-payment', data),
+  getSubscription: () => api.get('/plans/subscription'),
+  cancelSubscription: (data) => api.post('/plans/cancel-subscription', data || {}),
   getBillingHistory: () => api.get('/plans/billing-history'),
 }
 
@@ -179,6 +204,16 @@ export const taxRateApi = {
   create: (data) => api.post('/tax-rates', data),
   update: (id, data) => api.patch(`/tax-rates/${id}`, data),
   delete: (id) => api.delete(`/tax-rates/${id}`)
+}
+
+// Notification API (User)
+export const notificationApi = {
+  list: (params) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.post(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  registerDeviceToken: (data) => api.post('/notifications/device-token', data),
+  removeDeviceToken: (data) => api.delete('/notifications/device-token', { data }),
 }
 
 // Admin API (Super Admin only)
@@ -220,4 +255,10 @@ export const adminApi = {
   getBillingProfile: () => api.get('/admin/billing/profile'),
   listSubscriptionInvoices: (params) => api.get('/admin/billing/invoices', { params }),
   getSubscriptionInvoice: (id) => api.get(`/admin/billing/invoices/${id}`),
+
+  // Notifications
+  listNotifications: (params) => api.get('/notifications/admin', { params }),
+  getNotification: (id) => api.get(`/notifications/admin/${id}`),
+  sendNotification: (data) => api.post('/notifications/admin', data),
+  getNotificationTemplates: () => api.get('/notifications/admin/templates'),
 }

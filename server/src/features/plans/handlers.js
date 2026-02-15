@@ -1,5 +1,7 @@
+import { logger } from '../../common/logger.js'
 import * as planService from './service.js'
 import { generateSubscriptionInvoice, getBusinessSubscriptionInvoices } from '../admin/billingService.js'
+import { emit as emitNotification } from '../notifications/service.js'
 
 // User endpoints
 export async function getUsage(request, reply) {
@@ -63,10 +65,11 @@ export async function verifyPayment(request, reply) {
   const result = await planService.verifySubscriptionPayment(request.businessId, request.body)
 
   // Generate subscription invoice after successful payment
+  let subInvoiceNumber = null
   try {
     const plan = await planService.getPlanById(request.body.planId)
     const isYearly = result.renewAt && (new Date(result.renewAt).getTime() - new Date(result.startDate).getTime()) > 180 * 86400000
-    await generateSubscriptionInvoice({
+    const subInvoice = await generateSubscriptionInvoice({
       businessId: request.businessId,
       subscriptionId: result.id,
       planId: request.body.planId,
@@ -78,9 +81,58 @@ export async function verifyPayment(request, reply) {
       periodStart: result.startDate,
       periodEnd: result.renewAt,
     })
+    subInvoiceNumber = subInvoice?.invoiceNumber
+
+    // Emit plan_activated + payment_success notifications
+    const planName = plan?.displayName || plan?.name || 'Plan'
+    emitNotification('plan_activated', {
+      userId: request.user.userId,
+      businessId: request.businessId,
+      variables: { planName },
+      data: { action: 'navigate', route: '/plans', entityType: 'plan', entityId: request.body.planId },
+    })
+    emitNotification('payment_success', {
+      userId: request.user.userId,
+      businessId: request.businessId,
+      variables: {
+        amount: Number(result.amount || 0).toLocaleString('en-IN'),
+        planName,
+        invoiceNumber: subInvoiceNumber || '',
+      },
+      data: { action: 'navigate', route: '/plans', entityType: 'subscription', entityId: result.id },
+    })
   } catch (err) {
     // Don't fail the payment verification if invoice generation fails
-    console.error('[Billing] Failed to generate subscription invoice:', err.message)
+    logger.error({ err: err.message, businessId: request.businessId }, '[Billing] Failed to generate subscription invoice')
+  }
+
+  return { data: result }
+}
+
+export async function getSubscriptionDetails(request, reply) {
+  const details = await planService.getSubscriptionDetails(request.businessId)
+  return { data: details }
+}
+
+export async function cancelSubscription(request, reply) {
+  const reason = request.body?.reason || 'user_requested'
+  const result = await planService.cancelSubscription(request.businessId, reason)
+
+  // Emit notification
+  try {
+    const plan = await planService.getPlanById(result.planId)
+    const planName = plan?.displayName || plan?.name || 'Plan'
+    emitNotification('subscription_cancelled', {
+      userId: request.user.userId,
+      businessId: request.businessId,
+      variables: {
+        planName,
+        endDate: result.renewAt ? new Date(result.renewAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'end of period',
+      },
+      data: { action: 'navigate', route: '/plans', entityType: 'subscription', entityId: result.id },
+    })
+  } catch (err) {
+    logger.error({ err: err.message }, '[Plans] Failed to emit cancellation notification')
   }
 
   return { data: result }

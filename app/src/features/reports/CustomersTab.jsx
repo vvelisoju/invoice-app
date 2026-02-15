@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, Search, Loader2, Users, FileSpreadsheet, Printer
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0)
@@ -65,18 +65,28 @@ function exportToCSV(rows, totals) {
   saveAs(blob, `CustomerSummary_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`)
 }
 
-export default function CustomersTab() {
+export default function CustomersTab({ documentType }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [activeQuick, setActiveQuick] = useState('')
   const [searchParams, setSearchParams] = useState({})
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['reports', 'customer-summary', searchParams],
-    queryFn: async () => {
-      const res = await reportsApi.getCustomerSummary(searchParams)
-      return res.data.data || res.data
+  // Update searchParams when documentType changes
+  useEffect(() => {
+    if (documentType) {
+      setSearchParams(prev => ({ ...prev, documentType }))
     }
+  }, [documentType])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports', 'customer-summary', searchParams, documentType],
+    queryFn: async () => {
+      const params = { ...searchParams }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getCustomerSummary(params)
+      return res.data.data || res.data
+    },
+    enabled: !!documentType
   })
 
   const rows = data?.rows || []
@@ -86,6 +96,7 @@ export default function CustomersTab() {
     const params = {}
     if (dateFrom) params.dateFrom = dateFrom
     if (dateTo) params.dateTo = dateTo
+    if (documentType) params.documentType = documentType
     setActiveQuick('')
     setSearchParams(params)
   }
@@ -95,7 +106,9 @@ export default function CustomersTab() {
     setDateFrom(range.from)
     setDateTo(range.to)
     setActiveQuick(key)
-    setSearchParams({ dateFrom: range.from, dateTo: range.to })
+    const params = { dateFrom: range.from, dateTo: range.to }
+    if (documentType) params.documentType = documentType
+    setSearchParams(params)
   }
 
   return (

@@ -94,22 +94,16 @@ jspm_packages/
 # TernJS port file
 .tern-port
 
-# Ionic specific
-/www/
-ionic.config.json.backup
-
-# Capacitor
-/android/
-/ios/
+# Capacitor native platforms
+/app/android/
+/app/ios/
 *.xcworkspace
 *.pbxproj
 
 # Electron
 /electron/dist/
 
-# React Native
-/android/
-/ios/
+# Signing keys & certificates
 *.jks
 *.p8
 *.p12

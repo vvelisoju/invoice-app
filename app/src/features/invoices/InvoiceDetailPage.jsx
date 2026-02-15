@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useHistory } from 'react-router-dom'
 import {
   Share2,
@@ -21,12 +21,15 @@ import {
   Palette
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Capacitor } from '@capacitor/core'
 import { invoiceApi, templateApi, businessApi } from '../../lib/api'
-import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
+import { generatePDF, downloadPDF, sharePDF, printPDF } from './utils/pdfGenerator.jsx'
+import { openExternalUrl } from '../../lib/nativeBrowser.js'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import Portal from '../../components/Portal'
+const PdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -182,44 +185,47 @@ export default function InvoiceDetailPage() {
     }
   }, [pdfBlob, invoice])
 
-  const handlePrint = useCallback(() => {
-    if (!pdfBlob) return
-    const url = URL.createObjectURL(pdfBlob)
-    const printWindow = window.open(url, '_blank')
-    if (printWindow) {
-      printWindow.onload = () => printWindow.print()
+  const handlePrint = useCallback(async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      await printPDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`)
+    } catch (err) {
+      console.error('Print failed:', err)
     }
-  }, [pdfBlob])
+  }, [pdfBlob, invoice])
 
   const handleShare = useCallback(async () => {
     if (!pdfBlob || !invoice) return
     try {
-      if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
-        const shareText = `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Invoice ${invoice.invoiceNumber}`,
-            text: shareText,
-            files: [file]
-          })
-          return
-        }
-      }
-      await handleDownload()
+      await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`,
+      })
     } catch (err) {
       if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
-  }, [pdfBlob, invoice, handleDownload])
+  }, [pdfBlob, invoice])
 
   const handleWhatsAppShare = useCallback(async () => {
     if (!invoice) return
-    const message = encodeURIComponent(
-      `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
-    )
-    window.open(`https://wa.me/?text=${message}`, '_blank')
-    await handleDownload()
-  }, [invoice, handleDownload])
+    if (Capacitor.isNativePlatform() && pdfBlob) {
+      // On native, share the PDF directly — WhatsApp will be in the share sheet
+      try {
+        await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+          title: `Invoice ${invoice.invoiceNumber}`,
+          text: `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`,
+        })
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Share failed:', err)
+      }
+    } else {
+      const message = encodeURIComponent(
+        `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
+      )
+      await openExternalUrl(`https://wa.me/?text=${message}`)
+      await handleDownload()
+    }
+  }, [invoice, pdfBlob, handleDownload])
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(window.location.href)
@@ -243,6 +249,9 @@ export default function InvoiceDetailPage() {
             name: item.name,
             quantity: item.quantity,
             rate: item.rate,
+            hsnCode: item.hsnCode || '',
+            taxRate: item.taxRate || null,
+            taxRateName: item.taxRateName || null,
             productServiceId: item.productServiceId || null
           })),
           discountTotal: invoice.discountTotal || 0,
@@ -278,6 +287,7 @@ export default function InvoiceDetailPage() {
   }
 
   const status = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.DRAFT
+  const docTypeLabel = (DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label
 
   return (
     <div className="h-full flex flex-col">
@@ -294,7 +304,7 @@ export default function InvoiceDetailPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm md:text-base font-bold text-textPrimary truncate">
-                  {(DOCUMENT_TYPE_DEFAULTS[invoice.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label} #{invoice.invoiceNumber}
+                  {docTypeLabel} #{invoice.invoiceNumber}
                 </h1>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full shrink-0 ${status.bg} ${status.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
@@ -377,7 +387,7 @@ export default function InvoiceDetailPage() {
                       onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
                       className="w-full px-4 py-3 text-sm text-left text-textPrimary hover:bg-bgPrimary flex items-center gap-2.5"
                     >
-                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                      <Pencil className="w-4 h-4 text-textSecondary" /> Edit {docTypeLabel}
                     </button>
                     <button
                       onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
@@ -402,7 +412,7 @@ export default function InvoiceDetailPage() {
                         onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
                         className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
                       >
-                        <Ban className="w-4 h-4" /> Cancel Invoice
+                        <Ban className="w-4 h-4" /> Cancel {docTypeLabel}
                       </button>
                     )}
                     {statusWorkflow && invoice.status === 'PAID' && (
@@ -413,17 +423,15 @@ export default function InvoiceDetailPage() {
                         <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                       </button>
                     )}
-                    {statusWorkflow && invoice.status === 'DRAFT' && (
-                      <>
-                        <div className="border-t border-border my-1" />
-                        <button
-                          onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                          className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete Invoice
-                        </button>
-                      </>
-                    )}
+                    {/* Delete option hidden — not currently used
+                    <div className="border-t border-border my-1" />
+                    <button
+                      onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                      className="w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
+                    </button>
+                    */}
                   </div>
                 </>
               )}
@@ -487,28 +495,21 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* PDF Viewer Area — fills remaining space */}
-      <div className="flex-1 bg-gray-100 pb-mobile-nav overflow-auto">
+      <div className="flex-1 bg-gray-100 pb-mobile-nav">
         {isGeneratingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-textSecondary">Generating PDF preview...</p>
           </div>
-        ) : pdfUrl ? (
-          <>
-            {/* Desktop: full iframe viewer */}
-            <iframe
-              src={pdfUrl}
-              className="hidden md:block w-full h-full border-0"
-              title={`Invoice ${invoice.invoiceNumber} PDF`}
-            />
-            {/* Mobile: embedded PDF with proper scaling */}
-            <iframe
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-              className="md:hidden w-full border-0"
-              style={{ height: 'calc(100dvh - 160px)', minHeight: 500 }}
-              title={`Invoice ${invoice.invoiceNumber} PDF`}
-            />
-          </>
+        ) : pdfBlob ? (
+          <Suspense fallback={
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <p className="text-xs text-textSecondary">Loading viewer...</p>
+            </div>
+          }>
+            <PdfViewer blob={pdfBlob} className="w-full h-full" />
+          </Suspense>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-sm text-textSecondary">PDF preview unavailable</p>
@@ -528,7 +529,7 @@ export default function InvoiceDetailPage() {
                 onClick={() => { setShowMoreActions(false); history.push(`/invoices/${id}/edit`) }}
                 className="w-full px-4 py-3.5 text-sm text-left text-textPrimary active:bg-bgPrimary flex items-center gap-3 rounded-lg"
               >
-                <Pencil className="w-4 h-4 text-textSecondary" /> Edit Invoice
+                <Pencil className="w-4 h-4 text-textSecondary" /> Edit {docTypeLabel}
               </button>
               <button
                 onClick={() => { setShowMoreActions(false); setShowTemplateModal(true) }}
@@ -553,7 +554,7 @@ export default function InvoiceDetailPage() {
                   onClick={() => { setShowMoreActions(false); setPendingStatus('CANCELLED'); setShowStatusConfirm(true) }}
                   className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
                 >
-                  <Ban className="w-4 h-4" /> Cancel Invoice
+                  <Ban className="w-4 h-4" /> Cancel {docTypeLabel}
                 </button>
               )}
               {statusWorkflow && invoice.status === 'PAID' && (
@@ -564,17 +565,15 @@ export default function InvoiceDetailPage() {
                   <RotateCcw className="w-4 h-4 text-textSecondary" /> Mark as Unpaid
                 </button>
               )}
-              {statusWorkflow && invoice.status === 'DRAFT' && (
-                <>
-                  <div className="border-t border-border my-1 mx-4" />
-                  <button
-                    onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
-                    className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete Invoice
-                  </button>
-                </>
-              )}
+              {/* Delete option hidden — not currently used
+              <div className="border-t border-border my-1 mx-4" />
+              <button
+                onClick={() => { setShowMoreActions(false); setShowDeleteConfirm(true) }}
+                className="w-full px-4 py-3.5 text-sm text-left text-red-600 active:bg-red-50 flex items-center gap-3 rounded-lg"
+              >
+                <Trash2 className="w-4 h-4" /> Delete {docTypeLabel}
+              </button>
+              */}
             </div>
           </div>
         </>
@@ -589,8 +588,9 @@ export default function InvoiceDetailPage() {
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete Invoice</h3>
-            <p className="text-sm text-textSecondary text-center mb-6">Are you sure you want to delete this draft invoice? This action cannot be undone.</p>
+            <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">Delete {docTypeLabel}?</h3>
+            <p className="text-sm text-textSecondary text-center mb-2">This {docTypeLabel.toLowerCase()} will be moved to Inactive. You can view it later by selecting the Inactive filter.</p>
+            <p className="text-xs text-textSecondary text-center mb-6">This action can be reversed by restoring from Inactive.</p>
             <div className="flex gap-3">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors">Cancel</button>
               <button
@@ -627,11 +627,11 @@ export default function InvoiceDetailPage() {
             </div>
             <h3 className="text-lg font-semibold text-textPrimary text-center mb-2">
               {pendingStatus === 'PAID' ? 'Mark as Paid' :
-               pendingStatus === 'CANCELLED' ? 'Cancel Invoice' :
+               pendingStatus === 'CANCELLED' ? `Cancel ${docTypeLabel}` :
                'Change Status'}
             </h3>
             <p className="text-sm text-textSecondary text-center mb-6">
-              Are you sure you want to mark this invoice as {STATUS_CONFIG[pendingStatus]?.label || pendingStatus}?
+              Are you sure you want to mark this {docTypeLabel.toLowerCase()} as {STATUS_CONFIG[pendingStatus]?.label || pendingStatus}?
             </p>
             <div className="flex gap-3">
               <button onClick={() => { setShowStatusConfirm(false); setPendingStatus(null) }} className="flex-1 px-4 py-2.5 text-sm font-medium text-textSecondary hover:bg-bgPrimary rounded-lg border border-border transition-colors">Cancel</button>

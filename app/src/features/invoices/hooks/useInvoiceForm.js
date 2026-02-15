@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { db, dbHelpers } from '../../../db'
 import { useAuthStore } from '../../../store/authStore'
+import { productApi } from '../../../lib/api'
 
 const DRAFT_STORAGE_KEY = 'invoice_draft'
 
@@ -137,6 +138,22 @@ export function useInvoiceForm(invoiceId = null) {
   }, [calculateTotals])
 
   // Update line item
+  // Debounced product price/tax sync — silently update the product catalog
+  // when the user changes rate or taxRate on a line item linked to a product
+  const productSyncTimers = useRef({})
+
+  const syncProductPrice = useCallback((productId, updates) => {
+    if (!productId) return
+    // Clear previous timer for this product
+    if (productSyncTimers.current[productId]) {
+      clearTimeout(productSyncTimers.current[productId])
+    }
+    productSyncTimers.current[productId] = setTimeout(() => {
+      productApi.update(productId, updates).catch(() => {})
+      delete productSyncTimers.current[productId]
+    }, 1500)
+  }, [])
+
   const updateLineItem = useCallback((index, field, value) => {
     setInvoice(prev => {
       const newLineItems = [...prev.lineItems]
@@ -152,6 +169,16 @@ export function useInvoiceForm(invoiceId = null) {
         newLineItems[index].lineTotal = (parseFloat(qty) || 0) * (parseFloat(rate) || 0)
       }
 
+      // Auto-sync product price/tax when changed on a linked line item
+      const item = newLineItems[index]
+      if (item.productServiceId) {
+        if (field === 'rate' && value !== '' && value != null) {
+          syncProductPrice(item.productServiceId, { defaultRate: parseFloat(value) || 0 })
+        } else if (field === 'taxRate' && value !== undefined) {
+          syncProductPrice(item.productServiceId, { taxRate: value ? Number(value) : null })
+        }
+      }
+
       const totals = calculateTotals(newLineItems, prev.discountTotal, prev.taxRate)
       
       return {
@@ -162,7 +189,7 @@ export function useInvoiceForm(invoiceId = null) {
       }
     })
     setIsDirty(true)
-  }, [calculateTotals])
+  }, [calculateTotals, syncProductPrice])
 
   // Add line item
   const addLineItem = useCallback(() => {
@@ -222,6 +249,8 @@ export function useInvoiceForm(invoiceId = null) {
         rate: product?.defaultRate || newLineItems[index].rate,
         productServiceId: product?.id || null,
         taxRate: product?.taxRate || null,
+        taxRateName: product?.taxRateName || newLineItems[index].taxRateName || null,
+        taxComponents: product?.taxComponents || null,
         lineTotal: (parseFloat(newLineItems[index].quantity) || 0) * (parseFloat(product?.defaultRate) || 0)
       }
 
@@ -233,6 +262,34 @@ export function useInvoiceForm(invoiceId = null) {
         ...totals,
         updatedAt: new Date().toISOString()
       }
+    })
+    setIsDirty(true)
+  }, [calculateTotals])
+
+  // Update all line items that reference a specific product (after editing product via modal)
+  const updateProductInLineItems = useCallback((product) => {
+    if (!product?.id) return
+    setInvoice(prev => {
+      const hasMatch = prev.lineItems.some(item => item.productServiceId === product.id)
+      if (!hasMatch) return prev
+
+      const newLineItems = prev.lineItems.map(item => {
+        if (item.productServiceId !== product.id) return item
+        const updatedRate = product.defaultRate != null ? product.defaultRate : item.rate
+        return {
+          ...item,
+          name: product.name || item.name,
+          hsnCode: product.hsnCode || '',
+          rate: updatedRate,
+          taxRate: product.taxRate != null ? product.taxRate : item.taxRate,
+          taxRateName: product.taxRateName || item.taxRateName || null,
+          taxComponents: product.taxComponents !== undefined ? product.taxComponents : item.taxComponents || null,
+          lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(updatedRate) || 0)
+        }
+      })
+
+      const totals = calculateTotals(newLineItems, prev.discountTotal, prev.taxRate)
+      return { ...prev, lineItems: newLineItems, ...totals, updatedAt: new Date().toISOString() }
     })
     setIsDirty(true)
   }, [calculateTotals])
@@ -322,6 +379,7 @@ export function useInvoiceForm(invoiceId = null) {
     removeLineItem,
     setCustomer,
     setProductForLineItem,
+    updateProductInLineItems,
     saveToLocal,
     resetForm,
     setInvoiceData

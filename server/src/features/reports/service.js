@@ -261,7 +261,7 @@ function getMonthDateRange(month) {
   return { from, to }
 }
 
-export async function getGSTR3BSummary(businessId, month) {
+export async function getGSTR3BSummary(businessId, month, documentType) {
   const { from, to } = getMonthDateRange(month)
 
   const business = await prisma.business.findUnique({
@@ -273,7 +273,8 @@ export async function getGSTR3BSummary(businessId, month) {
     where: {
       businessId,
       status: { in: ['ISSUED', 'PAID'] },
-      date: { gte: from, lte: to }
+      date: { gte: from, lte: to },
+      ...(documentType && { documentType })
     },
     select: {
       id: true,
@@ -361,7 +362,7 @@ export async function getGSTR3BSummary(businessId, month) {
 // GSTR-1 Table 4A — B2B Invoices (supplies to registered persons)
 // ============================================================================
 
-export async function getGSTR1B2B(businessId, month) {
+export async function getGSTR1B2B(businessId, month, documentType) {
   const { from, to } = getMonthDateRange(month)
 
   const business = await prisma.business.findUnique({
@@ -374,7 +375,8 @@ export async function getGSTR1B2B(businessId, month) {
       businessId,
       status: { in: ['ISSUED', 'PAID'] },
       date: { gte: from, lte: to },
-      customer: { gstin: { not: null } }
+      customer: { gstin: { not: null } },
+      ...(documentType && { documentType })
     },
     include: {
       customer: { select: { gstin: true, name: true } }
@@ -429,7 +431,7 @@ export async function getGSTR1B2B(businessId, month) {
 // Sales Register — chronological invoice list with tax breakup
 // ============================================================================
 
-export async function getSalesRegister(businessId, dateFrom, dateTo) {
+export async function getSalesRegister(businessId, dateFrom, dateTo, documentType) {
   const where = {
     businessId,
     status: { in: ['ISSUED', 'PAID', 'CANCELLED', 'VOID'] },
@@ -439,7 +441,8 @@ export async function getSalesRegister(businessId, dateFrom, dateTo) {
         ? { date: { gte: new Date(dateFrom) } }
         : dateTo
           ? { date: { lte: new Date(dateTo) } }
-          : {})
+          : {}),
+    ...(documentType && { documentType })
   }
 
   const invoices = await prisma.invoice.findMany({
@@ -492,7 +495,7 @@ export async function getSalesRegister(businessId, dateFrom, dateTo) {
 // GSTR-1 Table 5A — B2C Large (Interstate to unregistered > threshold)
 // ============================================================================
 
-export async function getGSTR1B2CLarge(businessId, month, threshold = 250000) {
+export async function getGSTR1B2CLarge(businessId, month, threshold = 250000, documentType) {
   const { from, to } = getMonthDateRange(month)
 
   const business = await prisma.business.findUnique({
@@ -506,6 +509,7 @@ export async function getGSTR1B2CLarge(businessId, month, threshold = 250000) {
       status: { in: ['ISSUED', 'PAID'] },
       date: { gte: from, lte: to },
       taxMode: 'IGST',
+      ...(documentType && { documentType }),
       OR: [
         { customer: { gstin: null } },
         { customer: { gstin: '' } },
@@ -554,7 +558,7 @@ export async function getGSTR1B2CLarge(businessId, month, threshold = 250000) {
 // GSTR-1 Table 7 — B2C Small (all other B2C, grouped by state + rate)
 // ============================================================================
 
-export async function getGSTR1B2CSmall(businessId, month, b2cLargeThreshold = 250000) {
+export async function getGSTR1B2CSmall(businessId, month, b2cLargeThreshold = 250000, documentType) {
   const { from, to } = getMonthDateRange(month)
 
   const business = await prisma.business.findUnique({
@@ -567,6 +571,7 @@ export async function getGSTR1B2CSmall(businessId, month, b2cLargeThreshold = 25
       businessId,
       status: { in: ['ISSUED', 'PAID'] },
       date: { gte: from, lte: to },
+      ...(documentType && { documentType }),
       OR: [
         { customer: { gstin: null } },
         { customer: { gstin: '' } },
@@ -636,7 +641,7 @@ export async function getGSTR1B2CSmall(businessId, month, b2cLargeThreshold = 25
 // GSTR-1 Table 8 — Nil-rated, Exempt, Non-GST Supplies
 // ============================================================================
 
-export async function getGSTR1NilExempt(businessId, month) {
+export async function getGSTR1NilExempt(businessId, month, documentType) {
   const { from, to } = getMonthDateRange(month)
 
   const business = await prisma.business.findUnique({
@@ -649,6 +654,7 @@ export async function getGSTR1NilExempt(businessId, month) {
       businessId,
       status: { in: ['ISSUED', 'PAID'] },
       date: { gte: from, lte: to },
+      ...(documentType && { documentType }),
       OR: [
         { taxMode: 'NONE' },
         { taxMode: null },
@@ -842,7 +848,7 @@ export async function getGSTR1DocSummary(businessId, month) {
 // Customer-wise Sales Summary
 // ============================================================================
 
-export async function getCustomerSummary(businessId, dateFrom, dateTo) {
+export async function getCustomerSummary(businessId, dateFrom, dateTo, documentType) {
   const where = {
     businessId,
     status: { in: ['ISSUED', 'PAID'] },
@@ -852,7 +858,8 @@ export async function getCustomerSummary(businessId, dateFrom, dateTo) {
         ? { date: { gte: new Date(dateFrom) } }
         : dateTo
           ? { date: { lte: new Date(dateTo) } }
-          : {})
+          : {}),
+    ...(documentType && { documentType })
   }
 
   const invoices = await prisma.invoice.findMany({
@@ -1134,13 +1141,14 @@ function getFYDateRange(fy) {
   return { from, to }
 }
 
-export async function getAnnualSummary(businessId, fy) {
+export async function getAnnualSummary(businessId, fy, documentType) {
   const { from, to } = getFYDateRange(fy)
 
   const invoices = await prisma.invoice.findMany({
     where: {
       businessId,
-      date: { gte: from, lte: to }
+      date: { gte: from, lte: to },
+      ...(documentType && { documentType })
     },
     select: {
       date: true,
@@ -1245,7 +1253,7 @@ export async function getAnnualSummary(businessId, fy) {
 // GSTR-9 Data Export (Annual Return — outward supplies only)
 // ============================================================================
 
-export async function getGSTR9Data(businessId, fy) {
+export async function getGSTR9Data(businessId, fy, documentType) {
   const { from, to } = getFYDateRange(fy)
 
   const business = await prisma.business.findUnique({
@@ -1257,7 +1265,8 @@ export async function getGSTR9Data(businessId, fy) {
     where: {
       businessId,
       status: { in: ['ISSUED', 'PAID'] },
-      date: { gte: from, lte: to }
+      date: { gte: from, lte: to },
+      ...(documentType && { documentType })
     },
     select: {
       taxMode: true,

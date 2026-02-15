@@ -12,17 +12,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Suppress Ionic web component errors in desktop browsers
-      // These errors don't occur on actual mobile devices
-      const originalError = console.error;
-      console.error = (...args) => {
-        const errorString = args[0]?.toString?.() || '';
-        if (errorString.includes('watchMethodName')) return;
-        if (errorString.includes('instance[watchMethodName]')) return;
-        originalError.apply(console, args);
-      };
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

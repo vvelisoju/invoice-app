@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Search, Calendar, ChevronDown, FileText, FileSpreadsheet, Printer,
   Loader2, FolderArchive, Download, ChevronRight, X
@@ -7,7 +7,8 @@ import { useQuery } from '@tanstack/react-query'
 import { reportsApi, invoiceApi } from '../../lib/api'
 import { generatePDF } from '../invoices/utils/pdfGenerator'
 import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 import Portal from '../../components/Portal'
 
 const DOC_TYPE_LABELS = {
@@ -128,11 +129,7 @@ function printReport(documents, totals) {
       <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=900,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print(); w.close() }, 400)
+  openPrintWindow(html, { width: 900, height: 700, autoPrint: true, autoClose: true })
 }
 
 // ── Export: Summary PDF (HTML → print‑to‑PDF) ────────────
@@ -169,11 +166,7 @@ function exportSummaryPDF(documents, totals) {
       <tfoot><tr><td colspan="4">Total INR</td><td style="text-align:right">${formatCurrency(totals.subtotal)}</td><td style="text-align:right">${formatCurrency(totals.tax)}</td><td style="text-align:right">${formatCurrency(totals.paidAmount)}</td><td style="text-align:right">${formatCurrency(totals.total)}</td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=1100,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 1100, height: 700, autoPrint: true })
 }
 
 // ── Progress Modal ───────────────────────────────────────
@@ -257,7 +250,7 @@ function ExportMenu({ documents, totals, onExportZip }) {
 
 // ── Main Component ───────────────────────────────────────
 
-export default function DocumentsTab() {
+export default function DocumentsTab({ documentType }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -265,18 +258,28 @@ export default function DocumentsTab() {
   const [quickFilter, setQuickFilter] = useState('all')
   const [searchParams, setSearchParams] = useState({})
 
+  // Update searchParams when documentType changes
+  useEffect(() => {
+    if (documentType) {
+      setSearchParams(prev => ({ ...prev, documentType }))
+    }
+  }, [documentType])
+
   // ZIP export progress
   const [zipExporting, setZipExporting] = useState(false)
   const [zipProgress, setZipProgress] = useState(0)
   const [zipTotal, setZipTotal] = useState(0)
   const [zipStatus, setZipStatus] = useState('')
 
-  const { data: reportData, isLoading } = useQuery({
-    queryKey: ['reports', 'documents', searchParams],
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports', 'documents', searchParams, documentType],
     queryFn: async () => {
-      const response = await reportsApi.getDocuments(searchParams)
-      return response.data.data || response.data
-    }
+      const params = { ...searchParams }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getDocuments(params)
+      return res.data.data || res.data
+    },
+    enabled: !!documentType
   })
 
   // GST summary query
@@ -288,8 +291,8 @@ export default function DocumentsTab() {
     }
   })
 
-  const documents = reportData?.documents || []
-  const totals = reportData?.totals || {}
+  const documents = data?.documents || []
+  const totals = data?.totals || {}
   const gstSummary = gstData?.summary || null
 
   const handleSearch = () => {
@@ -297,7 +300,7 @@ export default function DocumentsTab() {
     if (dateFrom) params.dateFrom = dateFrom
     if (dateTo) params.dateTo = dateTo
     if (statusFilter !== 'all') params.status = statusFilter
-    if (docTypeFilter !== 'all') params.documentType = docTypeFilter
+    if (documentType) params.documentType = documentType
     setSearchParams(params)
   }
 
@@ -307,18 +310,24 @@ export default function DocumentsTab() {
       const range = getLastMonthRange()
       setDateFrom(range.from)
       setDateTo(range.to)
-      setSearchParams({ dateFrom: range.from, dateTo: range.to })
+      const params = { dateFrom: range.from, dateTo: range.to }
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     } else if (key === 'lastQuarter') {
       const range = getLastQuarterRange()
       setDateFrom(range.from)
       setDateTo(range.to)
-      setSearchParams({ dateFrom: range.from, dateTo: range.to })
+      const params = { dateFrom: range.from, dateTo: range.to }
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     } else {
       setDateFrom('')
       setDateTo('')
       setStatusFilter('all')
       setDocTypeFilter('all')
-      setSearchParams({})
+      const params = {}
+      if (documentType) params.documentType = documentType
+      setSearchParams(params)
     }
   }
 

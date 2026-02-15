@@ -4,6 +4,7 @@ import {
   handleGetInvoice,
   handleListInvoices,
   handleDeleteInvoice,
+  handleBulkDeleteInvoices,
   handleIssueInvoice,
   handleUpdateStatus
 } from './handlers.js'
@@ -27,6 +28,9 @@ export const invoiceRoutes = async (fastify) => {
 
   // Delete invoice
   fastify.delete('/invoices/:id', handleDeleteInvoice)
+
+  // Bulk delete invoices
+  fastify.post('/invoices/bulk-delete', handleBulkDeleteInvoices)
 
   // Issue invoice (mark as issued with template snapshot)
   fastify.post('/invoices/:id/issue', handleIssueInvoice)

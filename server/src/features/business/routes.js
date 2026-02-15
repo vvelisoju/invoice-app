@@ -41,6 +41,43 @@ export default async function businessRoutes(fastify) {
     }
   }, handlers.updateProfile)
 
+  // Section-specific update endpoints
+  fastify.patch('/info', {
+    schema: {
+      description: 'Update business information (name, phone, email, etc.)',
+      tags: ['business'],
+      body: { type: 'object', additionalProperties: true },
+      response: { 200: { type: 'object', properties: { data: { type: 'object', additionalProperties: true }, message: { type: 'string' } } } }
+    }
+  }, handlers.updateBusinessInfo)
+
+  fastify.patch('/gst', {
+    schema: {
+      description: 'Update GST settings',
+      tags: ['business'],
+      body: { type: 'object', additionalProperties: true },
+      response: { 200: { type: 'object', properties: { data: { type: 'object', additionalProperties: true }, message: { type: 'string' } } } }
+    }
+  }, handlers.updateGstSettings)
+
+  fastify.patch('/bank', {
+    schema: {
+      description: 'Update bank & payment details',
+      tags: ['business'],
+      body: { type: 'object', additionalProperties: true },
+      response: { 200: { type: 'object', properties: { data: { type: 'object', additionalProperties: true }, message: { type: 'string' } } } }
+    }
+  }, handlers.updateBankSettings)
+
+  fastify.patch('/invoice-settings', {
+    schema: {
+      description: 'Update invoice settings (prefix, numbering, defaults, types)',
+      tags: ['business'],
+      body: { type: 'object', additionalProperties: true },
+      response: { 200: { type: 'object', properties: { data: { type: 'object', additionalProperties: true }, message: { type: 'string' } } } }
+    }
+  }, handlers.updateInvoiceSettings)
+
   // Upload business logo
   fastify.post('/logo', {
     schema: {

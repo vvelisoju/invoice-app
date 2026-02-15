@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users } from 'lucide-react'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { Plus, Download, FileText, Loader2, SlidersHorizontal, X, Users, Trash2, AlertTriangle } from 'lucide-react'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { invoiceApi, businessApi, customerApi } from '../../lib/api'
+import { DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import Portal from '../../components/Portal'
 import {
   DataTable,
@@ -106,7 +107,7 @@ function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compac
       {/* Tag-input style container */}
       <div
         onClick={() => inputRef.current?.focus()}
-        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[32px] px-2 py-1' : 'min-h-[38px] px-2.5 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
+        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[34px] px-2.5 py-1' : 'min-h-[40px] px-3 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
       >
         <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-gray-400 shrink-0`} />
         {/* Selected chips inside the input */}
@@ -181,6 +182,9 @@ export default function InvoiceListPage() {
   const history = useHistory()
   const location = useLocation()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [selectedIds, setSelectedIds] = useState([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const queryClient = useQueryClient()
 
   // Fetch business profile to get enabled document types
   const { data: businessProfile } = useQuery({
@@ -191,17 +195,24 @@ export default function InvoiceListPage() {
     }
   })
 
-  const enabledKeys = businessProfile?.enabledInvoiceTypes || ['invoice', 'quote', 'receipt']
+  const enabledKeys = businessProfile?.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES
   const filteredDocTypeOptions = useMemo(
     () => DOC_TYPE_OPTIONS.filter(opt => enabledKeys.includes(opt.key)),
     [enabledKeys]
   )
 
-  const [docTypeFilters, setDocTypeFilters] = useState(() => {
+  const [docTypeFilters, setDocTypeFilters] = useState({})
+  const [docTypeInitialized, setDocTypeInitialized] = useState(false)
+
+  // Initialize doc type filter to show only the default document type
+  useEffect(() => {
+    if (docTypeInitialized || !businessProfile) return
+    const defaultDocType = businessProfile.defaultDocType || 'invoice'
     const initial = {}
-    DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = true })
-    return initial
-  })
+    DOC_TYPE_OPTIONS.forEach(opt => { initial[opt.key] = opt.key === defaultDocType })
+    setDocTypeFilters(initial)
+    setDocTypeInitialized(true)
+  }, [businessProfile, docTypeInitialized])
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -251,7 +262,8 @@ export default function InvoiceListPage() {
         limit: 20,
         offset: pageParam,
         ...(debouncedSearch && { search: debouncedSearch }),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(statusFilter === 'inactive' ? { active: 'false' } : statusFilter !== 'all' && { status: statusFilter, active: 'true' }),
+        ...(statusFilter === 'all' && { active: 'true' }),
         ...(selectedCustomerIds.length === 1 && { customerId: selectedCustomerIds[0] })
       }
       const response = await invoiceApi.list(params)
@@ -295,10 +307,11 @@ export default function InvoiceListPage() {
     })
   }, [invoices, docTypeFilters, selectedCustomerIds])
 
-  // Compute counts for filter pills
+  // Compute counts for filter pills — use doc-type+customer filtered invoices across ALL statuses
   const counts = useMemo(() => {
-    const c = { all: filteredInvoices.length, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0 }
+    const c = { all: 0, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0 }
     filteredInvoices.forEach((inv) => {
+      c.all++
       if (inv.status === 'ISSUED') c.ISSUED++
       else if (inv.status === 'PAID') c.PAID++
       else if (inv.status === 'OVERDUE') c.OVERDUE++
@@ -395,6 +408,40 @@ export default function InvoiceListPage() {
   const allDocTypesSelected = filteredDocTypeOptions.every(opt => docTypeFilters[opt.key] !== false)
 
   // Toggle a doc type pill: if all are on, turn all off except clicked; if only one on and it's clicked, turn all on
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (invoiceIds) => {
+      const response = await invoiceApi.bulkDelete(invoiceIds)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      setSelectedIds([])
+      setShowDeleteConfirm(false)
+    }
+  })
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return
+    bulkDeleteMutation.mutate(selectedIds)
+  }
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedIds(filteredInvoices.map(inv => inv.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectOne = (id, checked) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id])
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id))
+    }
+  }
+
   const handleDocTypePillClick = (key) => {
     if (allDocTypesSelected) {
       // All selected → select only this one
@@ -550,6 +597,32 @@ export default function InvoiceListPage() {
         </div>
       </div>
 
+      {/* Bulk Action Toolbar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-primary/5 border-b border-primary/20 px-4 md:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <span className="text-sm font-medium text-textPrimary">
+              {selectedIds.length} document{selectedIds.length !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIds([])}
+                className="px-3 py-1.5 text-xs font-medium text-textSecondary hover:text-textPrimary hover:bg-white rounded-lg transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table Section */}
       <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
@@ -561,6 +634,9 @@ export default function InvoiceListPage() {
             onRowClick={(inv) => history.push(`/invoices/${inv.id}`)}
             getRowClassName={getRowClassName}
             selectable={true}
+            selectedIds={selectedIds}
+            onSelectAll={handleSelectAll}
+            onSelectOne={handleSelectOne}
             isLoading={isLoading}
             emptyIcon={<FileText className="w-16 h-16 text-gray-300 mb-4" />}
             emptyTitle="No documents yet"
@@ -614,6 +690,54 @@ export default function InvoiceListPage() {
       <div className="hidden md:block text-center py-4 bg-bgPrimary">
         <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-textPrimary mb-2">Delete {selectedIds.length} Document{selectedIds.length !== 1 ? 's' : ''}?</h3>
+              <p className="text-sm text-textSecondary mb-1">
+                {selectedIds.length === 1 
+                  ? 'This document will be moved to Inactive. You can view it later by selecting the Inactive filter.'
+                  : `These ${selectedIds.length} documents will be moved to Inactive. You can view them later by selecting the Inactive filter.`
+                }
+              </p>
+              <p className="text-xs text-textSecondary mt-2">This action can be reversed by restoring from Inactive.</p>
+            </div>
+            <div className="flex border-t border-border">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={bulkDeleteMutation.isPending}
+                className="flex-1 px-4 py-3 text-sm font-medium text-textSecondary hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+                className="flex-1 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 border-l border-border transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {bulkDeleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -61,19 +61,16 @@ export const generatePDF = async (invoice, templateConfig = null, templateId = n
   return blob
 }
 
-// Download PDF
-export const downloadPDF = async (blob, filename) => {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
+// Download PDF — native-aware (uses Filesystem + Share on iOS/Android)
+export { downloadFile as downloadPDF } from '../../../lib/nativeFile.js'
 
-// Get PDF as base64 (for Capacitor sharing)
+// Share PDF — native-aware (uses Share plugin on iOS/Android, Web Share API on web)
+export { shareFile as sharePDF } from '../../../lib/nativeFile.js'
+
+// Print PDF — native-aware (share sheet with print on native, window.open on web)
+export { printFile as printPDF } from '../../../lib/nativeFile.js'
+
+// Get PDF as base64 (for Capacitor sharing — legacy helper)
 export const getPDFBase64 = async (blob) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

@@ -3,12 +3,14 @@ import { useHistory } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../../lib/api'
+import { isNative } from '../../lib/capacitor'
 
 export default function PhonePage() {
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const inputRef = useRef(null)
   const history = useHistory()
+  const isMobileApp = isNative()
 
   const requestOTPMutation = useMutation({
     mutationFn: authApi.requestOTP,
@@ -34,7 +36,7 @@ export default function PhonePage() {
   }
 
   return (
-    <div className="min-h-screen bg-bgPrimary flex items-center justify-center p-4">
+    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">

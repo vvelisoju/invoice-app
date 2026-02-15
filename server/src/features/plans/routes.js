@@ -1,7 +1,29 @@
 import { authenticate, authenticateAdmin } from '../../common/auth.js'
 import * as handlers from './handlers.js'
+import { handleWebhook } from './webhookHandler.js'
 
 export default async function planRoutes(fastify) {
+  // Razorpay webhook (unauthenticated — verified via signature)
+  // Encapsulated in its own context to override content type parser for raw body access
+  fastify.register(async (webhookCtx) => {
+    webhookCtx.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+      req.rawBody = body
+      try {
+        done(null, JSON.parse(body))
+      } catch (err) {
+        done(err)
+      }
+    })
+
+    webhookCtx.post('/webhook/razorpay', {
+      schema: {
+        description: 'Razorpay webhook endpoint for payment events',
+        tags: ['webhooks'],
+        hide: true
+      }
+    }, handleWebhook)
+  })
+
   // User routes (authenticated)
   fastify.register(async (userRoutes) => {
     userRoutes.addHook('onRequest', authenticate)
@@ -55,6 +77,28 @@ export default async function planRoutes(fastify) {
         }
       }
     }, handlers.verifyPayment)
+
+    // Get subscription details
+    userRoutes.get('/subscription', {
+      schema: {
+        description: 'Get current subscription details for the business',
+        tags: ['plans']
+      }
+    }, handlers.getSubscriptionDetails)
+
+    // Cancel subscription (end-of-period)
+    userRoutes.post('/cancel-subscription', {
+      schema: {
+        description: 'Cancel the current subscription (takes effect at end of billing period)',
+        tags: ['plans'],
+        body: {
+          type: 'object',
+          properties: {
+            reason: { type: 'string' }
+          }
+        }
+      }
+    }, handlers.cancelSubscription)
 
     // List subscription invoices for the current business
     userRoutes.get('/billing-history', {

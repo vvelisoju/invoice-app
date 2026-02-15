@@ -10,8 +10,9 @@ import { InvoiceFormToolbar, InvoiceHeaderSection, InvoiceLineItems, InvoiceTota
 import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
-import { getDocTypeConfig } from '../../config/documentTypeDefaults'
+import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
 import ImageUploadModal from '../../components/settings/ImageUploadModal'
 import {
@@ -42,12 +43,13 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const [showCreateCustomer, setShowCreateCustomer] = useState(false)
   const [createCustomerName, setCreateCustomerName] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [editCustomer, setEditCustomer] = useState(null)
   const [showCreateProduct, setShowCreateProduct] = useState(false)
   const [createProductName, setCreateProductName] = useState('')
   const [createProductLineIndex, setCreateProductLineIndex] = useState(null)
+  const [editProduct, setEditProduct] = useState(null)
   const [invoiceTitle, setInvoiceTitle] = useState('Invoice')
-  const [showPlanLimit, setShowPlanLimit] = useState(false)
-  const [planLimitData, setPlanLimitData] = useState(null)
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
   const [showBusinessSettings, setShowBusinessSettings] = useState(false)
   const [showLogoUpload, setShowLogoUpload] = useState(false)
   const [showSignatureUpload, setShowSignatureUpload] = useState(false)
@@ -64,21 +66,27 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     try { localStorage.setItem(FORM_MODE_KEY, mode) } catch {}
   }
 
-  // Derive document type key from URL param
-  const documentTypeKey = (() => {
+  // Document type key — from URL param initially, overridden by existing invoice in edit mode
+  const [documentTypeKey, setDocumentTypeKey] = useState(() => {
     const params = new URLSearchParams(location.search)
     return params.get('type') || 'invoice'
-  })()
+  })
 
-  // Read ?type= query param and set invoice title on mount / URL change
+  // Read ?type= query param and update document type + title on URL change
   useEffect(() => {
+    // Skip if in edit mode — document type is locked to existing invoice
+    if (isEditMode) return
+    
     const params = new URLSearchParams(location.search)
     const typeKey = params.get('type')
     if (typeKey) {
       const found = ALL_INVOICE_TYPES.find(t => t.key === typeKey)
-      if (found) setInvoiceTitle(found.label)
+      if (found) {
+        setDocumentTypeKey(typeKey)
+        setInvoiceTitle(found.label)
+      }
     }
-  }, [location.search])
+  }, [location.search, isEditMode])
 
   // Pre-populate customer from ?customerId= URL param
   useEffect(() => {
@@ -96,14 +104,15 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     }
   }, [location.search])
 
-  // Fetch business profile — show cached data instantly, refetch in background
+  // Fetch business profile — always fetch fresh data to get latest nextNumber for each document type
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
     queryFn: async () => {
       const response = await businessApi.getProfile()
       return response.data?.data || response.data
     },
-    enabled: !isDemo
+    enabled: !isDemo,
+    staleTime: 0 // Always fetch fresh data to get updated nextNumber after creating documents
   })
 
   // Compute resolved config (defaults merged with business overrides)
@@ -128,6 +137,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     removeLineItem,
     setCustomer,
     setProductForLineItem,
+    updateProductInLineItems,
     saveToLocal,
     resetForm,
     setInvoiceData
@@ -165,6 +175,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         quantity: item.quantity,
         rate: item.rate,
         lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        hsnCode: item.hsnCode || '',
+        taxRate: item.taxRate || null,
+        taxRateName: item.taxRateName || null,
+        taxComponents: item.taxComponents || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: inv.discountTotal || 0,
@@ -174,6 +188,12 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     })
     if (inv.customer) {
       setSelectedCustomer(inv.customer)
+    }
+    // Set document type from existing invoice
+    if (inv.documentType) {
+      setDocumentTypeKey(inv.documentType)
+      const docLabel = (DOCUMENT_TYPE_DEFAULTS[inv.documentType] || DOCUMENT_TYPE_DEFAULTS.invoice).label
+      setInvoiceTitle(docLabel)
     }
     setEditLoaded(true)
     defaultsAppliedRef.current = true
@@ -204,6 +224,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             quantity: item.quantity,
             rate: item.rate,
             lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+            hsnCode: item.hsnCode || '',
+            taxRate: item.taxRate || null,
+            taxRateName: item.taxRateName || null,
+            taxComponents: item.taxComponents || null,
             productServiceId: item.productServiceId || null
           })),
           discountTotal: inv.discountTotal || 0,
@@ -235,6 +259,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         quantity: item.quantity,
         rate: item.rate,
         lineTotal: (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0),
+        hsnCode: item.hsnCode || '',
+        taxRate: item.taxRate || null,
+        taxRateName: item.taxRateName || null,
+        taxComponents: item.taxComponents || null,
         productServiceId: item.productServiceId || null
       })),
       discountTotal: cloneData.discountTotal || 0,
@@ -254,6 +282,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           name: item.name.trim(),
           quantity: parseFloat(item.quantity) || 1,
           rate: parseFloat(item.rate),
+          hsnCode: item.hsnCode || null,
+          taxRate: item.taxRate ? Number(item.taxRate) : null,
+          taxRateName: item.taxRateName || null,
+          taxComponents: item.taxComponents || null,
           productServiceId: item.productServiceId || null
         }))
 
@@ -301,6 +333,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         queryClient.invalidateQueries({ queryKey: ['business'] })
         // Update sidebar plan usage count
         queryClient.invalidateQueries({ queryKey: ['plans', 'usage'] })
+        queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
         // Invalidate invoice list so Documents page shows the new record
         queryClient.invalidateQueries({ queryKey: ['invoices'] })
         // Update customer list (invoice counts may have changed)
@@ -312,20 +345,46 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     onError: (err) => {
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
-        setPlanLimitData(errorData.details?.usage || errorData.usage)
-        setShowPlanLimit(true)
+        const usagePayload = errorData.details?.usage || errorData.usage
+        setPlanLimitData({ type: 'invoice', usage: usagePayload })
         return
       }
       setError(errorData?.message || err.message || (isEditMode ? 'Failed to update invoice' : 'Failed to create invoice'))
     }
   })
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('')
+
+    // Pre-check invoice plan limit (only for new invoices, not edits)
+    if (!isEditMode && !isDemo) {
+      const blocked = await checkLimit('invoice')
+      if (blocked) return
+    }
+
+    // Validate invoice number
+    if (!invoice.invoiceNumber || !invoice.invoiceNumber.trim()) {
+      setError('Invoice number is required')
+      return
+    }
+
+    // Validate line items
     const validItems = invoice.lineItems.filter(item => item.name && item.rate > 0)
     if (validItems.length === 0) {
       setError('Please add at least one item with a name and rate')
       return
+    }
+
+    // Validate amounts are valid numbers
+    for (const item of validItems) {
+      if (isNaN(Number(item.rate)) || Number(item.rate) < 0) {
+        setError(`Invalid rate for "${item.name}". Please enter a valid positive amount.`)
+        return
+      }
+      if (item.quantity && (isNaN(Number(item.quantity)) || Number(item.quantity) <= 0)) {
+        setError(`Invalid quantity for "${item.name}". Please enter a valid positive number.`)
+        return
+      }
     }
 
     // Demo mode: save ALL data to localStorage and redirect to signup
@@ -388,14 +447,14 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     let prefix, nextNum
     if (documentTypeKey === 'invoice' && typeConfig.prefix === undefined && typeConfig.nextNumber === undefined) {
       // Legacy: use business-level invoicePrefix + nextInvoiceNumber for plain invoices
-      prefix = businessProfile.invoicePrefix
+      prefix = businessProfile.invoicePrefix ?? ''
       nextNum = businessProfile.nextInvoiceNumber
     } else {
-      prefix = typeConfig.prefix || docTypeConfig.prefix || businessProfile.invoicePrefix
+      prefix = typeConfig.prefix ?? docTypeConfig.prefix ?? businessProfile.invoicePrefix ?? ''
       nextNum = typeConfig.nextNumber || 1
     }
 
-    if (prefix != null && nextNum != null) {
+    if (nextNum != null) {
       updateField('invoiceNumber', `${prefix}${String(nextNum).padStart(4, '0')}`)
     }
   }, [businessProfile, isEditMode, documentTypeKey])
@@ -414,11 +473,19 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     return parts.join('\n')
   }
 
-  // Apply default terms and fromAddress only once on initial load (not on refetches)
+  // Apply default terms/notes and fromAddress only once on initial load (not on refetches)
   useEffect(() => {
     if (!businessProfile || defaultsAppliedRef.current) return
-    if (businessProfile.defaultTerms != null && !invoice.terms) {
-      updateField('terms', businessProfile.defaultTerms)
+    // Per-document-type defaults from documentTypeConfig, falling back to business-level legacy fields
+    const docConfig = businessProfile.documentTypeConfig || {}
+    const typeConf = docConfig[documentTypeKey] || {}
+    const defaultTerms = typeConf.defaultTerms || businessProfile.defaultTerms
+    const defaultNotes = typeConf.defaultNotes || businessProfile.defaultNotes
+    if (defaultTerms != null && !invoice.terms) {
+      updateField('terms', defaultTerms)
+    }
+    if (defaultNotes != null && !invoice.notes) {
+      updateField('notes', defaultNotes)
     }
     // Pre-populate fromAddress from business profile for new invoices
     if (!invoice.fromAddress) {
@@ -467,8 +534,16 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
               setSelectedCustomer(customer)
               setCustomer(customer)
             }}
-            onCreateNewCustomer={(name) => {
+            onCreateNewCustomer={async (name) => {
+              if (!isDemo) {
+                const blocked = await checkLimit('customer')
+                if (blocked) return
+              }
               setCreateCustomerName(name || '')
+              setShowCreateCustomer(true)
+            }}
+            onEditCustomer={(customer) => {
+              setEditCustomer(customer)
               setShowCreateCustomer(true)
             }}
             shipTo={invoice.shipTo || ''}
@@ -498,9 +573,17 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             onProductSelect={(index, product) => {
               setProductForLineItem(index, product)
             }}
-            onCreateProduct={(index, name) => {
+            onCreateProduct={async (index, name) => {
+              if (!isDemo) {
+                const blocked = await checkLimit('product')
+                if (blocked) return
+              }
               setCreateProductLineIndex(index)
               setCreateProductName(name || '')
+              setShowCreateProduct(true)
+            }}
+            onEditProduct={(product) => {
+              setEditProduct(product)
               setShowCreateProduct(true)
             }}
             docTypeConfig={docTypeConfig}
@@ -511,6 +594,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           <InvoiceTotalsFooter
             subtotal={invoice.subtotal}
             discountTotal={invoice.discountTotal}
+            onDiscountChange={(val) => updateField('discountTotal', val)}
             taxRate={invoice.taxRate}
             taxTotal={invoice.taxTotal}
             total={invoice.total}
@@ -559,62 +643,74 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
       </div>
 
-      {/* Create Customer Modal */}
+      {/* Create / Edit Customer Modal */}
       {isDemo ? (
         <CreateCustomerModal
           isOpen={showCreateCustomer}
-          onClose={() => setShowCreateCustomer(false)}
+          onClose={() => { setShowCreateCustomer(false); setEditCustomer(null) }}
+          customer={editCustomer}
           initialName={createCustomerName}
           demoMode
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            setEditCustomer(null)
           }}
         />
       ) : (
         <CreateCustomerModal
           isOpen={showCreateCustomer}
-          onClose={() => setShowCreateCustomer(false)}
+          onClose={() => { setShowCreateCustomer(false); setEditCustomer(null) }}
+          customer={editCustomer}
           initialName={createCustomerName}
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            setEditCustomer(null)
           }}
         />
       )}
 
-      {/* Create Product Modal */}
+      {/* Create / Edit Product Modal */}
       {isDemo ? (
         <ProductAddEditModal
           isOpen={showCreateProduct}
-          onClose={() => setShowCreateProduct(false)}
+          onClose={() => { setShowCreateProduct(false); setEditProduct(null) }}
+          product={editProduct}
           initialName={createProductName}
           demoMode
           onCreated={(product) => {
-            if (createProductLineIndex !== null) {
+            if (editProduct) {
+              updateProductInLineItems(product)
+            } else if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
+            setEditProduct(null)
           }}
         />
       ) : (
         <ProductAddEditModal
           isOpen={showCreateProduct}
-          onClose={() => setShowCreateProduct(false)}
+          onClose={() => { setShowCreateProduct(false); setEditProduct(null) }}
+          product={editProduct}
           initialName={createProductName}
           onCreated={(product) => {
-            if (createProductLineIndex !== null) {
+            if (editProduct) {
+              updateProductInLineItems(product)
+            } else if (createProductLineIndex !== null) {
               setProductForLineItem(createProductLineIndex, product)
             }
+            setEditProduct(null)
           }}
         />
       )}
 
       {/* Plan Limit Modal */}
       <PlanLimitModal
-        isOpen={showPlanLimit}
-        onClose={() => setShowPlanLimit(false)}
-        usage={planLimitData?.usage || planLimitData}
-        plan={planLimitData?.plan || planLimitData}
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'invoice'}
+        usage={planLimitData?.usage}
       />
 
       {/* Business Settings Modal */}

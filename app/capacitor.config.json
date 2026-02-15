@@ -1,20 +1,36 @@
 {
-  "appId": "com.invoicebaba.app",
+  "appId": "com.codevel.invoicebaba",
   "appName": "Invoice Baba",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "iosScheme": "https"
   },
   "ios": {
     "contentInset": "automatic",
-    "allowsLinkPreview": false
+    "allowsLinkPreview": false,
+    "backgroundColor": "#FFFFFF",
+    "preferredContentMode": "mobile"
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "backgroundColor": "#FFFFFF",
+    "buildOptions": {
+      "keystorePath": null,
+      "keystoreAlias": null
+    }
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 0
+      "launchShowDuration": 2000,
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 300,
+      "backgroundColor": "#FFFFFF",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
     },
     "StatusBar": {
       "overlaysWebView": true,
@@ -24,6 +40,12 @@
     "Keyboard": {
       "resize": "body",
       "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "Browser": {
+      "presentationStyle": "popover"
     }
   }
 }

@@ -3,9 +3,10 @@ import { X, Loader2, PackagePlus, ChevronDown, Trash2, AlertTriangle } from 'luc
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
 import Portal from '../../components/Portal'
+import PlanLimitModal from '../../components/PlanLimitModal'
 import { addDemoProduct } from '../../lib/demoStorage'
 
-const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '' }
+const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '', taxRateName: '', taxComponents: null, hsnCode: '' }
 
 /**
  * Unified product add/edit modal used in both ProductListPage and NewInvoicePage.
@@ -33,6 +34,7 @@ export default function ProductAddEditModal({
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   // Unit combobox state
   const [unitInputValue, setUnitInputValue] = useState('')
@@ -69,6 +71,7 @@ export default function ProductAddEditModal({
     mutationFn: () => productApi.delete(product.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setShowDeleteConfirm(false)
       onDelete?.()
       onClose()
@@ -83,6 +86,9 @@ export default function ProductAddEditModal({
           defaultRate: product.defaultRate != null ? String(product.defaultRate) : '',
           unit: product.unit || '',
           taxRate: product.taxRate != null ? String(product.taxRate) : '',
+          taxRateName: product.taxRateName || '',
+          taxComponents: product.taxComponents || null,
+          hsnCode: product.hsnCode || '',
         })
         setUnitInputValue(product.unit || '')
       } else {
@@ -127,9 +133,19 @@ export default function ProductAddEditModal({
       const created = response.data?.data || response.data
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['product-units'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       onCreated?.(created)
       onSuccess?.()
       onClose()
+    },
+    onError: (err) => {
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        onClose()
+        return
+      }
+      setErrors({ submit: errorData?.message || (isEdit ? 'Failed to update product' : 'Failed to create product') })
     }
   })
 
@@ -150,6 +166,9 @@ export default function ProductAddEditModal({
       defaultRate: form.defaultRate ? Number(form.defaultRate) : null,
       unit: form.unit || null,
       taxRate: form.taxRate ? Number(form.taxRate) : null,
+      taxRateName: form.taxRateName || null,
+      taxComponents: form.taxComponents || null,
+      hsnCode: form.hsnCode?.trim() || null,
     }
     if (demoMode) {
       const product = addDemoProduct(payload)
@@ -210,9 +229,9 @@ export default function ProductAddEditModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Error banner */}
-          {mutation.isError && (
+          {errors.submit && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {mutation.error?.response?.data?.error?.message || mutation.error?.message || 'Something went wrong'}
+              {errors.submit}
             </div>
           )}
 
@@ -232,6 +251,20 @@ export default function ProductAddEditModal({
               }`}
             />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          </div>
+
+          {/* HSN/SAC Code */}
+          <div>
+            <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">
+              HSN/SAC Code
+            </label>
+            <input
+              type="text"
+              value={form.hsnCode}
+              onChange={(e) => updateField('hsnCode', e.target.value)}
+              placeholder="e.g., 998314, 8471"
+              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+            />
           </div>
 
           {/* Rate + Tax Rate row */}
@@ -260,15 +293,37 @@ export default function ProductAddEditModal({
               </label>
               <select
                 value={form.taxRate}
-                onChange={(e) => updateField('taxRate', e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (!val) {
+                    updateField('taxRate', '')
+                    setForm(prev => ({ ...prev, taxRate: '', taxRateName: '', taxComponents: null }))
+                    return
+                  }
+                  const selected = taxRates.find(tr => String(Number(tr.rate)) === val || tr.id === val)
+                  if (selected) {
+                    const isGroup = selected.components && Array.isArray(selected.components) && selected.components.length >= 2
+                    setForm(prev => ({
+                      ...prev,
+                      taxRate: String(Number(selected.rate)),
+                      taxRateName: selected.name,
+                      taxComponents: isGroup ? selected.components : null
+                    }))
+                  } else {
+                    updateField('taxRate', val)
+                  }
+                }}
                 className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               >
                 <option value="">No Tax</option>
-                {taxRates.map((tr) => (
-                  <option key={tr.id} value={Number(tr.rate)}>
-                    {tr.name} ({Number(tr.rate)}%)
-                  </option>
-                ))}
+                {taxRates.map((tr) => {
+                  const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+                  return (
+                    <option key={tr.id} value={Number(tr.rate)}>
+                      {tr.name} ({Number(tr.rate)}%){isGroup ? ` [${tr.components.map(c => c.name).join('+')}]` : ''}
+                    </option>
+                  )
+                })}
               </select>
             </div>
           </div>
@@ -409,6 +464,13 @@ export default function ProductAddEditModal({
         </form>
       </div>
     </div>
+    {/* Plan Limit Modal */}
+    <PlanLimitModal
+      isOpen={!!planLimitData}
+      onClose={() => setPlanLimitData(null)}
+      resourceType="product"
+      usage={planLimitData}
+    />
     </Portal>
   )
 }

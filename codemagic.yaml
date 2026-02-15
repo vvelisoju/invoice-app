@@ -1,0 +1,181 @@
+workflows:
+  ios-workflow:
+    name: iOS Build - Invoice Baba
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
+    integrations:
+      app_store_connect: Lokalhunt - API Key
+    
+    environment:
+      vars:
+        BUNDLE_ID: com.codevel.invoicebaba
+        APP_STORE_APP_ID: 6759199018
+      
+      node: v20.11.0
+      xcode: latest
+      cocoapods: default
+      
+      # Automatic Signing Configuration
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.codevel.invoicebaba
+    
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          cd app
+          rm -rf node_modules package-lock.json
+          npm install
+      
+      - name: Set up environment variables
+        script: |
+          cd app
+          # Create .env file from Codemagic environment variables
+          echo "VITE_API_URL=$VITE_API_URL" > .env
+          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
+          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
+          echo "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" >> .env
+      
+      - name: Build web app
+        script: |
+          cd app
+          npm run build
+      
+      - name: Initialize iOS platform
+        script: |
+          cd app
+          # Remove corrupted iOS directory if it exists
+          rm -rf ios
+          # Add iOS platform fresh
+          npx cap add ios
+      
+      - name: Add GoogleService-Info.plist
+        script: |
+          cd app
+          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/App/App/GoogleService-Info.plist
+      
+      - name: Install CocoaPods dependencies
+        script: |
+          cd app/ios/App
+          pod install
+      
+      - name: Set up code signing settings on Xcode project
+        script: |
+          cd app/ios/App
+          xcode-project use-profiles
+      
+      - name: Increment build number
+        script: |
+          cd app/ios/App
+          agvtool new-version -all $BUILD_NUMBER
+      
+      - name: Build ipa for distribution
+        script: |
+          cd app/ios/App
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App"
+    
+    artifacts:
+      - app/ios/App/build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  android-workflow:
+    name: Android Build - Invoice Baba
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      android_signing:
+        - keystore_reference
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "com.codevel.invoicebaba"
+      node: v20.11.0
+      java: 17
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          cd app
+          rm -rf node_modules package-lock.json
+          npm install
+      
+      - name: Set up environment variables
+        script: |
+          cd app
+          echo "VITE_API_URL=$VITE_API_URL" > .env
+          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
+          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
+          echo "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" >> .env
+      
+      - name: Build web app
+        script: |
+          cd app
+          npm run build
+      
+      - name: Initialize Android platform
+        script: |
+          cd app
+          rm -rf android
+          npx cap add android
+      
+      - name: Configure Android project
+        script: |
+          cd app
+          bash scripts/configure-android.sh
+      
+      - name: Generate app icons
+        script: |
+          cd app
+          node scripts/generate-android-icons.mjs
+      
+      - name: Add google-services.json
+        script: |
+          cd app
+          echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
+      
+      - name: Sync Capacitor
+        script: |
+          cd app
+          npx cap sync android
+      
+      - name: Set up local.properties
+        script: |
+          cd app/android
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+      
+      - name: Build Android release (AAB + APK)
+        script: |
+          cd app/android
+          ./gradlew bundleRelease
+          ./gradlew assembleRelease
+    
+    artifacts:
+      - app/android/app/build/outputs/**/*.aab
+      - app/android/app/build/outputs/**/*.apk
+    
+    publishing:
+      email:
+        recipients:
+          - javalead.venkatesh@gmail.com
+        notify:
+          success: true
+          failure: true
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true

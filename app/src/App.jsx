@@ -1,7 +1,11 @@
-import { BrowserRouter, Route, Switch, Redirect } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Route, Switch, Redirect, useHistory } from 'react-router-dom'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
+import { usePushNotifications } from './features/notifications/usePushNotifications'
+import { setApiNavigate } from './lib/api'
+import { isNative } from './lib/capacitor'
 
 import LandingPage from './pages/LandingPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -23,6 +27,7 @@ import TemplateEditorPage from './features/templates/TemplateEditorPage'
 import CustomerListPage from './features/customers/CustomerListPage'
 import ProductListPage from './features/products/ProductListPage'
 import PlansPage from './features/plans/PlansPage'
+import WelcomeModal from './components/WelcomeModal'
 
 // Admin pages
 import AdminLayout from './features/admin/AdminLayout'
@@ -35,6 +40,7 @@ import AdminPlanListPage from './features/admin/AdminPlanListPage'
 import AdminSettingsPage from './features/admin/AdminSettingsPage'
 import AdminAuditLogPage from './features/admin/AdminAuditLogPage'
 import AdminBillingPage from './features/admin/AdminBillingPage'
+import AdminNotificationsPage from './features/admin/AdminNotificationsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,9 +51,57 @@ const queryClient = new QueryClient({
   }
 })
 
+/**
+ * Hook to handle Capacitor-specific events inside the Router context:
+ * - app:deeplink → navigate via React Router
+ * - app:resume  → invalidate stale queries so data refreshes
+ */
+function useCapacitorListeners() {
+  const history = useHistory()
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    const handleDeepLink = (e) => {
+      const path = e.detail?.path
+      if (path) history.push(path)
+    }
+    const handleResume = () => {
+      qc.invalidateQueries()
+    }
+    document.addEventListener('app:deeplink', handleDeepLink)
+    document.addEventListener('app:resume', handleResume)
+    return () => {
+      document.removeEventListener('app:deeplink', handleDeepLink)
+      document.removeEventListener('app:resume', handleResume)
+    }
+  }, [history, qc])
+}
+
+/**
+ * Wires React Router history into the Axios 401 interceptor so that
+ * auth redirects use history.push() instead of window.location.href.
+ * This prevents a full page reload in Capacitor WebView.
+ */
+function ApiNavigateWirer() {
+  const history = useHistory()
+  useEffect(() => {
+    setApiNavigate((path) => history.push(path))
+    return () => setApiNavigate(null)
+  }, [history])
+  return null
+}
+
 function AuthenticatedApp() {
+  usePushNotifications()
+  useCapacitorListeners()
+
+  const [showWelcome, setShowWelcome] = useState(() => {
+    return localStorage.getItem('show_welcome') === '1'
+  })
+
   return (
     <AppLayout>
+      <WelcomeModal isOpen={showWelcome} onClose={() => setShowWelcome(false)} />
       <Switch>
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/invoices" component={InvoiceListPage} />
@@ -73,6 +127,8 @@ function AuthenticatedApp() {
 }
 
 function AdminApp() {
+  usePushNotifications()
+  useCapacitorListeners()
   return (
     <AdminLayout>
       <Switch>
@@ -83,6 +139,7 @@ function AdminApp() {
         <Route exact path="/admin/users/:id" component={AdminUserDetailPage} />
         <Route exact path="/admin/plans" component={AdminPlanListPage} />
         <Route exact path="/admin/billing" component={AdminBillingPage} />
+        <Route exact path="/admin/notifications" component={AdminNotificationsPage} />
         <Route exact path="/admin/settings" component={AdminSettingsPage} />
         <Route exact path="/admin/audit-logs" component={AdminAuditLogPage} />
         <Route exact path="/">
@@ -98,13 +155,15 @@ function App() {
   const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
   const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const isMobileApp = isNative()
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ApiNavigateWirer />
         {!token ? (
           <Switch>
-            <Route exact path="/" component={LandingPage} />
+            <Route exact path="/" component={isMobileApp ? PhonePage : LandingPage} />
             <Route exact path="/terms" component={TermsOfServicePage} />
             <Route exact path="/privacy" component={PrivacyPolicyPage} />
             <Route exact path="/refund-policy" component={RefundPolicyPage} />

@@ -29,3 +29,18 @@ export function verifyRazorpaySignature({ orderId, paymentId, signature }) {
 
   return expectedSignature === signature
 }
+
+/**
+ * Verify Razorpay webhook signature.
+ * @param {string|Buffer} rawBody - The raw request body
+ * @param {string} signature - The X-Razorpay-Signature header
+ * @returns {boolean}
+ */
+export function verifyWebhookSignature(rawBody, signature) {
+  if (!config.razorpay.webhookSecret) return false
+  const expectedSignature = crypto
+    .createHmac('sha256', config.razorpay.webhookSecret)
+    .update(rawBody)
+    .digest('hex')
+  return expectedSignature === signature
+}

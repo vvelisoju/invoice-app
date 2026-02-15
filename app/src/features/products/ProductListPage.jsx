@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2, Download, X, SlidersHorizontal } from 'lucide-react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Search, Package, Pencil, Trash2, FileText, AlertTriangle, Loader2, Download, X, SlidersHorizontal, RotateCcw } from 'lucide-react'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productApi } from '../../lib/api'
 import {
   DataTable,
@@ -9,6 +9,8 @@ import {
   PageToolbar
 } from '../../components/data-table'
 import ProductAddEditModal from './ProductAddEditModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import Portal from '../../components/Portal'
 
 const AVATAR_COLORS = [
@@ -23,8 +25,7 @@ const AVATAR_COLORS = [
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Products' },
-  { key: 'active', label: 'Active', badgeColor: 'bg-green-500' },
-  { key: 'archived', label: 'Archived', badgeColor: 'bg-gray-400' },
+  { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
 
 const TABLE_COLUMNS = [
@@ -94,10 +95,20 @@ export default function ProductListPage() {
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
+  // Plan limit pre-check
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
+
+  const handleAddProduct = useCallback(async () => {
+    const blocked = await checkLimit('product')
+    if (blocked) return
+    setShowAddModal(true)
+  }, [checkLimit])
+
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [mobileActionProduct, setMobileActionProduct] = useState(null)
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -146,29 +157,45 @@ export default function ProductListPage() {
   const allProducts = data?.pages.flatMap(p => p.products || []) || []
   const totalCount = data?.pages[0]?.total || 0
 
+  // Fetch deleted products
+  const { data: deletedProductsData } = useQuery({
+    queryKey: ['products', 'deleted'],
+    queryFn: async () => {
+      const response = await productApi.listDeleted()
+      return response.data || []
+    }
+  })
+  const deletedProducts = deletedProductsData || []
+
+  // Restore mutation
+  const restoreMutation = useMutation({
+    mutationFn: (id) => productApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
+    }
+  })
+
   // Client-side filtering based on statusFilter
   const products = useMemo(() => {
     switch (statusFilter) {
       case 'active':
-        // Products with a defaultRate set (considered active/priced)
         return allProducts.filter(p => p.defaultRate != null && Number(p.defaultRate) > 0)
-      case 'archived':
-        // Products with no rate (placeholder for archived logic)
-        return allProducts.filter(p => p.defaultRate == null || Number(p.defaultRate) === 0)
+      case 'deleted':
+        return deletedProducts
       default:
         return allProducts
     }
-  }, [allProducts, statusFilter])
+  }, [allProducts, deletedProducts, statusFilter])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    const c = { all: allProducts.length, active: 0, archived: 0 }
+    const c = { all: allProducts.length, active: 0, deleted: deletedProducts.length }
     allProducts.forEach((p) => {
       if (p.defaultRate != null && Number(p.defaultRate) > 0) c.active++
-      else c.archived++
     })
     return c
-  }, [allProducts])
+  }, [allProducts, deletedProducts])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
 
@@ -185,6 +212,7 @@ export default function ProductListPage() {
     mutationFn: (id) => productApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setDeleteTarget(null)
     }
   })
@@ -220,9 +248,9 @@ export default function ProductListPage() {
         </div>
         <div>
           <div className="font-semibold text-textPrimary">{product.name}</div>
-          {product.description && (
-            <div className="text-xs text-textSecondary line-clamp-1">{product.description}</div>
-          )}
+          <div className="text-xs text-textSecondary line-clamp-1">
+            {product.hsnCode ? `HSN: ${product.hsnCode}` : 'No HSN'}{product.description ? ` · ${product.description}` : ''}
+          </div>
         </div>
       </div>,
 
@@ -241,29 +269,43 @@ export default function ProductListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push('/invoices/new') }}
-          className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Create Invoice"
-        >
-          <FileText className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
-          className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Edit Product"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
-          className="w-7 h-7 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
-          title="Delete Product"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>,
+      statusFilter === 'deleted' ? (
+        <div key="actions" className="flex justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(product.id) }}
+            disabled={restoreMutation.isPending}
+            className="px-2.5 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 flex items-center gap-1 transition-colors disabled:opacity-50"
+            title="Restore Product"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Restore
+          </button>
+        </div>
+      ) : (
+        <div key="actions" className="flex justify-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push('/invoices/new') }}
+            className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Create Invoice"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
+            className="w-7 h-7 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Edit Product"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
+            className="w-7 h-7 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
+            title="Delete Product"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ),
     ]
   }
 
@@ -286,8 +328,8 @@ export default function ProductListPage() {
               <SlidersHorizontal className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
+              onClick={handleAddProduct}
+              className="w-10 h-10 flex items-center justify-center text-white bg-[#2563eb] active:bg-[#1d4ed8] rounded-lg shadow-sm"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -306,8 +348,8 @@ export default function ProductListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              onClick={handleAddProduct}
+              className="px-4 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />
               Add Product
@@ -348,56 +390,59 @@ export default function ProductListPage() {
       {/* Table */}
       <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
-          {/* Bulk Action Bar */}
+          {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
-              <span className="text-sm font-semibold text-primary">{selectedIds.size} selected</span>
-              <div className="w-px h-5 bg-blue-200" />
-              <button
-                onClick={() => {
-                  const selected = products.filter(p => selectedIds.has(p.id))
-                  const headers = ['Name', 'Default Rate', 'Tax Rate']
-                  const rows = selected.map(p => [
-                    `"${(p.name || '').replace(/"/g, '""')}"`,
-                    p.defaultRate != null ? Number(p.defaultRate).toFixed(2) : '',
-                    p.taxRate != null ? `${Number(p.taxRate)}%` : '',
-                  ])
-                  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-                  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url; a.download = `products_${Date.now()}.csv`
-                  document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                  URL.revokeObjectURL(url)
-                }}
-                className="text-xs font-medium text-primary hover:text-primaryHover flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
-              </button>
-              <button
-                onClick={() => {
-                  const ids = Array.from(selectedIds)
-                  if (ids.length === 1) {
-                    const p = products.find(pr => pr.id === ids[0])
-                    if (p) setDeleteTarget(p)
-                  } else {
-                    setDeleteTarget({ id: '__bulk__', name: `${ids.length} products`, _bulkIds: ids })
-                  }
-                }}
-                className="text-xs font-medium text-red-600 hover:text-red-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={() => setSelectedIds(new Set())}
-                className="text-xs text-textSecondary hover:text-textPrimary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-3 h-3" />
-                Clear
-              </button>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedIds.size} {selectedIds.size === 1 ? 'product' : 'products'} selected
+                </span>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear selection
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const selected = products.filter(p => selectedIds.has(p.id))
+                    const headers = ['Name', 'Default Rate', 'Tax Rate']
+                    const rows = selected.map(p => [
+                      `"${(p.name || '').replace(/"/g, '""')}"`,
+                      p.defaultRate != null ? Number(p.defaultRate).toFixed(2) : '',
+                      p.taxRate != null ? `${Number(p.taxRate)}%` : '',
+                    ])
+                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+                    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = `products_${Date.now()}.csv`
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={() => {
+                    const ids = Array.from(selectedIds)
+                    if (ids.length === 1) {
+                      const p = products.find(pr => pr.id === ids[0])
+                      if (p) setDeleteTarget(p)
+                    } else {
+                      setDeleteTarget({ id: '__bulk__', name: `${ids.length} products`, _bulkIds: ids })
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
             </div>
           )}
 
@@ -407,6 +452,7 @@ export default function ProductListPage() {
             rowKey={(p) => p.id}
             renderRow={renderRow}
             onRowClick={(p) => handleEdit(p)}
+            onMobileRowClick={(p) => setMobileActionProduct(p)}
             getRowClassName={() => ''}
             selectable={true}
             onSelectionChange={setSelectedIds}
@@ -425,7 +471,7 @@ export default function ProductListPage() {
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-sm text-textPrimary truncate">{product.name}</div>
                     <div className="text-xs text-textSecondary">
-                      {product.unit || 'No unit'}{product.description ? ` · ${product.description}` : ''}
+                      {product.hsnCode ? `HSN: ${product.hsnCode}` : 'No HSN'}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -496,6 +542,69 @@ export default function ProductListPage() {
         onSuccess={() => { setShowAddModal(false); setEditingProduct(null) }}
       />
 
+      {/* Mobile Action Bottom Sheet */}
+      {mobileActionProduct && (
+        <Portal>
+        <div className="fixed inset-0 z-50 md:hidden" onClick={() => setMobileActionProduct(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl safe-bottom animate-slide-up" onClick={e => e.stopPropagation()}>
+            {/* Product Info Header */}
+            <div className="flex items-center gap-3 px-5 pt-5 pb-3 border-b border-borderLight">
+              <div className={`w-11 h-11 rounded-lg ${getAvatarColor(mobileActionProduct.name).bg} ${getAvatarColor(mobileActionProduct.name).text} flex items-center justify-center font-bold text-sm shrink-0`}>
+                {getInitials(mobileActionProduct.name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-base text-textPrimary truncate">{mobileActionProduct.name}</div>
+                <div className="text-xs text-textSecondary">
+                  {mobileActionProduct.defaultRate ? formatCurrency(mobileActionProduct.defaultRate) : 'No rate'}
+                  {mobileActionProduct.hsnCode ? ` · HSN: ${mobileActionProduct.hsnCode}` : ''}
+                </div>
+              </div>
+            </div>
+            {/* Actions */}
+            <div className="py-2 px-2">
+              <button
+                onClick={() => { history.push('/invoices/new'); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-textPrimary active:bg-gray-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <span>Create Invoice</span>
+              </button>
+              <button
+                onClick={() => { handleEdit(mobileActionProduct); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-textPrimary active:bg-gray-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                  <Pencil className="w-4.5 h-4.5" />
+                </div>
+                <span>Edit Product</span>
+              </button>
+              <button
+                onClick={() => { handleDelete(mobileActionProduct); setMobileActionProduct(null) }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-red-600 active:bg-red-50 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4.5 h-4.5" />
+                </div>
+                <span>Delete Product</span>
+              </button>
+            </div>
+            {/* Cancel */}
+            <div className="px-4 pb-4 pt-1">
+              <button
+                onClick={() => setMobileActionProduct(null)}
+                className="w-full py-3 text-sm font-semibold text-textSecondary bg-gray-100 active:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+        </Portal>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <Portal>
@@ -536,6 +645,14 @@ export default function ProductListPage() {
         </div>
         </Portal>
       )}
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'product'}
+        usage={planLimitData?.usage}
+      />
     </div>
   )
 }

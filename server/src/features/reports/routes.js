@@ -60,7 +60,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['month'],
         properties: {
-          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -75,7 +76,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['month'],
         properties: {
-          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -90,7 +92,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         properties: {
           dateFrom: { type: 'string', format: 'date' },
-          dateTo: { type: 'string', format: 'date' }
+          dateTo: { type: 'string', format: 'date' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -105,7 +108,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['month'],
         properties: {
-          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -120,7 +124,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['month'],
         properties: {
-          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -135,7 +140,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['month'],
         properties: {
-          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -180,7 +186,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         properties: {
           dateFrom: { type: 'string', format: 'date' },
-          dateTo: { type: 'string', format: 'date' }
+          dateTo: { type: 'string', format: 'date' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -246,7 +253,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['fy'],
         properties: {
-          fy: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          fy: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }
@@ -261,7 +269,8 @@ export default async function reportsRoutes(fastify) {
         type: 'object',
         required: ['fy'],
         properties: {
-          fy: { type: 'string', pattern: '^\\d{4}-\\d{2}$' }
+          fy: { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          documentType: { type: 'string' }
         }
       }
     }

@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import Portal from '../../components/Portal'
 import {
   LayoutDashboard, Building2, Users, CreditCard, Settings,
-  ScrollText, LogOut, Shield, Receipt, Menu, X, MoreHorizontal
+  ScrollText, LogOut, Shield, Receipt, Menu, X, MoreHorizontal, Bell
 } from 'lucide-react'
 
 // All sidebar nav items
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: '/admin/users', label: 'Users', icon: Users },
   { path: '/admin/plans', label: 'Plans', icon: CreditCard },
   { path: '/admin/billing', label: 'Billing', icon: Receipt },
+  { path: '/admin/notifications', label: 'Notifications', icon: Bell },
   { path: '/admin/settings', label: 'Settings', icon: Settings },
   { path: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
 ]

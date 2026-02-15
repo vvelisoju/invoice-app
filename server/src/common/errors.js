@@ -47,12 +47,15 @@ export class RateLimitError extends AppError {
 }
 
 export const errorHandler = (error, request, reply) => {
+  const isProduction = process.env.NODE_ENV === 'production'
+
   if (error instanceof AppError) {
     return reply.status(error.statusCode).send({
       error: {
         code: error.code,
         message: error.message,
-        ...(error.details && { details: error.details })
+        ...(error.details && { details: error.details }),
+        ...(!isProduction && { requestId: request.id }),
       }
     })
   }
@@ -67,12 +70,38 @@ export const errorHandler = (error, request, reply) => {
     })
   }
 
-  request.log.error(error)
+  // Handle Prisma errors with concise logging (Railway truncates large objects)
+  const isPrismaError = error.constructor?.name?.startsWith('PrismaClient')
+  if (isPrismaError) {
+    request.log.error({
+      prismaErrorName: error.constructor.name,
+      prismaCode: error.code || 'N/A',
+      prismaTarget: error.meta?.target || error.meta?.modelName || 'N/A',
+      prismaCause: error.meta?.cause || 'N/A',
+      message: error.message?.slice(0, 800),
+      method: request.method,
+      url: request.url,
+      requestId: request.id,
+    }, 'Prisma error')
+  }
+
+  // Log full error context for unexpected errors
+  request.log.error({
+    errName: error.constructor?.name || error.name,
+    errMessage: error.message?.slice(0, 500),
+    method: request.method,
+    url: request.url,
+    requestId: request.id,
+  }, 'Unhandled server error')
 
   return reply.status(500).send({
     error: {
       code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred'
+      message: isProduction
+        ? 'An unexpected error occurred'
+        : error.message || 'An unexpected error occurred',
+      ...(!isProduction && { stack: error.stack }),
+      requestId: request.id,
     }
   })
 }

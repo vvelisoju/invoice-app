@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Building2, Save, Loader2, CheckCircle2 } from 'lucide-react'
+import { X, Building2, Save, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi } from '../../lib/api'
 import BusinessInfoForm from './BusinessInfoForm'
@@ -9,6 +9,7 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState({})
   const [isDirty, setIsDirty] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const { data: business, isLoading } = useQuery({
     queryKey: ['business'],
@@ -23,26 +24,32 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
     if (business && isOpen) {
       setFormData({ ...business })
       setIsDirty(false)
+      setSaveError('')
     }
   }, [business, isOpen])
 
   const updateMutation = useMutation({
-    mutationFn: (data) => businessApi.updateProfile(data),
+    mutationFn: (data) => businessApi.updateBusinessInfo(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] })
       setIsDirty(false)
+      setSaveError('')
       setTimeout(() => onClose(), 600)
+    },
+    onError: (err) => {
+      setSaveError(err?.response?.data?.error?.message || err?.message || 'Failed to save. Please try again.')
     }
   })
 
   const handleFormChange = (newData) => {
     setFormData(newData)
     setIsDirty(true)
+    setSaveError('')
   }
 
   const handleSave = () => {
-    const { id, createdAt, updatedAt, ...editableData } = formData
-    updateMutation.mutate(editableData)
+    const { name, phone, email, website, address, logoUrl } = formData
+    updateMutation.mutate({ name, phone, email, website, address, logoUrl })
   }
 
   if (!isOpen) return null
@@ -80,8 +87,15 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-border flex items-center justify-end gap-2 shrink-0">
-          {updateMutation.isSuccess && !isDirty && (
+        <div className="px-5 py-3.5 border-t border-border shrink-0">
+          {saveError && (
+            <div className="flex items-start gap-2 mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-700">{saveError}</p>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2">
+          {updateMutation.isSuccess && !isDirty && !saveError && (
             <span className="text-xs text-green-600 flex items-center gap-1 font-medium mr-auto">
               <CheckCircle2 className="w-3.5 h-3.5" /> Saved
             </span>
@@ -101,6 +115,7 @@ export default function BusinessSettingsModal({ isOpen, onClose }) {
             Save Changes
           </button>
         </div>
+      </div>
       </div>
     </div>
     </Portal>

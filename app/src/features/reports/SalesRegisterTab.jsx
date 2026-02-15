@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, Search, Loader2, FileText, FileSpreadsheet, Printer, Download, ChevronDown
 } from 'lucide-react'
 import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { saveAs } from '../../lib/nativeFile.js'
+import { openPrintWindow } from '../../lib/nativeBrowser.js'
 
 const DOC_TYPE_LABELS = {
   invoice: 'Invoice', tax_invoice: 'Tax Invoice', proforma: 'Proforma',
@@ -126,27 +127,33 @@ function printReport(rows, totals) {
       <tfoot><tr><td colspan="5">Total</td><td style="text-align:right">${formatCurrency(totals.taxableValue)}</td><td></td><td style="text-align:right">${formatCurrency(totals.cgst)}</td><td style="text-align:right">${formatCurrency(totals.sgst)}</td><td style="text-align:right">${formatCurrency(totals.igst)}</td><td style="text-align:right">${formatCurrency(totals.totalInvoiceValue)}</td><td></td></tr></tfoot>
     </table></body></html>`
 
-  const w = window.open('', '_blank', 'width=1100,height=700')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  setTimeout(() => { w.print() }, 400)
+  openPrintWindow(html, { width: 1100, height: 700, autoPrint: true })
 }
 
 // ── Main Component ────────────────────────────────────
 
-export default function SalesRegisterTab() {
+export default function SalesRegisterTab({ documentType }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [activeQuick, setActiveQuick] = useState('')
   const [searchParams, setSearchParams] = useState({})
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['reports', 'sales-register', searchParams],
-    queryFn: async () => {
-      const res = await reportsApi.getSalesRegister(searchParams)
-      return res.data.data || res.data
+  // Update searchParams when documentType changes
+  useEffect(() => {
+    if (documentType) {
+      setSearchParams(prev => ({ ...prev, documentType }))
     }
+  }, [documentType])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports', 'sales-register', searchParams, documentType],
+    queryFn: async () => {
+      const params = { ...searchParams }
+      if (documentType) params.documentType = documentType
+      const res = await reportsApi.getSalesRegister(params)
+      return res.data.data || res.data
+    },
+    enabled: !!documentType
   })
 
   const rows = data?.rows || []
@@ -156,6 +163,7 @@ export default function SalesRegisterTab() {
     const params = {}
     if (dateFrom) params.dateFrom = dateFrom
     if (dateTo) params.dateTo = dateTo
+    if (documentType) params.documentType = documentType
     setActiveQuick('')
     setSearchParams(params)
   }
@@ -165,7 +173,9 @@ export default function SalesRegisterTab() {
     setDateFrom(range.from)
     setDateTo(range.to)
     setActiveQuick(key)
-    setSearchParams({ dateFrom: range.from, dateTo: range.to })
+    const params = { dateFrom: range.from, dateTo: range.to }
+    if (documentType) params.documentType = documentType
+    setSearchParams(params)
   }
 
   return (

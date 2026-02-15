@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { NotFoundError, ValidationError, ForbiddenError } from '../../common/errors.js'
-import { checkCanIssueInvoice, incrementUsageCounter } from '../plans/service.js'
+import { checkCanIssueInvoice, incrementUsageCounter, getBusinessPlanUsage } from '../plans/service.js'
+import { emit as emitNotification } from '../notifications/service.js'
 
 // Default prefixes per document type (server-side mirror of client defaults)
 const DOC_TYPE_DEFAULT_PREFIX = {
@@ -84,6 +85,7 @@ export const createInvoice = async (prisma, businessId, data) => {
   let taxMode = 'NONE'
 
   if (data.taxRate && parseFloat(data.taxRate) > 0) {
+    // Invoice-level tax rate (legacy / simple mode)
     const taxableAmount = subtotal - discountTotal
     const taxRate = parseFloat(data.taxRate)
     taxTotal = (taxableAmount * taxRate) / 100
@@ -106,6 +108,36 @@ export const createInvoice = async (prisma, businessId, data) => {
         }
       }
     }
+  } else {
+    // Per-line-item taxes: sum tax from each line item individually
+    const breakdown = {}
+    data.lineItems.forEach(item => {
+      if (item.taxRate && parseFloat(item.taxRate) > 0) {
+        const lineTotal = parseFloat(item.quantity) * parseFloat(item.rate)
+        const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+          ? item.taxComponents : null
+        if (comps) {
+          comps.forEach(c => {
+            const key = `${c.name}_${c.rate}`
+            const amt = (lineTotal * Number(c.rate)) / 100
+            if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+            breakdown[key].amount += amt
+          })
+        } else {
+          const rate = parseFloat(item.taxRate)
+          const key = String(rate)
+          const amt = (lineTotal * rate) / 100
+          if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+          breakdown[key].amount += amt
+        }
+      }
+    })
+    const entries = Object.values(breakdown)
+    if (entries.length > 0) {
+      taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
+      taxBreakup = entries.sort((a, b) => a.rate - b.rate)
+      taxMode = 'NONE'
+    }
   }
 
   const total = subtotal - discountTotal + taxTotal
@@ -115,10 +147,8 @@ export const createInvoice = async (prisma, businessId, data) => {
   // When true, invoices start as DRAFT and go through Issue → Paid flow
   const initialStatus = business.enableStatusWorkflow ? 'DRAFT' : 'PAID'
 
-  // If saving directly as PAID (no workflow), check plan limits and count usage
-  if (!business.enableStatusWorkflow) {
-    await checkCanIssueInvoice(businessId)
-  }
+  // Check plan limits regardless of workflow mode — drafts count toward the limit too
+  await checkCanIssueInvoice(businessId)
 
   // Create invoice with line items
   const invoice = await prisma.invoice.create({
@@ -156,6 +186,9 @@ export const createInvoice = async (prisma, businessId, data) => {
           quantity: parseFloat(item.quantity),
           rate: parseFloat(item.rate),
           lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
+          taxRate: item.taxRate ? parseFloat(item.taxRate) : null,
+          taxRateName: item.taxRateName || null,
+          taxComponents: item.taxComponents || null,
           productServiceId: item.productServiceId || null
         }))
       }
@@ -166,10 +199,9 @@ export const createInvoice = async (prisma, businessId, data) => {
     }
   })
 
-  // Increment usage counter when saving directly as PAID
-  if (!business.enableStatusWorkflow) {
-    await incrementUsageCounter(businessId)
-  }
+  // Increment usage counter for every new invoice (drafts count too)
+  await incrementUsageCounter(businessId)
+  checkUsageLimitWarning(businessId, business.ownerUserId)
 
   return invoice
 }
@@ -210,6 +242,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
     let taxMode = invoice.taxMode
 
     if (data.taxRate && parseFloat(data.taxRate) > 0) {
+      // Invoice-level tax rate (legacy / simple mode)
       const taxableAmount = subtotal - discountTotal
       const taxRate = parseFloat(data.taxRate)
       taxTotal = (taxableAmount * taxRate) / 100
@@ -234,6 +267,36 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
             igstAmount: taxTotal
           }
         }
+      }
+    } else {
+      // Per-line-item taxes: sum tax from each line item individually
+      const breakdown = {}
+      data.lineItems.forEach(item => {
+        if (item.taxRate && parseFloat(item.taxRate) > 0) {
+          const lineTotal = parseFloat(item.quantity) * parseFloat(item.rate)
+          const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+            ? item.taxComponents : null
+          if (comps) {
+            comps.forEach(c => {
+              const key = `${c.name}_${c.rate}`
+              const amt = (lineTotal * Number(c.rate)) / 100
+              if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+              breakdown[key].amount += amt
+            })
+          } else {
+            const rate = parseFloat(item.taxRate)
+            const key = String(rate)
+            const amt = (lineTotal * rate) / 100
+            if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+            breakdown[key].amount += amt
+          }
+        }
+      })
+      const entries = Object.values(breakdown)
+      if (entries.length > 0) {
+        taxTotal = entries.reduce((sum, e) => sum + e.amount, 0)
+        taxBreakup = entries.sort((a, b) => a.rate - b.rate)
+        taxMode = 'NONE'
       }
     }
 
@@ -281,6 +344,9 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
             quantity: parseFloat(item.quantity),
             rate: parseFloat(item.rate),
             lineTotal: parseFloat(item.quantity) * parseFloat(item.rate),
+            taxRate: item.taxRate ? parseFloat(item.taxRate) : null,
+            taxRateName: item.taxRateName || null,
+            taxComponents: item.taxComponents || null,
             ...(item.productServiceId ? { productService: { connect: { id: item.productServiceId } } } : {})
           }))
         }
@@ -321,10 +387,12 @@ export const getInvoice = async (prisma, invoiceId, businessId) => {
 }
 
 export const listInvoices = async (prisma, businessId, filters = {}) => {
-  const { search, status, customerId, dateFrom, dateTo, limit = 20, offset = 0 } = filters
+  const { search, status, customerId, dateFrom, dateTo, limit = 20, offset = 0, active } = filters
 
   const where = {
     businessId,
+    // Filter by active status: true (default), false (inactive), or undefined (all)
+    ...(active !== undefined && { active: active === 'true' || active === true }),
     ...(status && { status }),
     ...(customerId && { customerId }),
     ...(dateFrom && { date: { gte: new Date(dateFrom) } }),
@@ -372,15 +440,40 @@ export const deleteInvoice = async (prisma, invoiceId, businessId) => {
     throw new ForbiddenError('Access denied')
   }
 
-  if (invoice.status !== 'DRAFT') {
-    throw new ValidationError('Cannot delete issued invoice')
-  }
-
-  await prisma.invoice.delete({
-    where: { id: invoiceId }
+  // Soft delete: set active = false
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { active: false }
   })
 
   return { message: 'Invoice deleted successfully' }
+}
+
+// Bulk soft delete
+export const bulkDeleteInvoices = async (prisma, invoiceIds, businessId) => {
+  // Verify all invoices belong to this business
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      id: { in: invoiceIds },
+      businessId
+    },
+    select: { id: true }
+  })
+
+  if (invoices.length !== invoiceIds.length) {
+    throw new ForbiddenError('Some invoices not found or access denied')
+  }
+
+  // Soft delete all
+  await prisma.invoice.updateMany({
+    where: {
+      id: { in: invoiceIds },
+      businessId
+    },
+    data: { active: false }
+  })
+
+  return { message: `${invoices.length} invoice(s) deleted successfully`, count: invoices.length }
 }
 
 export const issueInvoice = async (prisma, invoiceId, businessId, templateData) => {
@@ -427,10 +520,40 @@ export const issueInvoice = async (prisma, invoiceId, businessId, templateData) 
     }
   })
 
-  // Increment usage counter after successful issuance
-  await incrementUsageCounter(businessId)
+  // Usage already counted at creation time — just fire warning check
+  checkUsageLimitWarning(businessId, business.ownerUserId)
 
   return updated
+}
+
+// Fire-and-forget usage limit warning check
+async function checkUsageLimitWarning(businessId, userId) {
+  try {
+    const usage = await getBusinessPlanUsage(businessId)
+    const used = usage.usage.invoicesIssued
+    const limit = usage.plan.monthlyInvoiceLimit
+    if (limit <= 0) return
+
+    const pct = (used / limit) * 100
+
+    if (pct >= 100) {
+      emitNotification('usage_limit_reached', {
+        userId,
+        businessId,
+        variables: { limit: String(limit) },
+        data: { action: 'navigate', route: '/plans' },
+      })
+    } else if (pct >= 80) {
+      emitNotification('usage_limit_warning', {
+        userId,
+        businessId,
+        variables: { used: String(used), limit: String(limit) },
+        data: { action: 'navigate', route: '/plans' },
+      })
+    }
+  } catch {
+    // Non-critical, ignore
+  }
 }
 
 export const updateInvoiceStatus = async (prisma, invoiceId, businessId, status) => {

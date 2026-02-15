@@ -3,7 +3,7 @@ import { useParams, useHistory } from 'react-router-dom'
 import { Download, Printer, Share2, MessageCircle, Plus, CheckCircle, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { invoiceApi, templateApi } from '../../lib/api'
-import { generatePDF, downloadPDF } from './utils/pdfGenerator.jsx'
+import { generatePDF, downloadPDF, sharePDF, printPDF } from './utils/pdfGenerator.jsx'
 import { PageHeader } from '../../components/layout'
 
 export default function InvoicePDFPage() {
@@ -58,38 +58,34 @@ export default function InvoicePDFPage() {
   const handleShare = async () => {
     if (!pdfBlob || !invoice) return
     try {
-      if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' })
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Invoice ${invoice.invoiceNumber}`,
-            text: `Please find attached Invoice #${invoice.invoiceNumber}`,
-            files: [file]
-          })
-          return
-        }
-      }
-      await handleDownload()
+      await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Please find attached Invoice #${invoice.invoiceNumber}`,
+      })
     } catch (err) {
       if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
   }
 
   const handleWhatsAppShare = async () => {
-    if (!invoice) return
-    const message = encodeURIComponent(
-      `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`
-    )
-    window.open(`https://wa.me/?text=${message}`, '_blank')
-    await handleDownload()
+    if (!pdfBlob || !invoice) return
+    try {
+      // On native, share the PDF directly (WhatsApp will be in the share sheet)
+      await sharePDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`, {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: `Invoice #${invoice.invoiceNumber}\nAmount: ₹${invoice.total.toLocaleString('en-IN')}\nDate: ${new Date(invoice.date).toLocaleDateString('en-IN')}`,
+      })
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('WhatsApp share failed:', err)
+    }
   }
 
-  const handlePrint = () => {
-    if (!pdfBlob) return
-    const url = URL.createObjectURL(pdfBlob)
-    const printWindow = window.open(url, '_blank')
-    if (printWindow) {
-      printWindow.onload = () => printWindow.print()
+  const handlePrint = async () => {
+    if (!pdfBlob || !invoice) return
+    try {
+      await printPDF(pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`)
+    } catch (err) {
+      console.error('Print failed:', err)
     }
   }
 

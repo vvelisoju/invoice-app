@@ -1,9 +1,13 @@
+import crypto from 'crypto'
 import { config } from '../../common/config.js'
+import { logger } from '../../common/logger.js'
 import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 import springedge from 'springedge'
+import { emit as emitNotification } from '../notifications/service.js'
 
-const isProduction = () => config.nodeEnv === 'production' && !!config.sms.springEdgeApiKey
+const forceSms = () => process.env.FORCE_SMS === 'true' && !!config.sms.springEdgeApiKey
+const isProduction = () => (config.nodeEnv === 'production' || forceSms()) && !!config.sms.springEdgeApiKey
 
 const generateOTP = () => {
   if (!isProduction()) {
@@ -11,37 +15,45 @@ const generateOTP = () => {
   }
 
   const length = config.otp.length
-  const digits = '0123456789'
   let otp = ''
   for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * 10)]
+    otp += crypto.randomInt(0, 10).toString()
   }
   return otp
 }
 
 const sendOTP = async (phone, otp) => {
   if (!isProduction()) {
-    console.log(`[OTP] Phone: ${phone}, OTP: ${otp}`)
+    logger.info({ phone, otp }, '[OTP] Development mode OTP generated')
     return true
   }
 
   // Production: use SpringEdge SMS gateway
   return new Promise((resolve, reject) => {
+    const apiKey = config.sms.springEdgeApiKey
+    const sender = config.sms.springEdgeSender || 'CODVEL'
     const params = {
-      sender: config.sms.springEdgeSender || 'CODVEL',
-      apikey: config.sms.springEdgeApiKey,
+      sender,
+      apikey: apiKey,
       to: [`91${phone}`],
       message: `Your OTP for logging into Lokalhunt is ${otp}. Do not share this with anyone.`,
       format: 'json'
     }
 
+    logger.info({
+      phone,
+      sender,
+      apiKeyPrefix: apiKey ? `${apiKey.substring(0, 4)}...` : 'MISSING',
+      to: params.to
+    }, '[SpringEdge] Sending SMS with params')
+
     springedge.messages.send(params, 5000, (err, response) => {
       if (err) {
-        console.error('[SpringEdge] SMS send error:', err)
+        logger.error({ err, phone, errMessage: err?.message, errCode: err?.code }, '[SpringEdge] SMS send error')
         reject(new Error('Failed to send OTP via SMS'))
         return
       }
-      console.log('[SpringEdge] SMS response:', JSON.stringify(response))
+      logger.info({ phone, response: JSON.stringify(response) }, '[SpringEdge] SMS API response')
       resolve(true)
     })
   })
@@ -124,8 +136,9 @@ export const verifyOTP = async (prisma, phone, otp) => {
     throw new UnauthorizedError('Too many failed attempts. Please request a new OTP')
   }
 
-  // Verify OTP
-  if (otpRequest.otp !== otp) {
+  // Verify OTP (demo accounts also accept default OTP 999999)
+  const isDemoBypass = (phone === '9494644848' || phone === '9999999999') && otp === '999999'
+  if (otpRequest.otp !== otp && !isDemoBypass) {
     // Increment attempts
     await prisma.otpRequest.update({
       where: { id: otpRequest.id },
@@ -153,6 +166,7 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
   // Super admins don't need a business workspace
   let business = null
+  let isNewUser = false
   if (user.role !== 'SUPER_ADMIN') {
     business = await prisma.business.findFirst({
       where: { ownerUserId: user.id }
@@ -160,11 +174,20 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
     if (!business) {
       // Auto-create business workspace
+      isNewUser = true
       business = await prisma.business.create({
         data: {
           ownerUserId: user.id,
           name: `Business ${phone.slice(-4)}` // Temporary name
         }
+      })
+
+      // Emit welcome notification for new users
+      emitNotification('welcome', {
+        userId: user.id,
+        businessId: business.id,
+        variables: { businessName: business.name },
+        data: { action: 'navigate', route: '/settings', entityType: 'business', entityId: business.id },
       })
     }
   }
@@ -180,6 +203,7 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
   return {
     token,
+    isNewUser,
     user: {
       id: user.id,
       phone: user.phone,

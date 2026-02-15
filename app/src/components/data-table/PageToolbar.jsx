@@ -11,20 +11,20 @@
  */
 export default function PageToolbar({ title, subtitle, actions, mobileActions, children }) {
   return (
-    <div className="bg-white border-b border-border px-4 md:px-8 pt-3 md:pt-5 pb-2.5 md:pb-4">
+    <div className="bg-white border-b border-border px-4 md:px-8 pt-4 md:pt-6 pb-3 md:pb-5">
       <div className="max-w-7xl mx-auto">
         {/* Mobile: title + compact action in single row */}
         {mobileActions && (
-          <div className="flex items-center justify-between md:hidden mb-2">
-            <h1 className="text-lg font-bold text-textPrimary truncate">{title}</h1>
+          <div className="flex items-center justify-between md:hidden mb-3">
+            <h1 className="text-xl font-extrabold text-textPrimary truncate tracking-tight">{title}</h1>
             <div className="flex items-center gap-2 shrink-0">{mobileActions}</div>
           </div>
         )}
         {/* Desktop: full title row with subtitle and all actions */}
-        <div className={`${mobileActions ? 'hidden md:flex' : 'flex flex-col gap-3 sm:flex-row sm:items-center'} sm:items-center sm:justify-between mb-3 md:mb-4`}>
+        <div className={`${mobileActions ? 'hidden md:flex' : 'flex flex-col gap-3 sm:flex-row sm:items-center'} sm:items-center sm:justify-between mb-4 md:mb-5`}>
           <div className="min-w-0">
-            <h1 className="text-lg md:text-xl font-bold text-textPrimary mb-0.5">{title}</h1>
-            {subtitle && <p className="hidden md:block text-xs text-textSecondary">{subtitle}</p>}
+            <h1 className="text-xl md:text-2xl font-extrabold text-textPrimary mb-1 tracking-tight">{title}</h1>
+            {subtitle && <p className="hidden md:block text-sm text-textSecondary/80">{subtitle}</p>}
           </div>
           {actions && <div className="flex items-center gap-2 md:gap-3 shrink-0">{actions}</div>}
         </div>

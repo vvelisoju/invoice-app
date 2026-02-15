@@ -32,7 +32,7 @@ function TermsSection({ terms, onTermsChange }) {
           rows={4}
           value={terms}
           onChange={(e) => onTermsChange(e.target.value)}
-          className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
+          className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-border/40 active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary text-sm placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
         />
       </div>
     </div>
@@ -92,7 +92,7 @@ function SignatureSection({ signatureUrl, signatureName, onSignatureClick, colla
   )
 }
 
-function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBreakdown, totalTaxFromItems, currency, formatCurrency }) {
+function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBreakdown, totalTaxFromItems, currency, formatCurrency, onDiscountChange }) {
   return (
     <div>
       <div className="space-y-3">
@@ -100,12 +100,28 @@ function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBre
           <span className="text-sm font-medium text-textSecondary">Subtotal</span>
           <span className="text-sm font-semibold text-textPrimary">{formatCurrency(subtotal)}</span>
         </div>
-        {discountTotal > 0 && (
+        {onDiscountChange ? (
+          <div className="flex justify-between items-center px-2">
+            <span className="text-sm font-medium text-textSecondary">Discount</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-red-500">-</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discountTotal || ''}
+                onChange={(e) => onDiscountChange(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="w-24 text-right text-sm font-semibold text-red-500 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        ) : discountTotal > 0 ? (
           <div className="flex justify-between items-center px-2">
             <span className="text-sm font-medium text-textSecondary">Discount</span>
             <span className="text-sm font-semibold text-red-500">-{formatCurrency(discountTotal)}</span>
           </div>
-        )}
+        ) : null}
 
         {/* Per-tax-rate breakdown from line items */}
         {taxBreakdown.length > 0 && (
@@ -164,24 +180,45 @@ export default function InvoiceTotalsFooter({
   signatureUrl,
   signatureName,
   onSignatureClick,
-  docTypeConfig
+  docTypeConfig,
+  onDiscountChange
 }) {
   const showTerms = docTypeConfig?.fields?.showTerms !== false
   const showSignature = docTypeConfig?.fields?.showSignature !== false
   // Compute per-tax-rate breakdown from line items
+  // When a line item has taxComponents (tax group), expand into individual component lines
   const taxBreakdown = useMemo(() => {
     const breakdown = {}
     lineItems.forEach((item) => {
       if (item.taxRate && item.taxRate > 0) {
-        const rate = Number(item.taxRate)
-        const name = item.taxRateName || `Tax ${rate}%`
-        const key = `${rate}_${name}`
         const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)
-        const taxAmount = (lineTotal * rate) / 100
-        if (!breakdown[key]) {
-          breakdown[key] = { rate, name, amount: 0 }
+        const components = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+          ? item.taxComponents
+          : null
+
+        if (components) {
+          // Expand tax group into individual component taxes
+          components.forEach((comp) => {
+            const compRate = Number(comp.rate)
+            const key = `${comp.name}_${compRate}`
+            const compAmount = (lineTotal * compRate) / 100
+            if (!breakdown[key]) {
+              breakdown[key] = { rate: compRate, name: comp.name, amount: 0 }
+            }
+            breakdown[key].amount += compAmount
+          })
+        } else {
+          // Simple flat tax rate
+          const rate = Number(item.taxRate)
+          const key = String(rate)
+          const taxAmount = (lineTotal * rate) / 100
+          if (!breakdown[key]) {
+            breakdown[key] = { rate, name: item.taxRateName || `Tax ${rate}%`, amount: 0 }
+          } else if (!breakdown[key].name.includes(item.taxRateName) && item.taxRateName) {
+            breakdown[key].name = item.taxRateName
+          }
+          breakdown[key].amount += taxAmount
         }
-        breakdown[key].amount += taxAmount
       }
     })
     return Object.values(breakdown).sort((a, b) => a.rate - b.rate)
@@ -203,6 +240,7 @@ export default function InvoiceTotalsFooter({
             subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
             taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
             totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
+            onDiscountChange={onDiscountChange}
           />
           {showSignature && (
             <div className="mt-6">
@@ -221,6 +259,7 @@ export default function InvoiceTotalsFooter({
           subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
           taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}
           totalTaxFromItems={totalTaxFromItems} currency={currency} formatCurrency={formatCurrency}
+          onDiscountChange={onDiscountChange}
         />
         {showSignature && (
           <SignatureSection

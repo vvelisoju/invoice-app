@@ -14,6 +14,17 @@ export default function HomePage() {
     }
   })
 
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
+
+  const defaultDocType = businessProfile?.defaultDocType || 'invoice'
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -35,12 +46,11 @@ export default function HomePage() {
           <p className="text-xs md:text-sm text-textSecondary mt-0.5 hidden md:block">Overview of your business activity</p>
         </div>
         <button
-          onClick={() => history.push('/invoices/new')}
+          onClick={() => history.push(`/invoices/new?type=${defaultDocType}`)}
           className="px-4 md:px-5 py-2.5 bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Invoice</span>
-          <span className="sm:hidden">New</span>
+          New
         </button>
       </div>
 

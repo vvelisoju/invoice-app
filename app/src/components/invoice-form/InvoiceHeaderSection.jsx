@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { Building, User, Truck, Hash, Check, Search, UserPlus, Loader2, Settings, ChevronDown, ChevronUp, Calendar, Pencil } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import LogoUpload from './LogoUpload'
@@ -14,6 +14,7 @@ export default function InvoiceHeaderSection({
   selectedCustomer,
   onCustomerSelect,
   onCreateNewCustomer,
+  onEditCustomer,
   shipTo,
   onShipToChange,
   invoiceNumber,
@@ -297,7 +298,7 @@ export default function InvoiceHeaderSection({
                 }}
                 onFocus={() => setShowFromSuggestion(true)}
                 onBlur={() => setTimeout(() => setShowFromSuggestion(false), 200)}
-                className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
+                className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-border/40 active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
               />
 
               {/* Auto-suggestion dropdown */}
@@ -390,7 +391,7 @@ export default function InvoiceHeaderSection({
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
-                className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
+                className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-border/40 active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
               />
               <Search className="w-4 h-4 absolute right-4 top-4 text-textSecondary/40" />
             </div>
@@ -413,28 +414,40 @@ export default function InvoiceHeaderSection({
                 {!isFetching && suggestions.length > 0 && (
                   <div className="max-h-52 overflow-y-auto">
                     {suggestions.map((customer, index) => (
-                      <button
-                        key={customer.id}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelectCustomer(customer)}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
-                          highlightedIndex === index
-                            ? 'bg-blue-50 text-primary'
-                            : 'hover:bg-gray-50 text-textPrimary'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                          {customer.name?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{customer.name}</div>
-                          <div className="text-xs text-textSecondary flex items-center gap-2">
-                            {customer.phone && <span>{customer.phone}</span>}
-                            {customer.email && <span>{customer.email}</span>}
+                      <div key={customer.id} className="group/row relative">
+                        <button
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectCustomer(customer)}
+                          onMouseEnter={() => setHighlightedIndex(index)}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
+                            highlightedIndex === index
+                              ? 'bg-blue-50 text-primary'
+                              : 'hover:bg-gray-50 text-textPrimary'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            {customer.name?.substring(0, 2).toUpperCase()}
                           </div>
-                        </div>
-                      </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{customer.name}</div>
+                            <div className="text-xs text-textSecondary flex items-center gap-2">
+                              {customer.phone && <span>{customer.phone}</span>}
+                              {customer.email && <span>{customer.email}</span>}
+                            </div>
+                          </div>
+                        </button>
+                        {onEditCustomer && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { e.stopPropagation(); setShowSuggestions(false); onEditCustomer(customer) }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-300 opacity-0 md:group-hover/row:opacity-100 active:opacity-100 focus:opacity-100 md:hover:text-primary md:hover:bg-blue-50 active:text-primary active:bg-blue-50 transition-all"
+                            title="Edit customer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -494,7 +507,7 @@ export default function InvoiceHeaderSection({
                   onFocus={handleShipFocus}
                   onBlur={handleShipBlur}
                   onKeyDown={handleShipKeyDown}
-                  className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-transparent active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
+                  className="w-full p-3 md:p-4 bg-bgPrimary/30 active:bg-bgPrimary/50 md:hover:bg-bgPrimary/50 focus:bg-white border border-border/40 active:border-border md:hover:border-border focus:border-primary rounded-lg text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none text-sm leading-relaxed"
                 />
                 <Search className="w-4 h-4 absolute right-4 top-4 text-textSecondary/40" />
               </div>
@@ -512,28 +525,40 @@ export default function InvoiceHeaderSection({
                   {!shipIsFetching && shipSuggestions.length > 0 && (
                     <div className="max-h-52 overflow-y-auto">
                       {shipSuggestions.map((customer, index) => (
-                        <button
-                          key={customer.id}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleShipSelectCustomer(customer)}
-                          onMouseEnter={() => setShipHighlightedIndex(index)}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
-                            shipHighlightedIndex === index
-                              ? 'bg-blue-50 text-primary'
-                              : 'hover:bg-gray-50 text-textPrimary'
-                          }`}
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs shrink-0">
-                            {customer.name?.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{customer.name}</div>
-                            <div className="text-xs text-textSecondary flex items-center gap-2">
-                              {customer.phone && <span>{customer.phone}</span>}
-                              {customer.email && <span>{customer.email}</span>}
+                        <div key={customer.id} className="group/row relative">
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleShipSelectCustomer(customer)}
+                            onMouseEnter={() => setShipHighlightedIndex(index)}
+                            className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-border/50 last:border-b-0 ${
+                              shipHighlightedIndex === index
+                                ? 'bg-blue-50 text-primary'
+                                : 'hover:bg-gray-50 text-textPrimary'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs shrink-0">
+                              {customer.name?.substring(0, 2).toUpperCase()}
                             </div>
-                          </div>
-                        </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{customer.name}</div>
+                              <div className="text-xs text-textSecondary flex items-center gap-2">
+                                {customer.phone && <span>{customer.phone}</span>}
+                                {customer.email && <span>{customer.email}</span>}
+                              </div>
+                            </div>
+                          </button>
+                          {onEditCustomer && (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={(e) => { e.stopPropagation(); setShowShipSuggestions(false); onEditCustomer(customer) }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-300 opacity-0 md:group-hover/row:opacity-100 active:opacity-100 focus:opacity-100 md:hover:text-primary md:hover:bg-blue-50 active:text-primary active:bg-blue-50 transition-all"
+                              title="Edit customer"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}

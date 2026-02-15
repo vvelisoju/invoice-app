@@ -4,6 +4,7 @@ import {
   getInvoice,
   listInvoices,
   deleteInvoice,
+  bulkDeleteInvoices,
   issueInvoice,
   updateInvoiceStatus
 } from './service.js'
@@ -38,6 +39,13 @@ export const handleDeleteInvoice = async (request, reply) => {
   const { id } = request.params
   const businessId = request.user.businessId
   const result = await deleteInvoice(request.server.prisma, id, businessId)
+  return reply.status(200).send(result)
+}
+
+export const handleBulkDeleteInvoices = async (request, reply) => {
+  const businessId = request.user.businessId
+  const { invoiceIds } = request.body
+  const result = await bulkDeleteInvoices(request.server.prisma, invoiceIds, businessId)
   return reply.status(200).send(result)
 }
 

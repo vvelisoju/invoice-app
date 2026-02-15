@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   FileText, BarChart3, Users, Receipt, CalendarRange, Download, Loader2, ChevronDown, X
 } from 'lucide-react'
-import { reportsApi } from '../../lib/api'
-import { saveAs } from 'file-saver'
+import { reportsApi, businessApi } from '../../lib/api'
+import { saveAs } from '../../lib/nativeFile.js'
+import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
 import SalesRegisterTab from './SalesRegisterTab'
 import GSTReturnsTab from './GSTReturnsTab'
 import DocumentsTab from './DocumentsTab'
@@ -137,6 +139,29 @@ export default function ReportsPage() {
   const [showCAModal, setShowCAModal] = useState(false)
   const [caMonth, setCAMonth] = useState(getCurrentMonth())
   const [caLoading, setCALoading] = useState(false)
+  const [selectedDocType, setSelectedDocType] = useState('')
+
+  // Fetch business profile to get defaultDocType and enabledInvoiceTypes
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
+
+  // Set default document type when business profile loads
+  const defaultDocType = businessProfile?.defaultDocType || 'tax_invoice'
+  const enabledTypes = businessProfile?.enabledInvoiceTypes || ['invoice', 'tax_invoice', 'receipt', 'quote']
+  
+  // Initialize selectedDocType with defaultDocType once loaded
+  if (!selectedDocType && defaultDocType) {
+    setSelectedDocType(defaultDocType)
+  }
+
+  // Filter document types to show only enabled ones
+  const availableDocTypes = ALL_INVOICE_TYPES.filter(type => enabledTypes.includes(type.key))
 
   const monthOptions = useMemo(() => {
     const opts = []
@@ -171,14 +196,34 @@ export default function ReportsPage() {
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
 
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <h1 className="text-lg md:text-xl font-bold text-textPrimary">Reports</h1>
-          <button
-            onClick={() => setShowCAModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" /> CA Package
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Document Type Selector */}
+            <div className="flex-1 md:flex-initial">
+              <div className="relative">
+                <select
+                  value={selectedDocType}
+                  onChange={(e) => setSelectedDocType(e.target.value)}
+                  className="w-full md:w-48 pl-3 pr-8 py-2 text-sm border border-border rounded-lg appearance-none cursor-pointer bg-white focus:ring-primary focus:border-primary"
+                >
+                  {availableDocTypes.map(type => (
+                    <option key={type.key} value={type.key}>
+                      {type.label}
+                      {type.key === defaultDocType ? ' (Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCAModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" /> CA Package
+            </button>
+          </div>
         </div>
 
         {/* CA Package Modal */}
@@ -239,11 +284,11 @@ export default function ReportsPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'sales' && <SalesRegisterTab />}
-        {activeTab === 'gst' && <GSTReturnsTab />}
-        {activeTab === 'documents' && <DocumentsTab />}
-        {activeTab === 'customers' && <CustomersTab />}
-        {activeTab === 'annual' && <AnnualTab />}
+        {activeTab === 'sales' && <SalesRegisterTab documentType={selectedDocType} />}
+        {activeTab === 'gst' && <GSTReturnsTab documentType={selectedDocType} />}
+        {activeTab === 'documents' && <DocumentsTab documentType={selectedDocType} />}
+        {activeTab === 'customers' && <CustomersTab documentType={selectedDocType} />}
+        {activeTab === 'annual' && <AnnualTab documentType={selectedDocType} />}
       </div>
     </div>
   )

@@ -25,14 +25,19 @@ import {
   User,
   Phone,
   Mail,
-  Pencil
+  Pencil,
+  Layers,
+  AlertTriangle,
+  Info,
+  Package,
+  Crown
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { PageToolbar } from '../../components/data-table'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
-import { TEMPLATE_REGISTRY, COLOR_FAMILIES, getTemplateList } from '../invoices/utils/templates/registry'
+import { TEMPLATE_REGISTRY, COLOR_FAMILIES, CATEGORIES, getTemplateList } from '../invoices/utils/templates/registry'
 import { DOCUMENT_TYPE_DEFAULTS } from '../../config/documentTypeDefaults'
 import BusinessInfoForm, { FieldInput, FieldTextarea, FieldToggle } from '../../components/settings/BusinessInfoForm'
 
@@ -41,31 +46,15 @@ const SETTINGS_TABS = [
   { key: 'gst', label: 'GST Settings', mobileLabel: 'GST', icon: Receipt },
   { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
+  { key: 'templates', label: 'Invoice Templates', mobileLabel: 'Templates', icon: Palette },
+  { key: 'subscription', label: 'Manage Subscription', mobileLabel: 'Subscription', icon: Crown },
 ]
 
-function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
+function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChange, hasPaidPlan, legacyDefaults }) {
   const [expandedType, setExpandedType] = useState(null)
+  const history = useHistory()
 
-  const handleLabelChange = (typeKey, labelKey, value) => {
-    const current = documentTypeConfig || {}
-    const typeOverrides = current[typeKey] || {}
-    const labels = { ...(typeOverrides.labels || {}), [labelKey]: value }
-    // Remove empty overrides
-    if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.labels?.[labelKey]) {
-      delete labels[labelKey]
-    }
-    const updated = { ...current, [typeKey]: { ...typeOverrides, labels } }
-    // Clean up empty type entries
-    if (Object.keys(updated[typeKey].labels || {}).length === 0) {
-      delete updated[typeKey].labels
-    }
-    if (Object.keys(updated[typeKey] || {}).length === 0) {
-      delete updated[typeKey]
-    }
-    onChange(updated)
-  }
-
-  const handleTopLevelChange = (typeKey, field, value) => {
+  const handleFieldChange = (typeKey, field, value) => {
     const current = documentTypeConfig || {}
     const typeOverrides = { ...(current[typeKey] || {}) }
     if (field === 'nextNumber') {
@@ -81,8 +70,31 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
       } else {
         typeOverrides.prefix = value
       }
+    } else if (field === 'defaultNotes' || field === 'defaultTerms') {
+      if (!value) {
+        delete typeOverrides[field]
+      } else {
+        typeOverrides[field] = value
+      }
     }
     const updated = { ...current, [typeKey]: typeOverrides }
+    if (Object.keys(updated[typeKey] || {}).length === 0) {
+      delete updated[typeKey]
+    }
+    onChange(updated)
+  }
+
+  const handleLabelChange = (typeKey, labelKey, value) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = current[typeKey] || {}
+    const labels = { ...(typeOverrides.labels || {}), [labelKey]: value }
+    if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.labels?.[labelKey]) {
+      delete labels[labelKey]
+    }
+    const updated = { ...current, [typeKey]: { ...typeOverrides, labels } }
+    if (Object.keys(updated[typeKey].labels || {}).length === 0) {
+      delete updated[typeKey].labels
+    }
     if (Object.keys(updated[typeKey] || {}).length === 0) {
       delete updated[typeKey]
     }
@@ -93,9 +105,22 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
     return documentTypeConfig?.[typeKey]?.labels?.[labelKey] || ''
   }
 
-  const getTopLevel = (typeKey, field) => {
+  const getField = (typeKey, field) => {
     const val = documentTypeConfig?.[typeKey]?.[field]
     return val !== undefined && val !== null ? String(val) : ''
+  }
+
+  // For the legacy 'invoice' type, fall back to business-level defaults if no per-type override exists
+  const getFieldWithLegacy = (typeKey, field) => {
+    const perType = getField(typeKey, field)
+    if (perType) return perType
+    if (typeKey === 'invoice' && legacyDefaults) {
+      if (field === 'prefix' && legacyDefaults.invoicePrefix) return legacyDefaults.invoicePrefix
+      if (field === 'nextNumber' && legacyDefaults.nextInvoiceNumber) return String(legacyDefaults.nextInvoiceNumber)
+      if (field === 'defaultNotes' && legacyDefaults.defaultNotes) return legacyDefaults.defaultNotes
+      if (field === 'defaultTerms' && legacyDefaults.defaultTerms) return legacyDefaults.defaultTerms
+    }
+    return ''
   }
 
   const enabledDefaults = ALL_INVOICE_TYPES
@@ -103,121 +128,176 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
     .map(t => ({ ...t, defaults: DOCUMENT_TYPE_DEFAULTS[t.key] }))
     .filter(t => t.defaults)
 
+  const inputClass = "w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+  const labelClass = "text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block"
+  const sectionTitleClass = "text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2"
+
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
       <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
-        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-          <Pencil className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+          <Layers className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
         </div>
         <div>
-          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Labels</h3>
-          <p className="text-[11px] md:text-xs text-textSecondary">Customize field labels, numbering & line item columns for each document type</p>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Settings</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Configure numbering, defaults & labels for each document type</p>
         </div>
       </div>
       <div className="p-3 md:p-4 space-y-2">
         {enabledDefaults.map((type) => {
           const isExpanded = expandedType === type.key
           const Icon = type.icon
-          const hasOverrides = documentTypeConfig?.[type.key] && Object.keys(documentTypeConfig[type.key]).length > 0
+          const typeConf = documentTypeConfig?.[type.key] || {}
+          const hasOverrides = Object.keys(typeConf).length > 0
+          const previewPrefix = getFieldWithLegacy(type.key, 'prefix') || type.defaults.prefix
+          const previewNum = getFieldWithLegacy(type.key, 'nextNumber') || '1'
+          const previewInvNum = `${previewPrefix}${String(previewNum).padStart(4, '0')}`
+
           return (
             <div key={type.key} className="border border-border rounded-lg overflow-hidden">
               <button
                 onClick={() => setExpandedType(isExpanded ? null : type.key)}
                 className="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 md:hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className="w-4 h-4 text-gray-400 shrink-0" />
                   <span className="text-sm font-medium text-textPrimary">{type.label}</span>
+                  {!isExpanded && (
+                    <span className="text-[11px] text-textSecondary font-mono hidden sm:inline">{previewInvNum}</span>
+                  )}
                   {hasOverrides && (
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase">Customized</span>
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase shrink-0">Customized</span>
                   )}
                 </div>
-                {isExpanded ? (
-                  <ChevronRight className="w-4 h-4 text-textSecondary rotate-90 transition-transform" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-textSecondary transition-transform" />
-                )}
+                <ChevronRight className={`w-4 h-4 text-textSecondary transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
               </button>
               {isExpanded && (
-                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50 space-y-4">
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50 space-y-5">
                   {/* Numbering */}
                   <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Numbering</p>
+                    <p className={sectionTitleClass}>Numbering</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Prefix</label>
+                        <label className={labelClass}>Prefix</label>
                         <input
                           type="text"
-                          value={getTopLevel(type.key, 'prefix')}
-                          onChange={(e) => handleTopLevelChange(type.key, 'prefix', e.target.value)}
+                          value={getFieldWithLegacy(type.key, 'prefix')}
+                          onChange={(e) => handleFieldChange(type.key, 'prefix', e.target.value)}
                           placeholder={type.defaults.prefix || 'INV-'}
                           maxLength={10}
-                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Next Number</label>
+                        <label className={labelClass}>Next Number</label>
                         <input
                           type="number"
                           min="1"
-                          value={getTopLevel(type.key, 'nextNumber')}
-                          onChange={(e) => handleTopLevelChange(type.key, 'nextNumber', e.target.value)}
+                          value={getFieldWithLegacy(type.key, 'nextNumber')}
+                          onChange={(e) => handleFieldChange(type.key, 'nextNumber', e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-textSecondary mt-1.5">
+                      Next: <span className="font-mono font-semibold">{previewInvNum}</span>
+                    </p>
+                  </div>
+
+                  {/* Default Notes & Terms */}
+                  <div>
+                    <p className={sectionTitleClass}>Defaults</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className={labelClass}>Default Notes</label>
+                        <textarea
+                          value={getFieldWithLegacy(type.key, 'defaultNotes')}
+                          onChange={(e) => handleFieldChange(type.key, 'defaultNotes', e.target.value)}
+                          placeholder={`Notes to appear on every ${type.defaults.label?.toLowerCase() || 'document'}`}
+                          rows={2}
+                          className={`${inputClass} resize-none`}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Default Terms & Conditions</label>
+                        <textarea
+                          value={getFieldWithLegacy(type.key, 'defaultTerms')}
+                          onChange={(e) => handleFieldChange(type.key, 'defaultTerms', e.target.value)}
+                          placeholder="Terms & conditions"
+                          rows={2}
+                          className={`${inputClass} resize-none`}
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Section Labels */}
-                  <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Section Labels</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {[
-                        { key: 'fromSection', label: 'From Label' },
-                        { key: 'toSection', label: 'To Label' },
-                        { key: 'numberField', label: 'Number Label' },
-                        { key: 'dateField', label: 'Date Label' },
-                        { key: 'saveButton', label: 'Save Button' },
-                      ].map((field) => (
-                        <div key={field.key}>
-                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
-                          <input
-                            type="text"
-                            value={getOverride(type.key, field.key)}
-                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
-                            placeholder={type.defaults.labels[field.key]}
-                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                          />
+                  {/* Section Labels — Advanced Plan only */}
+                  {hasPaidPlan ? (
+                    <>
+                      <div>
+                        <p className={sectionTitleClass}>Section Labels</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {[
+                            { key: 'fromSection', label: 'From Label' },
+                            { key: 'toSection', label: 'To Label' },
+                            { key: 'numberField', label: 'Number Label' },
+                            { key: 'dateField', label: 'Date Label' },
+                            { key: 'saveButton', label: 'Save Button' },
+                          ].map((field) => (
+                            <div key={field.key}>
+                              <label className={labelClass}>{field.label}</label>
+                              <input
+                                type="text"
+                                value={getOverride(type.key, field.key)}
+                                onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                                placeholder={type.defaults.labels[field.key]}
+                                className={inputClass}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Line Item Labels */}
-                  <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Line Item Labels</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {[
-                        { key: 'descriptionCol', label: 'Description' },
-                        { key: 'unitPriceCol', label: 'Unit Price' },
-                        { key: 'qtyCol', label: 'Quantity' },
-                        { key: 'amountCol', label: 'Amount' },
-                        { key: 'taxCol', label: 'Tax' },
-                      ].map((field) => (
-                        <div key={field.key}>
-                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
-                          <input
-                            type="text"
-                            value={getOverride(type.key, field.key)}
-                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
-                            placeholder={type.defaults.labels[field.key]}
-                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                          />
+                      {/* Line Item Labels */}
+                      <div>
+                        <p className={sectionTitleClass}>Line Item Labels</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {[
+                            { key: 'descriptionCol', label: 'Description' },
+                            { key: 'unitPriceCol', label: 'Unit Price' },
+                            { key: 'qtyCol', label: 'Quantity' },
+                            { key: 'amountCol', label: 'Amount' },
+                            { key: 'taxCol', label: 'Tax' },
+                          ].map((field) => (
+                            <div key={field.key}>
+                              <label className={labelClass}>{field.label}</label>
+                              <input
+                                type="text"
+                                value={getOverride(type.key, field.key)}
+                                onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                                placeholder={type.defaults.labels[field.key]}
+                                className={inputClass}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-gray-50 border border-border rounded-lg p-4 text-center">
+                      <Lock className="w-5 h-5 text-gray-300 mx-auto mb-2" />
+                      <p className="text-xs font-medium text-textPrimary mb-0.5">Custom Labels</p>
+                      <p className="text-[11px] text-textSecondary mb-2.5">Customize section & line item labels with a paid plan.</p>
+                      <button
+                        onClick={() => history.push('/plans')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors"
+                      >
+                        <Crown className="w-3 h-3" />
+                        Upgrade
+                      </button>
                     </div>
-                  </div>
+                  )}
 
                   <p className="text-[10px] text-textSecondary">
                     Leave blank to use defaults. Changes apply to new documents.
@@ -232,11 +312,16 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
   )
 }
 
-function InvoiceTypesSection({ enabledTypes, onChange }) {
+function InvoiceTypesSection({ enabledTypes, onChange, defaultDocType, onDefaultChange }) {
   const toggleType = (key) => {
     if (enabledTypes.includes(key)) {
       if (enabledTypes.length <= 1) return
-      onChange(enabledTypes.filter(k => k !== key))
+      // If disabling the current default, switch default to first remaining enabled type
+      const newTypes = enabledTypes.filter(k => k !== key)
+      if (key === defaultDocType && onDefaultChange) {
+        onDefaultChange(newTypes[0])
+      }
+      onChange(newTypes)
     } else {
       onChange([...enabledTypes, key])
     }
@@ -250,53 +335,74 @@ function InvoiceTypesSection({ enabledTypes, onChange }) {
         </div>
         <div>
           <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Types</h3>
-          <p className="text-[11px] md:text-xs text-textSecondary">Choose which types appear in your sidebar</p>
+          <p className="text-[11px] md:text-xs text-textSecondary">Choose which types appear in your sidebar. Tap the star to set the default for the "New" button.</p>
         </div>
       </div>
       <div className="p-3 md:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {ALL_INVOICE_TYPES.map((type) => {
             const isEnabled = enabledTypes.includes(type.key)
+            const isDefault = defaultDocType === type.key
             const Icon = type.icon
             return (
-              <button
-                key={type.key}
-                onClick={() => toggleType(type.key)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-lg border transition-all text-left ${
-                  isEnabled
-                    ? 'bg-primary/5 border-primary/30 text-primary'
-                    : 'bg-gray-50 border-border text-textSecondary active:bg-gray-100 md:hover:bg-gray-100'
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isEnabled ? 'text-primary' : 'text-gray-400'}`} />
-                <span className={`text-sm ${isEnabled ? 'font-semibold' : 'font-medium'}`}>{type.label}</span>
-                {isEnabled && (
-                  <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />
+              <div key={type.key} className="relative">
+                <button
+                  onClick={() => toggleType(type.key)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg border transition-all text-left ${
+                    isEnabled
+                      ? 'bg-primary/5 border-primary/30 text-primary'
+                      : 'bg-gray-50 border-border text-textSecondary active:bg-gray-100 md:hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isEnabled ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className={`text-sm flex-1 ${isEnabled ? 'font-semibold' : 'font-medium'}`}>{type.label}</span>
+                  {isEnabled && isDefault && (
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                  )}
+                  {isEnabled && !isDefault && (
+                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                  )}
+                </button>
+                {isEnabled && !isDefault && onDefaultChange && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDefaultChange(type.key) }}
+                    className="absolute top-1 right-1 w-7 h-7 flex items-center justify-center rounded-md text-gray-300 active:text-amber-500 md:hover:text-amber-500 active:bg-amber-50 md:hover:bg-amber-50 transition-all"
+                    title="Set as default for New button"
+                  >
+                    <Star className="w-3 h-3" />
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>
         <p className="text-[11px] text-textSecondary mt-3 ml-1">
-          Selected types will appear in the sidebar for quick access. At least one type must be selected.
+          Selected types will appear in the sidebar for quick access. At least one type must be selected. The starred type opens when you click "New".
         </p>
       </div>
     </div>
   )
 }
 
-const TEMPLATE_PREVIEW_COLORS = {
-  clean: { bg: '#FFFFFF', accent: '#1F2937', headerBg: '#F9FAFB' },
-  'modern-red': { bg: '#FFFFFF', accent: '#DC2626', headerBg: '#FEF2F2' },
-  'classic-red': { bg: '#FFFFFF', accent: '#047857', headerBg: '#ECFDF5' },
-  wexler: { bg: '#FFFFFF', accent: '#1E3A5F', headerBg: '#1E3A5F' },
-  plexer: { bg: '#FFFFFF', accent: '#374151', headerBg: '#F3F4F6' },
-  contemporary: { bg: '#FFFFFF', accent: '#E11D48', headerBg: '#E11D48' },
+// Derive dynamic preview colors from template previewColor
+function getSettingsPreviewColors(template) {
+  const accent = template.previewColor || '#374151'
+  const category = template.category
+  const isFullHeader = category === 'modern' || category === 'creative'
+  return {
+    bg: '#FFFFFF',
+    accent,
+    headerBg: isFullHeader ? accent : `${accent}12`,
+  }
 }
+
+const SETTINGS_TPL_PAGE_SIZE = 18
 
 function TemplateSection() {
   const queryClient = useQueryClient()
   const [colorFilter, setColorFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [page, setPage] = useState(0)
 
   const { data: currentConfig, isLoading: configLoading } = useQuery({
     queryKey: ['templates', 'config'],
@@ -324,9 +430,19 @@ function TemplateSection() {
   }, [serverTemplates])
 
   const filteredTemplates = useMemo(() => {
-    if (colorFilter === 'all') return templates
-    return templates.filter(t => t.colorFamily === colorFilter)
-  }, [templates, colorFilter])
+    return templates.filter(t => {
+      const catMatch = categoryFilter === 'all' || t.category === categoryFilter
+      const colorMatch = colorFilter === 'all' || t.colorFamily === colorFilter
+      return catMatch && colorMatch
+    })
+  }, [templates, colorFilter, categoryFilter])
+
+  const pagedTemplates = useMemo(() => {
+    const start = page * SETTINGS_TPL_PAGE_SIZE
+    return filteredTemplates.slice(start, start + SETTINGS_TPL_PAGE_SIZE)
+  }, [filteredTemplates, page])
+
+  const totalPages = Math.ceil(filteredTemplates.length / SETTINGS_TPL_PAGE_SIZE)
 
   const currentTemplateId = useMemo(() => {
     if (!currentConfig?.baseTemplateId || !serverTemplates?.length) return 'clean'
@@ -357,35 +473,56 @@ function TemplateSection() {
           </div>
           <div>
             <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Template</h3>
-            <p className="text-[11px] md:text-xs text-textSecondary">Default template for invoice PDFs</p>
+            <p className="text-[11px] md:text-xs text-textSecondary">
+              {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Color Filter */}
-      <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-border flex items-center gap-2 md:gap-3">
-        <span className="text-xs font-medium text-textSecondary">Filter by Color</span>
-        <div className="flex items-center gap-1.5">
-          {COLOR_FAMILIES.map(cf => (
+      {/* Filters */}
+      <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-border space-y-2">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {CATEGORIES.map(cat => (
             <button
-              key={cf.key}
-              onClick={() => setColorFilter(cf.key)}
-              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                colorFilter === cf.key
-                  ? 'border-primary scale-110 shadow-sm'
-                  : 'border-transparent hover:border-gray-300'
+              key={cat.key}
+              onClick={() => { setCategoryFilter(cat.key); setPage(0) }}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === cat.key
+                  ? 'bg-primary text-white'
+                  : 'bg-bgPrimary text-textSecondary hover:bg-gray-200'
               }`}
-              style={cf.color ? { backgroundColor: cf.color } : { backgroundColor: '#F3F4F6' }}
-              title={cf.label}
             >
-              {colorFilter === cf.key && (
-                <Check className={`w-3.5 h-3.5 ${cf.color ? 'text-white' : 'text-gray-600'}`} />
-              )}
-              {cf.key === 'all' && colorFilter !== 'all' && (
-                <span className="text-[9px] font-bold text-gray-500">All</span>
-              )}
+              {cat.label}
             </button>
           ))}
+        </div>
+        {/* Color Filter */}
+        <div className="flex items-center gap-2 md:gap-3">
+          <span className="text-xs font-medium text-textSecondary">Color</span>
+          <div className="flex items-center gap-1.5">
+            {COLOR_FAMILIES.map(cf => (
+              <button
+                key={cf.key}
+                onClick={() => { setColorFilter(cf.key); setPage(0) }}
+                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                  colorFilter === cf.key
+                    ? 'border-primary scale-110 shadow-sm'
+                    : 'border-transparent hover:border-gray-300'
+                }`}
+                style={cf.color ? { backgroundColor: cf.color } : { backgroundColor: '#F3F4F6' }}
+                title={cf.label}
+              >
+                {colorFilter === cf.key && (
+                  <Check className={`w-3.5 h-3.5 ${cf.color ? 'text-white' : 'text-gray-600'}`} />
+                )}
+                {cf.key === 'all' && colorFilter !== 'all' && (
+                  <span className="text-[9px] font-bold text-gray-500">All</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -396,15 +533,15 @@ function TemplateSection() {
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
             <p className="text-sm text-textSecondary">Loading templates...</p>
           </div>
-        ) : filteredTemplates.length === 0 ? (
+        ) : pagedTemplates.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sm text-textSecondary">No templates match this filter</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredTemplates.map(template => {
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {pagedTemplates.map(template => {
               const isSelected = currentTemplateId === template.id
-              const colors = TEMPLATE_PREVIEW_COLORS[template.id] || TEMPLATE_PREVIEW_COLORS.clean
+              const colors = getSettingsPreviewColors(template)
               const isSelecting = selectMutation.isPending && selectMutation.variables === template.id
 
               return (
@@ -423,51 +560,51 @@ function TemplateSection() {
                   } ${selectMutation.isPending && !isSelecting ? 'opacity-50' : ''}`}
                 >
                   {/* Mini Preview */}
-                  <div className="aspect-[3/4] bg-gray-50 p-3 relative">
+                  <div className="aspect-[3/4] bg-gray-50 p-2 relative">
                     <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden flex flex-col">
                       <div className="h-[18%] flex items-center px-2" style={{ backgroundColor: colors.headerBg }}>
                         <div className="flex items-center justify-between w-full">
-                          <span className="text-[7px] font-bold tracking-wider" style={{ color: colors.headerBg === colors.accent ? '#FFFFFF' : colors.accent }}>
+                          <span className="text-[6px] font-bold tracking-wider" style={{ color: colors.headerBg === colors.accent ? '#FFFFFF' : colors.accent }}>
                             INVOICE
                           </span>
                           <div className="flex flex-col items-end gap-0.5">
-                            <div className="w-8 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
-                            <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.2 }} />
+                            <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
+                            <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.2 }} />
                           </div>
                         </div>
                       </div>
-                      <div className="px-2 py-1.5 flex gap-2">
+                      <div className="px-2 py-1 flex gap-1.5">
                         <div className="flex-1">
-                          <div className="w-10 h-1 rounded-full bg-gray-300 mb-1" />
-                          <div className="w-14 h-0.5 rounded-full bg-gray-200 mb-0.5" />
-                          <div className="w-12 h-0.5 rounded-full bg-gray-200" />
+                          <div className="w-8 h-0.5 rounded-full bg-gray-300 mb-0.5" />
+                          <div className="w-10 h-0.5 rounded-full bg-gray-200 mb-0.5" />
+                          <div className="w-8 h-0.5 rounded-full bg-gray-200" />
                         </div>
                         <div className="flex-1">
-                          <div className="w-8 h-1 rounded-full bg-gray-300 mb-1" />
-                          <div className="w-12 h-0.5 rounded-full bg-gray-200 mb-0.5" />
-                          <div className="w-10 h-0.5 rounded-full bg-gray-200" />
+                          <div className="w-6 h-0.5 rounded-full bg-gray-300 mb-0.5" />
+                          <div className="w-9 h-0.5 rounded-full bg-gray-200 mb-0.5" />
+                          <div className="w-7 h-0.5 rounded-full bg-gray-200" />
                         </div>
                       </div>
                       <div className="px-2 flex-1">
-                        <div className="h-[1px] mb-1" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
+                        <div className="h-[1px] mb-0.5" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
                         {[1, 2, 3].map(i => (
-                          <div key={i} className="flex items-center gap-1 mb-1">
+                          <div key={i} className="flex items-center gap-0.5 mb-0.5">
                             <div className="flex-1 h-0.5 rounded-full bg-gray-200" />
-                            <div className="w-4 h-0.5 rounded-full bg-gray-200" />
-                            <div className="w-5 h-0.5 rounded-full bg-gray-300" />
+                            <div className="w-3 h-0.5 rounded-full bg-gray-200" />
+                            <div className="w-4 h-0.5 rounded-full bg-gray-300" />
                           </div>
                         ))}
                       </div>
-                      <div className="px-2 pb-2 flex justify-end">
-                        <div className="flex items-center gap-1">
-                          <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.5 }} />
-                          <div className="w-8 h-1.5 rounded-full" style={{ backgroundColor: colors.accent }} />
+                      <div className="px-2 pb-1.5 flex justify-end">
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-5 h-0.5 rounded-full" style={{ backgroundColor: colors.accent, opacity: 0.5 }} />
+                          <div className="w-6 h-1 rounded-full" style={{ backgroundColor: colors.accent }} />
                         </div>
                       </div>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow">
-                        <Check className="w-3 h-3 text-white" />
+                      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center shadow">
+                        <Check className="w-2.5 h-2.5 text-white" />
                       </div>
                     )}
                     {isSelecting && (
@@ -476,16 +613,39 @@ function TemplateSection() {
                       </div>
                     )}
                   </div>
-                  <div className="px-3 py-2.5 bg-white border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: template.previewColor }} />
-                      <span className="text-xs font-semibold text-textPrimary truncate">{template.name}</span>
+                  <div className="px-2.5 py-2 bg-white border-t border-border/50">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: template.previewColor }} />
+                      <span className="text-[11px] font-semibold text-textPrimary truncate">{template.name}</span>
                     </div>
-                    <p className="text-[10px] text-textSecondary mt-0.5 line-clamp-1 pl-5">{template.description}</p>
+                    <p className="text-[9px] text-textSecondary mt-0.5 line-clamp-1 pl-4">{template.category}</p>
                   </div>
                 </button>
               )
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg border border-border text-textSecondary hover:bg-bgPrimary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-[11px] text-textSecondary">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg border border-border text-textSecondary hover:bg-bgPrimary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         )}
 
@@ -720,7 +880,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
           </div>
         </div>
 
-        {/* Text Signature — always visible below */}
+        {/* Text Signature — hidden, not currently used
         <div className="pt-3 border-t border-border space-y-3">
           <p className="text-xs font-medium text-textSecondary">Or use a text signature</p>
           <FieldInput
@@ -742,12 +902,13 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
             </div>
           )}
         </div>
+        */}
       </div>
     </div>
   )
 }
 
-export function AccountSection({ onLogout }) {
+export function AccountSection({ onLogout, onManageSubscription }) {
   const queryClient = useQueryClient()
   const setAuth = useAuthStore((state) => state.setAuth)
   const authUser = useAuthStore((state) => state.user)
@@ -1016,15 +1177,54 @@ export function AccountSection({ onLogout }) {
             <p className="text-[11px] md:text-xs text-textSecondary">Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
           </div>
         </div>
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 flex flex-wrap gap-3">
+          <button
+            onClick={onManageSubscription}
+            className="px-5 py-2.5 text-sm font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg border border-blue-100 flex items-center gap-2 transition-colors"
+          >
+            <Crown className="w-4 h-4" />
+            Manage Subscription
+          </button>
+          <button
+            onClick={() => {
+              queryClient.clear()
+              window.location.reload()
+            }}
+            className="px-5 py-2.5 text-sm font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 md:hover:bg-amber-100 rounded-lg border border-amber-100 flex items-center gap-2 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear Cache
+          </button>
           <button
             onClick={onLogout}
-            className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-100 flex items-center justify-center gap-2 transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-100 flex items-center gap-2 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Toast notification component
+function Toast({ toast, onDismiss }) {
+  if (!toast) return null
+  const isError = toast.type === 'error'
+  return (
+    <div className={`fixed top-4 right-4 z-[100] max-w-sm w-full animate-in slide-in-from-top-2 fade-in duration-200`}>
+      <div className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border ${
+        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'
+      }`}>
+        {isError
+          ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+          : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-green-500" />
+        }
+        <p className="text-sm font-medium flex-1">{toast.message}</p>
+        <button onClick={onDismiss} className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   )
@@ -1036,16 +1236,39 @@ export default function SettingsPage() {
   const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
   const [formData, setFormData] = useState({})
-  const [isDirty, setIsDirty] = useState(false)
+  const [dirtyTabs, setDirtyTabs] = useState({}) // { business: true, gst: false, ... }
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search)
     const section = params.get('section')
     return section && SETTINGS_TABS.some(t => t.key === section) ? section : 'business'
   })
-  const [newTaxRate, setNewTaxRate] = useState({ name: '', rate: '', isDefault: false })
-  const [showAddTaxRate, setShowAddTaxRate] = useState(false)
+  const [toast, setToast] = useState(null) // { type: 'success'|'error', message: string }
+  const toastTimerRef = useRef(null)
+  const emptyTaxForm = { name: '', rate: '', isDefault: false, isGroup: false, components: [{ name: '', rate: '' }, { name: '', rate: '' }] }
+  const [taxForm, setTaxForm] = useState(emptyTaxForm)
+  const [showTaxForm, setShowTaxForm] = useState(false) // 'add' | 'edit' | false
+  const [editingTaxId, setEditingTaxId] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, name, productCount }
+  const [deleteError, setDeleteError] = useState('')
   const tabsRef = useRef(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
+
+  // Toast helper
+  const showToast = useCallback((type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ type, message })
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000)
+  }, [])
+
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast(null)
+  }, [])
+
+  // Is any tab dirty?
+  const isDirty = Object.values(dirtyTabs).some(Boolean)
+  // Is the current tab dirty?
+  const isActiveTabDirty = !!dirtyTabs[activeTab]
 
   const handleTabScroll = useCallback(() => {
     const el = tabsRef.current
@@ -1076,13 +1299,60 @@ export default function SettingsPage() {
     }
   }, [business])
 
+  // Shared mutation success/error handlers
+  const onMutationSuccess = (response, tabKey) => {
+    queryClient.invalidateQueries({ queryKey: ['business'] })
+    setDirtyTabs(prev => ({ ...prev, [tabKey]: false }))
+    const msg = response?.data?.message || 'Settings saved successfully'
+    showToast('success', msg)
+  }
+
+  const onMutationError = (err) => {
+    const msg = err?.response?.data?.error?.message || err?.message || 'Failed to save. Please try again.'
+    showToast('error', msg)
+  }
+
+  // Per-tab mutations
+  const businessInfoMutation = useMutation({
+    mutationFn: (data) => businessApi.updateBusinessInfo(data),
+    onSuccess: (res) => onMutationSuccess(res, 'business'),
+    onError: onMutationError
+  })
+
+  const gstMutation = useMutation({
+    mutationFn: (data) => businessApi.updateGstSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'gst'),
+    onError: onMutationError
+  })
+
+  const bankMutation = useMutation({
+    mutationFn: (data) => businessApi.updateBankSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'bank'),
+    onError: onMutationError
+  })
+
+  const invoiceMutation = useMutation({
+    mutationFn: (data) => businessApi.updateInvoiceSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'invoice'),
+    onError: onMutationError
+  })
+
+  // Legacy mutation (for backward compat — sidebar default change, etc.)
   const updateMutation = useMutation({
     mutationFn: (data) => businessApi.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] })
-      setIsDirty(false)
-    }
+      setDirtyTabs({})
+    },
+    onError: onMutationError
   })
+
+  // Which mutation is pending for the current tab?
+  const isSaving = activeTab === 'business' ? businessInfoMutation.isPending
+    : activeTab === 'gst' ? gstMutation.isPending
+    : activeTab === 'bank' ? bankMutation.isPending
+    : activeTab === 'invoice' ? invoiceMutation.isPending
+    : false
 
   // Tax Rates
   const { data: taxRates = [], isLoading: taxRatesLoading } = useQuery({
@@ -1097,47 +1367,135 @@ export default function SettingsPage() {
     mutationFn: (data) => taxRateApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['taxRates'] })
-      setNewTaxRate({ name: '', rate: '', isDefault: false })
-      setShowAddTaxRate(false)
+      closeTaxForm()
     }
   })
 
   const updateTaxRateMutation = useMutation({
     mutationFn: ({ id, data }) => taxRateApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+      closeTaxForm()
+    }
   })
 
   const deleteTaxRateMutation = useMutation({
     mutationFn: (id) => taxRateApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] })
+      setDeleteConfirm(null)
+      setDeleteError('')
+    },
+    onError: (err) => {
+      setDeleteError(err.response?.data?.error?.message || 'Failed to delete')
+    }
   })
 
-  const handleAddTaxRate = () => {
-    if (!newTaxRate.name.trim() || !newTaxRate.rate) return
-    createTaxRateMutation.mutate({
-      name: newTaxRate.name.trim(),
-      rate: parseFloat(newTaxRate.rate),
-      isDefault: newTaxRate.isDefault
+  const closeTaxForm = () => {
+    setShowTaxForm(false)
+    setEditingTaxId(null)
+    setTaxForm(emptyTaxForm)
+  }
+
+  const openAddForm = () => {
+    setTaxForm(emptyTaxForm)
+    setEditingTaxId(null)
+    setShowTaxForm('add')
+  }
+
+  const openEditForm = (tr) => {
+    const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+    setTaxForm({
+      name: tr.name,
+      rate: String(Number(tr.rate)),
+      isDefault: tr.isDefault,
+      isGroup,
+      components: isGroup
+        ? tr.components.map(c => ({ name: c.name, rate: String(c.rate) }))
+        : [{ name: '', rate: '' }, { name: '', rate: '' }]
     })
+    setEditingTaxId(tr.id)
+    setShowTaxForm('edit')
+  }
+
+  const handleSaveTaxRate = () => {
+    if (!taxForm.name.trim()) return
+    if (taxForm.isGroup) {
+      const validComponents = taxForm.components.filter(c => c.name.trim() && c.rate !== '' && parseFloat(c.rate) >= 0)
+      if (validComponents.length < 2) return
+      const totalRate = validComponents.reduce((sum, c) => sum + parseFloat(c.rate), 0)
+      const payload = {
+        name: taxForm.name.trim(),
+        rate: Math.round(totalRate * 100) / 100,
+        isDefault: taxForm.isDefault,
+        components: validComponents.map(c => ({ name: c.name.trim(), rate: parseFloat(c.rate) }))
+      }
+      if (showTaxForm === 'edit' && editingTaxId) {
+        updateTaxRateMutation.mutate({ id: editingTaxId, data: payload })
+      } else {
+        createTaxRateMutation.mutate(payload)
+      }
+    } else {
+      if (!taxForm.rate) return
+      const payload = {
+        name: taxForm.name.trim(),
+        rate: parseFloat(taxForm.rate),
+        isDefault: taxForm.isDefault,
+        components: null
+      }
+      if (showTaxForm === 'edit' && editingTaxId) {
+        updateTaxRateMutation.mutate({ id: editingTaxId, data: payload })
+      } else {
+        createTaxRateMutation.mutate(payload)
+      }
+    }
   }
 
   const handleSetDefault = (taxRate) => {
     updateTaxRateMutation.mutate({ id: taxRate.id, data: { isDefault: true } })
   }
 
-  const handleDeleteTaxRate = (id) => {
-    deleteTaxRateMutation.mutate(id)
+  const confirmDelete = (tr) => {
+    setDeleteError('')
+    setDeleteConfirm({ id: tr.id, name: tr.name, productCount: tr.productCount || 0 })
+  }
+
+  const executeDelete = () => {
+    if (deleteConfirm) {
+      deleteTaxRateMutation.mutate(deleteConfirm.id)
+    }
+  }
+
+  // Map fields to their owning tab
+  const fieldTabMap = {
+    name: 'business', phone: 'business', email: 'business', website: 'business', address: 'business', logoUrl: 'business',
+    gstEnabled: 'gst', gstin: 'gst', stateCode: 'gst', defaultTaxRate: 'gst',
+    bankName: 'bank', accountNumber: 'bank', ifscCode: 'bank', upiId: 'bank', signatureUrl: 'bank', signatureName: 'bank',
+    enableStatusWorkflow: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
+    defaultNotes: 'invoice', defaultTerms: 'invoice', enabledInvoiceTypes: 'invoice',
+    documentTypeConfig: 'invoice', defaultDocType: 'invoice',
   }
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    setIsDirty(true)
+    const tab = fieldTabMap[field] || activeTab
+    setDirtyTabs(prev => ({ ...prev, [tab]: true }))
   }
 
   const handleSave = () => {
-    // Only send editable fields, exclude id/timestamps/computed fields
-    const { id, createdAt, updatedAt, ...editableData } = formData
-    updateMutation.mutate(editableData)
+    if (activeTab === 'business') {
+      const { name, phone, email, website, address, logoUrl } = formData
+      businessInfoMutation.mutate({ name, phone, email, website, address, logoUrl })
+    } else if (activeTab === 'gst') {
+      const { gstEnabled, gstin, stateCode, defaultTaxRate } = formData
+      gstMutation.mutate({ gstEnabled, gstin, stateCode, defaultTaxRate })
+    } else if (activeTab === 'bank') {
+      const { bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName } = formData
+      bankMutation.mutate({ bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName })
+    } else if (activeTab === 'invoice') {
+      const { enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
+      invoiceMutation.mutate({ enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
+    }
   }
 
   const handleLogout = () => {
@@ -1156,25 +1514,23 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Toast Notification */}
+      <Toast toast={toast} onDismiss={dismissToast} />
+
       {/* Mobile Header — compact, like Invoice Detail page */}
       <div className="md:hidden px-3 py-2 border-b border-border bg-white shrink-0">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold text-textPrimary">Settings</h1>
           <div className="flex items-center gap-2">
-            {isDirty ? (
+            {isActiveTabDirty ? (
               <button
                 onClick={handleSave}
-                disabled={updateMutation.isPending}
+                disabled={isSaving}
                 className="px-3 py-1.5 bg-primary active:bg-primaryHover text-white rounded-lg font-semibold text-xs flex items-center gap-1.5 disabled:opacity-60"
               >
-                {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save
               </button>
-            ) : updateMutation.isSuccess ? (
-              <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Saved
-              </span>
             ) : null}
           </div>
         </div>
@@ -1187,7 +1543,7 @@ export default function SettingsPage() {
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
               className={`px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors ${
                 active
                   ? 'text-primary bg-blue-50 border border-blue-200'
@@ -1208,21 +1564,15 @@ export default function SettingsPage() {
           subtitle="Manage your business profile, tax configuration, and invoice defaults"
           actions={
             <>
-              {isDirty && (
+              {isActiveTabDirty && (
                 <button
                   onClick={handleSave}
-                  disabled={updateMutation.isPending}
+                  disabled={isSaving}
                   className="px-5 py-2.5 bg-primary md:hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
                 >
-                  {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Changes
                 </button>
-              )}
-              {!isDirty && updateMutation.isSuccess && (
-                <span className="text-sm text-green-600 flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Saved
-                </span>
               )}
             </>
           }
@@ -1239,7 +1589,7 @@ export default function SettingsPage() {
                 return (
                   <button
                     key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
                       active
                         ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
@@ -1277,148 +1627,400 @@ export default function SettingsPage() {
                   formData={formData}
                   onChange={(newData) => {
                     setFormData(newData)
-                    setIsDirty(true)
+                    setDirtyTabs(prev => ({ ...prev, business: true }))
                   }}
                 />
               </div>
             </div>
           )}
 
-          {/* GST Settings Tab — Tax Rates Management */}
+          {/* GST Settings Tab — Tax Rates & Tax Groups Management */}
           {activeTab === 'gst' && (
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                    <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Configure reusable tax rates</p>
-                  </div>
-                </div>
-                {!showAddTaxRate && (
-                  <button
-                    onClick={() => setShowAddTaxRate(true)}
-                    className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
-                  >
-                    <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    Add
-                  </button>
-                )}
-              </div>
-              <div className="p-4 md:p-6 space-y-3 md:space-y-4">
-                {/* Add new tax rate form */}
-                {showAddTaxRate && (
-                  <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-lg space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <input
-                        type="text"
-                        value={newTaxRate.name}
-                        onChange={(e) => setNewTaxRate(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., GST 18%"
-                        autoFocus
-                        className="px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={newTaxRate.rate}
-                        onChange={(e) => setNewTaxRate(prev => ({ ...prev, rate: e.target.value }))}
-                        placeholder="Rate %"
-                        className="px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      />
-                      <label className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-border rounded-lg cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newTaxRate.isDefault}
-                          onChange={(e) => setNewTaxRate(prev => ({ ...prev, isDefault: e.target.checked }))}
-                          className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
-                        />
-                        <span className="text-sm text-textPrimary">Set as default</span>
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleAddTaxRate}
-                        disabled={createTaxRateMutation.isPending || !newTaxRate.name.trim() || !newTaxRate.rate}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                      >
-                        {createTaxRateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                        Add
-                      </button>
-                      <button
-                        onClick={() => { setShowAddTaxRate(false); setNewTaxRate({ name: '', rate: '', isDefault: false }) }}
-                        className="px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+            <>
+              {/* GST Info Toggle */}
+                
 
-                {/* Tax rates list */}
-                {taxRatesLoading ? (
-                  <div className="flex justify-center py-6">
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              {/* Tax Rates & Groups Card */}
+              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 md:gap-3">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                      <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates & Groups</h3>
+                      <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Create taxes to apply on your products and invoices</p>
+                    </div>
                   </div>
-                ) : taxRates.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Percent className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-textSecondary">No tax rates configured yet</p>
-                    <p className="text-xs text-textSecondary mt-1">Add tax rates to use them on products and invoices</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {taxRates.map((tr) => (
-                      <div
-                        key={tr.id}
-                        className="flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-border transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                            tr.isDefault ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {Number(tr.rate)}%
+                  {!showTaxForm && (
+                    <button
+                      onClick={openAddForm}
+                      className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
+                    >
+                      <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                      Add
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 md:p-6 space-y-3 md:space-y-4">
+
+                  {/* Add / Edit tax rate form */}
+                  {showTaxForm && (
+                    <div className={`p-4 rounded-xl border space-y-4 ${showTaxForm === 'edit' ? 'bg-amber-50/50 border-amber-200' : 'bg-blue-50/50 border-blue-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-textPrimary uppercase tracking-wider">
+                          {showTaxForm === 'edit' ? 'Edit Tax' : 'New Tax'}
+                        </h4>
+                        <button onClick={closeTaxForm} className="w-7 h-7 flex items-center justify-center text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-100 md:hover:bg-gray-100 rounded-lg transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Type toggle */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTaxForm(prev => ({ ...prev, isGroup: false }))}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+                            !taxForm.isGroup
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white text-textSecondary border border-border active:bg-gray-50 md:hover:bg-gray-50'
+                          }`}
+                        >
+                          <Percent className="w-3 h-3" />
+                          Single Tax
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTaxForm(prev => ({ ...prev, isGroup: true }))}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+                            taxForm.isGroup
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white text-textSecondary border border-border active:bg-gray-50 md:hover:bg-gray-50'
+                          }`}
+                        >
+                          <Layers className="w-3 h-3" />
+                          Tax Group
+                        </button>
+                      </div>
+
+                      {/* Helpful hint */}
+                      <p className="text-[11px] text-textSecondary leading-relaxed">
+                        {taxForm.isGroup
+                          ? 'A tax group combines multiple taxes (e.g., CGST 9% + SGST 9% = GST 18%). Each component shows separately on invoices.'
+                          : 'A single tax rate like IGST 18% or VAT 5%. Use this for simple, flat-rate taxes.'
+                        }
+                      </p>
+
+                      {!taxForm.isGroup ? (
+                        /* Simple Tax Rate Form */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={taxForm.name}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="e.g., IGST 18%"
+                              autoFocus
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-textPrimary flex items-center gap-2">
-                              {tr.name}
-                              {tr.isDefault && (
-                                <span className="text-[10px] font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-textSecondary">{Number(tr.rate)}% tax rate</div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Rate (%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              value={taxForm.rate}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, rate: e.target.value }))}
+                              placeholder="e.g., 18"
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          {!tr.isDefault && (
+                      ) : (
+                        /* Tax Group Form */
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-textSecondary mb-1">Group Name</label>
+                            <input
+                              type="text"
+                              value={taxForm.name}
+                              onChange={(e) => setTaxForm(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="e.g., GST 18%"
+                              autoFocus
+                              className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
+                          </div>
+
+                          {/* Component taxes */}
+                          <div className="space-y-2">
+                            <label className="block text-[11px] font-semibold text-textSecondary">Components</label>
+                            {taxForm.components.map((comp, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={comp.name}
+                                  onChange={(e) => {
+                                    const updated = [...taxForm.components]
+                                    updated[idx] = { ...updated[idx], name: e.target.value }
+                                    setTaxForm(prev => ({ ...prev, components: updated }))
+                                  }}
+                                  placeholder={idx === 0 ? 'e.g., CGST' : idx === 1 ? 'e.g., SGST' : 'Tax name'}
+                                  className="flex-1 px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                />
+                                <div className="relative w-24 shrink-0">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    value={comp.rate}
+                                    onChange={(e) => {
+                                      const updated = [...taxForm.components]
+                                      updated[idx] = { ...updated[idx], rate: e.target.value }
+                                      setTaxForm(prev => ({ ...prev, components: updated }))
+                                    }}
+                                    placeholder="Rate"
+                                    className="w-full px-3 py-2 pr-7 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-right"
+                                  />
+                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-textSecondary pointer-events-none">%</span>
+                                </div>
+                                {taxForm.components.length > 2 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = taxForm.components.filter((_, i) => i !== idx)
+                                      setTaxForm(prev => ({ ...prev, components: updated }))
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                             <button
-                              onClick={() => handleSetDefault(tr)}
-                              title="Set as default"
-                              className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                              type="button"
+                              onClick={() => setTaxForm(prev => ({ ...prev, components: [...prev.components, { name: '', rate: '' }] }))}
+                              className="text-xs font-medium text-primary active:text-primaryHover md:hover:text-primaryHover flex items-center gap-1 py-1"
                             >
-                              <Star className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
+                              Add another component
                             </button>
-                          )}
+                          </div>
+
+                          {/* Auto-calculated total */}
+                          {(() => {
+                            const validComps = taxForm.components.filter(c => c.rate !== '' && parseFloat(c.rate) >= 0)
+                            const totalRate = validComps.reduce((sum, c) => sum + parseFloat(c.rate || 0), 0)
+                            return validComps.length >= 2 ? (
+                              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-green-200 rounded-lg">
+                                <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                <span className="text-xs text-textSecondary">Total:</span>
+                                <span className="text-sm font-bold text-green-700">{Math.round(totalRate * 100) / 100}%</span>
+                                <span className="text-[10px] text-textSecondary hidden sm:inline">
+                                  ({taxForm.components.filter(c => c.name.trim() && c.rate).map(c => `${c.name} ${c.rate}%`).join(' + ')})
+                                </span>
+                              </div>
+                            ) : null
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Default checkbox + action buttons */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={taxForm.isDefault}
+                            onChange={(e) => setTaxForm(prev => ({ ...prev, isDefault: e.target.checked }))}
+                            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
+                          />
+                          <span className="text-xs text-textPrimary">Use as default for new items</span>
+                        </label>
+                        <div className="flex items-center gap-2 sm:ml-auto">
                           <button
-                            onClick={() => handleDeleteTaxRate(tr.id)}
-                            title="Delete"
-                            className="w-8 h-8 flex items-center justify-center text-textSecondary hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            onClick={closeTaxForm}
+                            className="px-4 py-2 text-xs font-medium text-textSecondary active:text-textPrimary md:hover:text-textPrimary active:bg-gray-100 md:hover:bg-gray-100 rounded-lg transition-colors"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveTaxRate}
+                            disabled={(createTaxRateMutation.isPending || updateTaxRateMutation.isPending) || !taxForm.name.trim() || (!taxForm.isGroup && !taxForm.rate) || (taxForm.isGroup && taxForm.components.filter(c => c.name.trim() && c.rate !== '' && parseFloat(c.rate) >= 0).length < 2)}
+                            className="px-4 py-2 text-xs font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+                          >
+                            {(createTaxRateMutation.isPending || updateTaxRateMutation.isPending) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            {showTaxForm === 'edit' ? 'Save Changes' : taxForm.isGroup ? 'Add Group' : 'Add Tax'}
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                  {/* Tax rates & groups list */}
+                  {taxRatesLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    </div>
+                  ) : taxRates.length === 0 && !showTaxForm ? (
+                    <div className="text-center py-10">
+                      <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+                        <Percent className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <p className="text-sm font-medium text-textPrimary">No taxes set up yet</p>
+                      <p className="text-xs text-textSecondary mt-1 max-w-xs mx-auto">Create a tax rate (e.g., IGST 18%) or a tax group (e.g., CGST 9% + SGST 9%) to use on your products and invoices.</p>
+                      <button
+                        onClick={openAddForm}
+                        className="mt-4 px-4 py-2 text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-blue-100"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Create your first tax
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {taxRates.map((tr) => {
+                        const isGroup = tr.components && Array.isArray(tr.components) && tr.components.length >= 2
+                        const isEditing = editingTaxId === tr.id && showTaxForm === 'edit'
+                        const hasProducts = (tr.productCount || 0) > 0
+                        if (isEditing) return null // form is shown above
+                        return (
+                          <div
+                            key={tr.id}
+                            className="px-4 py-3 bg-gray-50/80 active:bg-gray-100 md:hover:bg-gray-100 rounded-xl border border-border/80 transition-colors group"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                                  isGroup ? 'bg-blue-100 text-blue-700' : tr.isDefault ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {isGroup
+                                    ? <Layers className="w-4 h-4" />
+                                    : <span className="text-xs font-bold">{Number(tr.rate)}%</span>
+                                  }
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-sm font-semibold text-textPrimary">{tr.name}</span>
+                                    {tr.isDefault && (
+                                      <span className="text-[9px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                        Default
+                                      </span>
+                                    )}
+                                    {isGroup && (
+                                      <span className="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                        Group
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-textSecondary mt-0.5">
+                                    {isGroup
+                                      ? tr.components.map(c => `${c.name} ${c.rate}%`).join(' + ') + ` = ${Number(tr.rate)}%`
+                                      : `${Number(tr.rate)}% tax rate`
+                                    }
+                                  </div>
+                                  {hasProducts && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <Package className="w-3 h-3 text-gray-400" />
+                                      <span className="text-[10px] text-textSecondary">{tr.productCount} product{tr.productCount !== 1 ? 's' : ''} using this</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                {!tr.isDefault && (
+                                  <button
+                                    onClick={() => handleSetDefault(tr)}
+                                    title="Set as default"
+                                    className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-yellow-600 md:hover:text-yellow-600 active:bg-yellow-50 md:hover:bg-yellow-50 rounded-lg transition-colors"
+                                  >
+                                    <Star className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => openEditForm(tr)}
+                                  title="Edit"
+                                  className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-primary md:hover:text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => confirmDelete(tr)}
+                                  title="Delete"
+                                  className="w-8 h-8 flex items-center justify-center text-textSecondary active:text-red-500 md:hover:text-red-500 active:bg-red-50 md:hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {/* Delete Confirmation Dialog */}
+              {deleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setDeleteConfirm(null); setDeleteError('') }} />
+                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+                    <div className="p-5 text-center">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                        deleteConfirm.productCount > 0 ? 'bg-amber-100' : 'bg-red-100'
+                      }`}>
+                        <AlertTriangle className={`w-6 h-6 ${deleteConfirm.productCount > 0 ? 'text-amber-600' : 'text-red-600'}`} />
+                      </div>
+                      <h3 className="text-base font-bold text-textPrimary mb-1">Delete "{deleteConfirm.name}"?</h3>
+                      {deleteConfirm.productCount > 0 ? (
+                        <p className="text-sm text-textSecondary">
+                          This tax is used by <strong className="text-amber-700">{deleteConfirm.productCount} product{deleteConfirm.productCount !== 1 ? 's' : ''}</strong>. Remove it from those products first before deleting.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-textSecondary">
+                          This will permanently remove this tax. This action cannot be undone.
+                        </p>
+                      )}
+                      {deleteError && (
+                        <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                          {deleteError}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex border-t border-border">
+                      <button
+                        onClick={() => { setDeleteConfirm(null); setDeleteError('') }}
+                        className="flex-1 px-4 py-3 text-sm font-medium text-textSecondary active:bg-gray-50 md:hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      {deleteConfirm.productCount > 0 ? (
+                        <button
+                          onClick={() => { setDeleteConfirm(null); setDeleteError('') }}
+                          className="flex-1 px-4 py-3 text-sm font-semibold text-amber-700 active:bg-amber-50 md:hover:bg-amber-50 border-l border-border transition-colors"
+                        >
+                          Understood
+                        </button>
+                      ) : (
+                        <button
+                          onClick={executeDelete}
+                          disabled={deleteTaxRateMutation.isPending}
+                          className="flex-1 px-4 py-3 text-sm font-semibold text-red-600 active:bg-red-50 md:hover:bg-red-50 border-l border-border transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                        >
+                          {deleteTaxRateMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Bank & Payment Tab */}
@@ -1489,33 +2091,21 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                    <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Defaults</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary">Default values applied to new invoices</p>
-                  </div>
-                </div>
-                <div className="p-4 md:p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
-                    <FieldInput label="Invoice Prefix" value={formData.invoicePrefix} onChange={(v) => handleChange('invoicePrefix', v)} placeholder="e.g., INV-" maxLength={10} description="Prefix added before invoice numbers" />
-                    <FieldInput label="Next Invoice Number" type="number" value={formData.nextInvoiceNumber} onChange={(v) => handleChange('nextInvoiceNumber', parseInt(v) || null)} placeholder="e.g., 1" description="Auto-incremented for each new invoice" />
-                    <div className="md:col-span-2">
-                      <FieldTextarea label="Default Notes" value={formData.defaultNotes} onChange={(v) => handleChange('defaultNotes', v)} placeholder="Notes to appear on every invoice" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <FieldTextarea label="Default Terms & Conditions" value={formData.defaultTerms} onChange={(v) => handleChange('defaultTerms', v)} placeholder="Terms & conditions" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Document Type Settings — unified section for all users */}
+              <DocumentTypeSettingsSection
+                enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
+                documentTypeConfig={formData.documentTypeConfig || null}
+                onChange={(config) => handleChange('documentTypeConfig', config)}
+                hasPaidPlan={!!formData.planId}
+                legacyDefaults={{
+                  invoicePrefix: formData.invoicePrefix,
+                  nextInvoiceNumber: formData.nextInvoiceNumber,
+                  defaultNotes: formData.defaultNotes,
+                  defaultTerms: formData.defaultTerms,
+                }}
+              />
 
-              <TemplateSection />
-
-              {/* Advanced Invoice Settings — paid plan only */}
+              {/* Advanced: Document Types selector — paid plan only */}
               {formData.planId ? (
                 <div className="space-y-3 md:space-y-6">
                   <div className="flex items-center gap-2 pt-2">
@@ -1526,11 +2116,8 @@ export default function SettingsPage() {
                   <InvoiceTypesSection
                     enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
                     onChange={(types) => handleChange('enabledInvoiceTypes', types)}
-                  />
-                  <DocumentTypeLabelSection
-                    enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
-                    documentTypeConfig={formData.documentTypeConfig || null}
-                    onChange={(config) => handleChange('documentTypeConfig', config)}
+                    defaultDocType={formData.defaultDocType || 'invoice'}
+                    onDefaultChange={(docType) => handleChange('defaultDocType', docType)}
                   />
                 </div>
               ) : (
@@ -1540,15 +2127,15 @@ export default function SettingsPage() {
                       <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
                     </div>
                     <div>
-                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Advanced Invoice Settings</h3>
-                      <p className="text-[11px] md:text-xs text-textSecondary">Document types, custom labels & more</p>
+                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">More Document Types</h3>
+                      <p className="text-[11px] md:text-xs text-textSecondary">Unlock 12 document types with a paid plan</p>
                     </div>
                   </div>
                   <div className="p-4 md:p-6 text-center">
                     <Lock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm font-medium text-textPrimary mb-1">Upgrade to unlock</p>
                     <p className="text-xs text-textSecondary mb-4 max-w-sm mx-auto">
-                      Customize document types, field labels, and more with a paid plan.
+                      Access all 12 document types including Proforma Invoice, Estimate, Credit Note, Purchase Order and more.
                     </p>
                     <a
                       href="/plans"
@@ -1560,6 +2147,11 @@ export default function SettingsPage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Invoice Templates Tab — separate from Invoice Settings */}
+          {activeTab === 'templates' && (
+            <TemplateSection />
           )}
 
           

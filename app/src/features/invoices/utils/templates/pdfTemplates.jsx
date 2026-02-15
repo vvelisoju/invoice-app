@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { DOCUMENT_TYPE_DEFAULTS } from '../../../../config/documentTypeDefaults'
+import BaseInvoiceDocument from './themes/BaseInvoiceDocument'
+import { ALL_THEMES, THEME_IDS, resolveTheme, LEGACY_MAP } from './themes/index'
 
 // ============================================================================
 // Shared Helpers
@@ -53,6 +55,84 @@ const formatDate = (dateString) => {
 }
 
 // Resolve logo/signature: prefer invoice-level snapshot, fallback to business profile
+// Format per-line-item tax label for display in the table
+const formatItemTax = (item) => {
+  if (!item.taxRate && !item.taxRateName) return ''
+  const rate = Number(item.taxRate)
+  if (rate && item.taxRateName) return `${rate}% ${item.taxRateName}`
+  if (rate) return `${rate}%`
+  return item.taxRateName
+}
+
+// Check if any line item has per-item tax data
+const hasLineItemTax = (lineItems) => lineItems?.some(item => item.taxRate || item.taxRateName)
+
+// Compute per-rate tax breakdown from line items
+// Returns { entries: [{name, rate, amount}], totalTax: number }
+function computeTaxBreakdown(lineItems) {
+  const breakdown = {}
+  ;(lineItems || []).forEach((item) => {
+    if (item.taxRate && Number(item.taxRate) > 0) {
+      const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)
+      const comps = item.taxComponents && Array.isArray(item.taxComponents) && item.taxComponents.length >= 2
+        ? item.taxComponents : null
+      if (comps) {
+        comps.forEach((c) => {
+          const key = `${c.name}_${c.rate}`
+          const amt = (lineTotal * Number(c.rate)) / 100
+          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+          breakdown[key].amount += amt
+        })
+      } else {
+        const rate = Number(item.taxRate)
+        const key = String(rate)
+        const amt = (lineTotal * rate) / 100
+        if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+        breakdown[key].amount += amt
+      }
+    }
+  })
+  const entries = Object.values(breakdown).sort((a, b) => a.rate - b.rate)
+  const totalTax = entries.reduce((sum, e) => sum + e.amount, 0)
+  return { entries, totalTax }
+}
+
+// Compute the correct invoice total, accounting for per-item taxes
+// This ensures the PDF shows the right total even for invoices saved before the server fix
+function computeInvoiceTotal(invoice) {
+  const subtotal = parseFloat(invoice.subtotal) || 0
+  const discount = parseFloat(invoice.discountTotal) || 0
+  const { totalTax } = computeTaxBreakdown(invoice.lineItems)
+  // Use per-item tax if available, otherwise fall back to invoice-level taxTotal
+  const tax = totalTax > 0 ? totalTax : (parseFloat(invoice.taxTotal) || 0)
+  return subtotal - discount + tax
+}
+
+// Shared tax breakdown rows for totals section
+// Expands tax group components (e.g. CGST + SGST) into individual lines
+function TaxBreakdownRows({ invoice, doc, labelStyle, valueStyle, rowStyle }) {
+  if (!doc.showTax) return null
+  const { entries } = computeTaxBreakdown(invoice.lineItems)
+  if (entries.length > 0) {
+    return entries.map((entry, i) => (
+      <View key={i} style={rowStyle}>
+        <Text style={labelStyle}>{entry.name} ({entry.rate}%)</Text>
+        <Text style={valueStyle}>{formatCurrency(entry.amount)}</Text>
+      </View>
+    ))
+  }
+  // Fallback: invoice-level tax
+  if (invoice.taxTotal > 0) {
+    return (
+      <View style={rowStyle}>
+        <Text style={labelStyle}>Tax{invoice.taxRate ? ` (${invoice.taxRate}%)` : ''}</Text>
+        <Text style={valueStyle}>{formatCurrency(invoice.taxTotal)}</Text>
+      </View>
+    )
+  }
+  return null
+}
+
 const getLogoUrl = (invoice) => invoice.logoUrl || invoice.business?.logoUrl
 const getSignatureUrl = (invoice) => invoice.signatureUrl || invoice.business?.signatureUrl
 
@@ -123,7 +203,7 @@ const cleanStyles = StyleSheet.create({
   table: { marginTop: 10 },
   tableHeader: { flexDirection: 'row', backgroundColor: '#f5f5f5', padding: 8, fontWeight: 'bold' },
   tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsSection: { marginTop: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#ddd' },
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
   totalLabel: { width: 100, textAlign: 'right', marginRight: 20, color: '#666' },
@@ -141,6 +221,7 @@ const cleanStyles = StyleSheet.create({
 export function CleanTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={cleanStyles.page}>
@@ -175,13 +256,15 @@ export function CleanTemplate({ invoice }) {
             <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>{doc.descriptionCol}</Text>
             {!isBasic && <Text style={cleanStyles.colQty}>{doc.qtyCol}</Text>}
             {!isBasic && <Text style={cleanStyles.colRate}>{doc.unitPriceCol}</Text>}
+            {showTaxCol && <Text style={cleanStyles.colTax}>{doc.taxCol}</Text>}
             <Text style={cleanStyles.colTotal}>{doc.amountCol}</Text>
           </View>
           {invoice.lineItems?.map((item, i) => (
             <View key={i} style={cleanStyles.tableRow}>
-              <Text style={isBasic ? { flex: 4 } : cleanStyles.colName}>{item.name}</Text>
+              <View style={isBasic ? { flex: 4 } : cleanStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
               {!isBasic && <Text style={cleanStyles.colQty}>{item.quantity}</Text>}
               {!isBasic && <Text style={cleanStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+              {showTaxCol && <Text style={[cleanStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
               <Text style={cleanStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
             </View>
           ))}
@@ -197,15 +280,10 @@ export function CleanTemplate({ invoice }) {
               <Text style={cleanStyles.totalValue}>-{formatCurrency(invoice.discountTotal)}</Text>
             </View>
           )}
-          {doc.showTax && invoice.taxTotal > 0 && (
-            <View style={cleanStyles.totalRow}>
-              <Text style={cleanStyles.totalLabel}>Tax{invoice.taxRate ? ` (${invoice.taxRate}%)` : ''}</Text>
-              <Text style={cleanStyles.totalValue}>{formatCurrency(invoice.taxTotal)}</Text>
-            </View>
-          )}
+          <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={cleanStyles.totalRow} labelStyle={cleanStyles.totalLabel} valueStyle={cleanStyles.totalValue} />
           <View style={cleanStyles.grandTotal}>
             <Text style={cleanStyles.grandTotalLabel}>Total</Text>
-            <Text style={cleanStyles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
+            <Text style={cleanStyles.grandTotalValue}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
           </View>
         </View>
         {doc.showNotes && invoice.notes && (
@@ -290,7 +368,7 @@ const modernRedStyles = StyleSheet.create({
   tableHeaderText: { color: '#FFFFFF', fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' },
   tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   tableRowAlt: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#FAFAFA' },
-  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsBox: { marginTop: 15, alignItems: 'flex-end' },
   totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
   totalLabel: { fontSize: 9, color: '#6B7280' },
@@ -303,6 +381,7 @@ const modernRedStyles = StyleSheet.create({
 export function ModernRedTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={modernRedStyles.page}>
@@ -363,13 +442,15 @@ export function ModernRedTemplate({ invoice }) {
               <Text style={[modernRedStyles.tableHeaderText, isBasic ? { flex: 4 } : modernRedStyles.colName]}>{doc.descriptionCol}</Text>
               {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colQty]}>{doc.qtyCol}</Text>}
               {!isBasic && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              {showTaxCol && <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colTax]}>{doc.taxCol}</Text>}
               <Text style={[modernRedStyles.tableHeaderText, modernRedStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={i % 2 === 1 ? modernRedStyles.tableRowAlt : modernRedStyles.tableRow}>
-                <Text style={isBasic ? { flex: 4 } : modernRedStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : modernRedStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={modernRedStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={modernRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                {showTaxCol && <Text style={[modernRedStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
                 <Text style={modernRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
@@ -385,15 +466,10 @@ export function ModernRedTemplate({ invoice }) {
                 <Text style={modernRedStyles.totalValue}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {doc.showTax && invoice.taxTotal > 0 && (
-              <View style={modernRedStyles.totalRow}>
-                <Text style={modernRedStyles.totalLabel}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-                <Text style={modernRedStyles.totalValue}>{formatCurrency(invoice.taxTotal)}</Text>
-              </View>
-            )}
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={modernRedStyles.totalRow} labelStyle={modernRedStyles.totalLabel} valueStyle={modernRedStyles.totalValue} />
             <View style={modernRedStyles.grandTotalRow}>
               <Text style={modernRedStyles.grandTotalLabel}>Total</Text>
-              <Text style={modernRedStyles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
+              <Text style={modernRedStyles.grandTotalValue}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
@@ -437,7 +513,7 @@ const classicRedStyles = StyleSheet.create({
   tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: '#047857', paddingBottom: 6, paddingHorizontal: 4 },
   tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#047857', textTransform: 'uppercase' },
   tableRow: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsBox: { marginTop: 15, alignItems: 'flex-end' },
   totalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 3 },
   grandTotalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 2, borderTopColor: '#047857', marginTop: 4 },
@@ -446,6 +522,7 @@ const classicRedStyles = StyleSheet.create({
 export function ClassicRedTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={classicRedStyles.page}>
@@ -506,14 +583,16 @@ export function ClassicRedTemplate({ invoice }) {
               <Text style={[classicRedStyles.tableHeaderText, isBasic ? { flex: 4 } : classicRedStyles.colName]}>{doc.descriptionCol}</Text>
               {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colQty]}>{doc.qtyCol}</Text>}
               {!isBasic && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              {showTaxCol && <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colTax]}>{doc.taxCol}</Text>}
               <Text style={[classicRedStyles.tableHeaderText, classicRedStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={classicRedStyles.tableRow}>
                 <Text style={classicRedStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : classicRedStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : classicRedStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={classicRedStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={classicRedStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                {showTaxCol && <Text style={[classicRedStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
                 <Text style={classicRedStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
@@ -529,15 +608,10 @@ export function ClassicRedTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {doc.showTax && invoice.taxTotal > 0 && (
-              <View style={classicRedStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
-              </View>
-            )}
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={classicRedStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
             <View style={classicRedStyles.grandTotalRow}>
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>{formatCurrency(invoice.total)}</Text>
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
@@ -573,7 +647,7 @@ const wexlerStyles = StyleSheet.create({
   tableHeader: { flexDirection: 'row', backgroundColor: '#EFF6FF', padding: 8, borderBottomWidth: 2, borderBottomColor: '#1E3A5F' },
   tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#1E3A5F', textTransform: 'uppercase' },
   tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsBox: { marginTop: 15, alignItems: 'flex-end' },
   totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
   grandTotalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 8, backgroundColor: '#1E3A5F', paddingHorizontal: 10, marginTop: 6 },
@@ -582,6 +656,7 @@ const wexlerStyles = StyleSheet.create({
 export function WexlerTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={wexlerStyles.page}>
@@ -633,14 +708,16 @@ export function WexlerTemplate({ invoice }) {
               <Text style={[wexlerStyles.tableHeaderText, isBasic ? { flex: 4 } : wexlerStyles.colName]}>{doc.descriptionCol}</Text>
               {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colQty]}>{doc.qtyCol}</Text>}
               {!isBasic && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              {showTaxCol && <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colTax]}>{doc.taxCol}</Text>}
               <Text style={[wexlerStyles.tableHeaderText, wexlerStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={wexlerStyles.tableRow}>
                 <Text style={wexlerStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : wexlerStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : wexlerStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={wexlerStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={wexlerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                {showTaxCol && <Text style={[wexlerStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
                 <Text style={wexlerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
@@ -656,15 +733,10 @@ export function WexlerTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {doc.showTax && invoice.taxTotal > 0 && (
-              <View style={wexlerStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
-              </View>
-            )}
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={wexlerStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
             <View style={wexlerStyles.grandTotalRow}>
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(invoice.total)}</Text>
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
@@ -704,7 +776,7 @@ const plexerStyles = StyleSheet.create({
   tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#374151', paddingBottom: 6, paddingHorizontal: 4 },
   tableHeaderText: { fontSize: 7, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: 1 },
   tableRow: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  colSno: { width: 25 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colSno: { width: 25 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsBox: { marginTop: 15, alignItems: 'flex-end' },
   totalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 3 },
   grandTotalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 2, borderTopColor: '#374151', marginTop: 4 },
@@ -713,6 +785,7 @@ const plexerStyles = StyleSheet.create({
 export function PlexerTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={plexerStyles.page}>
@@ -774,14 +847,16 @@ export function PlexerTemplate({ invoice }) {
               <Text style={[plexerStyles.tableHeaderText, isBasic ? { flex: 4 } : plexerStyles.colName]}>{doc.descriptionCol}</Text>
               {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colQty]}>{doc.qtyCol}</Text>}
               {!isBasic && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              {showTaxCol && <Text style={[plexerStyles.tableHeaderText, plexerStyles.colTax]}>{doc.taxCol}</Text>}
               <Text style={[plexerStyles.tableHeaderText, plexerStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={plexerStyles.tableRow}>
                 <Text style={plexerStyles.colSno}>{i + 1}</Text>
-                <Text style={isBasic ? { flex: 4 } : plexerStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : plexerStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={plexerStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={plexerStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                {showTaxCol && <Text style={[plexerStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
                 <Text style={plexerStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
@@ -797,15 +872,10 @@ export function PlexerTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {doc.showTax && invoice.taxTotal > 0 && (
-              <View style={plexerStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
-              </View>
-            )}
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={plexerStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
             <View style={plexerStyles.grandTotalRow}>
               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>TOTAL</Text>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>{formatCurrency(invoice.total)}</Text>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
@@ -846,7 +916,7 @@ const contemporaryStyles = StyleSheet.create({
   tableHeader: { flexDirection: 'row', backgroundColor: '#FFF1F2', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E11D48' },
   tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#E11D48', textTransform: 'uppercase' },
   tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTotal: { flex: 1, textAlign: 'right' },
+  colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
   totalsBox: { marginTop: 15, alignItems: 'flex-end' },
   totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
   grandTotalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 8, backgroundColor: '#E11D48', paddingHorizontal: 10, marginTop: 6 },
@@ -855,6 +925,7 @@ const contemporaryStyles = StyleSheet.create({
 export function ContemporaryTemplate({ invoice }) {
   const doc = getDocLabels(invoice)
   const isBasic = doc.lineItemsLayout === 'basic' || doc.lineItemsLayout === 'simple'
+  const showTaxCol = !isBasic && doc.showTax && hasLineItemTax(invoice.lineItems)
   return (
     <Document>
       <Page size="A4" style={contemporaryStyles.page}>
@@ -884,7 +955,7 @@ export function ContemporaryTemplate({ invoice }) {
               )}
               <View style={contemporaryStyles.totalBadge}>
                 <Text style={contemporaryStyles.totalBadgeLabel}>{doc.heading} Total</Text>
-                <Text style={contemporaryStyles.totalBadgeValue}>{formatCurrency(invoice.total)}</Text>
+                <Text style={contemporaryStyles.totalBadgeValue}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
               </View>
             </View>
           </View>
@@ -915,13 +986,15 @@ export function ContemporaryTemplate({ invoice }) {
               <Text style={[contemporaryStyles.tableHeaderText, isBasic ? { flex: 4 } : contemporaryStyles.colName]}>{doc.descriptionCol}</Text>
               {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colQty]}>{doc.qtyCol}</Text>}
               {!isBasic && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colRate]}>{doc.unitPriceCol}</Text>}
+              {showTaxCol && <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colTax]}>{doc.taxCol}</Text>}
               <Text style={[contemporaryStyles.tableHeaderText, contemporaryStyles.colTotal]}>{doc.amountCol}</Text>
             </View>
             {invoice.lineItems?.map((item, i) => (
               <View key={i} style={contemporaryStyles.tableRow}>
-                <Text style={isBasic ? { flex: 4 } : contemporaryStyles.colName}>{item.name}</Text>
+                <View style={isBasic ? { flex: 4 } : contemporaryStyles.colName}><Text>{item.name}</Text>{item.hsnCode && <Text style={{ fontSize: 6, color: '#888888', marginTop: 1 }}>HSN: {item.hsnCode}</Text>}</View>
                 {!isBasic && <Text style={contemporaryStyles.colQty}>{item.quantity}</Text>}
                 {!isBasic && <Text style={contemporaryStyles.colRate}>{formatCurrency(item.rate)}</Text>}
+                {showTaxCol && <Text style={[contemporaryStyles.colTax, { fontSize: 8 }]}>{formatItemTax(item)}</Text>}
                 <Text style={contemporaryStyles.colTotal}>{formatCurrency(item.lineTotal || item.rate)}</Text>
               </View>
             ))}
@@ -937,15 +1010,10 @@ export function ContemporaryTemplate({ invoice }) {
                 <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            {doc.showTax && invoice.taxTotal > 0 && (
-              <View style={contemporaryStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>GST {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.taxTotal)}</Text>
-              </View>
-            )}
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={contemporaryStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
             <View style={contemporaryStyles.grandTotalRow}>
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(invoice.total)}</Text>
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
@@ -963,14 +1031,45 @@ export function ContemporaryTemplate({ invoice }) {
 }
 
 // ============================================================================
+// Theme-based Template System — 100 templates from 20 layouts × 5 palettes
+// ============================================================================
+
+// Generic themed template wrapper — resolves theme and renders BaseInvoiceDocument
+function ThemedTemplate({ invoice, themeId }) {
+  const theme = resolveTheme(themeId)
+  if (!theme) return null
+  return <BaseInvoiceDocument invoice={invoice} theme={theme} />
+}
+
+// Factory: create a component for a specific theme ID
+function createThemedComponent(themeId) {
+  const Component = ({ invoice }) => <ThemedTemplate invoice={invoice} themeId={themeId} />
+  Component.displayName = `Theme_${themeId}`
+  return Component
+}
+
+// ============================================================================
 // Template Map — used by pdfGenerator to dispatch
 // ============================================================================
 
-export const TEMPLATE_COMPONENTS = {
+// Start with legacy templates (exact original rendering for backward compat)
+const LEGACY_COMPONENTS = {
   clean: CleanTemplate,
   'modern-red': ModernRedTemplate,
   'classic-red': ClassicRedTemplate,
   wexler: WexlerTemplate,
   plexer: PlexerTemplate,
   contemporary: ContemporaryTemplate,
+}
+
+// Build the full map: 100 themed templates + legacy overrides
+const themedComponents = {}
+for (const themeId of THEME_IDS) {
+  themedComponents[themeId] = createThemedComponent(themeId)
+}
+
+// Merge: legacy IDs point to original components, everything else uses themed
+export const TEMPLATE_COMPONENTS = {
+  ...themedComponents,
+  ...LEGACY_COMPONENTS,
 }

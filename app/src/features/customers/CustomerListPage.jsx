@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
-import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen } from 'lucide-react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen, RotateCcw } from 'lucide-react'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import {
   DataTable,
@@ -9,6 +9,8 @@ import {
   PageToolbar
 } from '../../components/data-table'
 import CustomerAddEditModal from './CustomerAddEditModal'
+import PlanLimitModal from '../../components/PlanLimitModal'
+import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import Portal from '../../components/Portal'
 
 const AVATAR_COLORS = [
@@ -23,9 +25,8 @@ const AVATAR_COLORS = [
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Customers' },
-  { key: 'active', label: 'Active' },
   { key: 'outstanding', label: 'Outstanding Balance', badgeColor: 'bg-accentOrange' },
-  { key: 'inactive', label: 'Inactive', badgeColor: 'bg-gray-400' },
+  { key: 'deleted', label: 'Deleted', badgeColor: 'bg-red-400' },
 ]
 
 const TABLE_COLUMNS = [
@@ -103,6 +104,15 @@ export default function CustomerListPage() {
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
+  // Plan limit pre-check
+  const { planLimitData, setPlanLimitData, checkLimit } = usePlanLimitCheck()
+
+  const handleAddCustomer = useCallback(async () => {
+    const blocked = await checkLimit('customer')
+    if (blocked) return
+    setShowAddModal(true)
+  }, [checkLimit])
+
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(null)
@@ -156,37 +166,49 @@ export default function CustomerListPage() {
   const allCustomers = data?.pages.flatMap(p => p.customers || []) || []
   const totalCount = data?.pages[0]?.total || 0
 
+  // Fetch deleted customers
+  const { data: deletedCustomersData } = useQuery({
+    queryKey: ['customers', 'deleted'],
+    queryFn: async () => {
+      const response = await customerApi.listDeleted()
+      return response.data || []
+    }
+  })
+  const deletedCustomers = deletedCustomersData || []
+
+  // Restore mutation
+  const restoreMutation = useMutation({
+    mutationFn: (id) => customerApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
+    }
+  })
+
   // Client-side filtering based on statusFilter
   const customers = useMemo(() => {
     switch (statusFilter) {
       case 'active':
-        // Customers who have at least one invoice
         return allCustomers.filter(c => c.invoices && c.invoices.length > 0)
       case 'outstanding':
         return allCustomers.filter(c => computeBalance(c) > 0)
-      case 'inactive':
-        // Customers with no invoices at all
-        return allCustomers.filter(c => !c.invoices || c.invoices.length === 0)
+      case 'deleted':
+        return deletedCustomers
       default:
-        // All customers
         return allCustomers
     }
-  }, [allCustomers, statusFilter])
+  }, [allCustomers, deletedCustomers, statusFilter])
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    let active = 0, outstanding = 0, inactive = 0
+    let active = 0, outstanding = 0
     allCustomers.forEach((cust) => {
       const balance = computeBalance(cust)
       if (balance > 0) outstanding++
-      if (!cust.invoices || cust.invoices.length === 0) {
-        inactive++
-      } else {
-        active++
-      }
+      if (cust.invoices && cust.invoices.length > 0) active++
     })
-    return { all: allCustomers.length, active, outstanding, inactive }
-  }, [allCustomers])
+    return { all: allCustomers.length, active, outstanding, deleted: deletedCustomers.length }
+  }, [allCustomers, deletedCustomers])
 
   const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
 
@@ -203,6 +225,7 @@ export default function CustomerListPage() {
     mutationFn: (id) => customerApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setDeleteTarget(null)
     }
   })
@@ -224,6 +247,7 @@ export default function CustomerListPage() {
     mutationFn: (ids) => Promise.all(ids.map(id => customerApi.delete(id))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setSelectedIds(new Set())
       setShowBulkActions(false)
       setShowBulkDeleteConfirm(false)
@@ -237,7 +261,6 @@ export default function CustomerListPage() {
   const bulkFavoriteMutation = useMutation({
     mutationFn: (ids) => {
       // Placeholder: future implementation for favorites
-      console.log('Adding to favorites:', ids)
       return Promise.resolve()
     },
     onSuccess: () => {
@@ -327,36 +350,50 @@ export default function CustomerListPage() {
       </div>,
 
       // Actions
-      <div key="actions" className="flex justify-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push(`/invoices?customerId=${customer.id}`) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="View Documents"
-        >
-          <FolderOpen className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Create Invoice"
-        >
-          <FileText className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleEdit(customer) }}
-          className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
-          title="Edit Customer"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(customer) }}
-          className="w-6 h-6 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
-          title="Delete Customer"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>,
+      statusFilter === 'deleted' ? (
+        <div key="actions" className="flex justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(customer.id) }}
+            disabled={restoreMutation.isPending}
+            className="px-2.5 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 flex items-center gap-1 transition-colors disabled:opacity-50"
+            title="Restore Customer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Restore
+          </button>
+        </div>
+      ) : (
+        <div key="actions" className="flex justify-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push(`/invoices?customerId=${customer.id}`) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="View Documents"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); history.push(`/invoices/new?customerId=${customer.id}`) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Create Invoice"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(customer) }}
+            className="w-6 h-6 rounded hover:bg-blue-50 text-textSecondary hover:text-primary flex items-center justify-center transition-colors"
+            title="Edit Customer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(customer) }}
+            className="w-6 h-6 rounded hover:bg-red-50 text-textSecondary hover:text-red-500 flex items-center justify-center transition-colors"
+            title="Delete Customer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
     ]
   }
 
@@ -379,7 +416,7 @@ export default function CustomerListPage() {
               <SlidersHorizontal className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddCustomer}
               className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
             >
               <Plus className="w-5 h-5" />
@@ -399,7 +436,7 @@ export default function CustomerListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddCustomer}
               className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -713,7 +750,11 @@ export default function CustomerListPage() {
             <p className="text-sm text-textSecondary text-center mb-6">
               {bulkDeleteMutation.isSuccess 
                 ? `${selectedIds.size} ${selectedIds.size === 1 ? 'customer' : 'customers'} deleted successfully.`
-                : `Are you sure you want to delete <span className="font-semibold text-textPrimary">${selectedIds.size} selected ${selectedIds.size === 1 ? 'customer' : 'customers'}</span>? This action cannot be undone.`
+                : (
+                  <>
+                    Are you sure you want to delete <span className="font-semibold text-textPrimary">{selectedIds.size} selected {selectedIds.size === 1 ? 'customer' : 'customers'}</span>? This action cannot be undone.
+                  </>
+                )
               }
             </p>
             {bulkDeleteMutation.isError && (
@@ -758,6 +799,14 @@ export default function CustomerListPage() {
         </div>
         </Portal>
       )}
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={!!planLimitData}
+        onClose={() => setPlanLimitData(null)}
+        resourceType={planLimitData?.type || 'customer'}
+        usage={planLimitData?.usage}
+      />
     </div>
   )
 }

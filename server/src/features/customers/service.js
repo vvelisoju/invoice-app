@@ -4,6 +4,7 @@ export const searchCustomers = async (prisma, businessId, query) => {
   const customers = await prisma.customer.findMany({
     where: {
       businessId,
+      deletedAt: null,
       OR: [
         { name: { contains: query, mode: 'insensitive' } },
         { phone: { contains: query, mode: 'insensitive' } }
@@ -21,6 +22,7 @@ export const listCustomers = async (prisma, businessId, filters = {}) => {
 
   const where = {
     businessId,
+    deletedAt: null,
     ...(search && {
       OR: [
         { name: { contains: search, mode: 'insensitive' } },
@@ -103,8 +105,26 @@ export const deleteCustomer = async (prisma, customerId, businessId) => {
     throw new ForbiddenError('Cannot delete customer with existing invoices')
   }
 
-  await prisma.customer.delete({ where: { id: customerId } })
+  await prisma.customer.update({ where: { id: customerId }, data: { deletedAt: new Date() } })
   return { success: true }
+}
+
+export const restoreCustomer = async (prisma, customerId, businessId) => {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } })
+  if (!customer) throw new NotFoundError('Customer not found')
+  if (customer.businessId !== businessId) throw new ForbiddenError('Access denied')
+  if (!customer.deletedAt) throw new ForbiddenError('Customer is not deleted')
+
+  const restored = await prisma.customer.update({ where: { id: customerId }, data: { deletedAt: null } })
+  return restored
+}
+
+export const listDeletedCustomers = async (prisma, businessId) => {
+  const customers = await prisma.customer.findMany({
+    where: { businessId, deletedAt: { not: null } },
+    orderBy: { deletedAt: 'desc' }
+  })
+  return customers
 }
 
 export const updateCustomer = async (prisma, customerId, businessId, data) => {
