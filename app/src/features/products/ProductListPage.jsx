@@ -188,16 +188,7 @@ export default function ProductListPage() {
     }
   }, [allProducts, deletedProducts, statusFilter])
 
-  // Compute counts for filter pills
-  const counts = useMemo(() => {
-    const c = { all: allProducts.length, active: 0, deleted: deletedProducts.length }
-    allProducts.forEach((p) => {
-      if (p.defaultRate != null && Number(p.defaultRate) > 0) c.active++
-    })
-    return c
-  }, [allProducts, deletedProducts])
-
-  const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
+  // Removed count calculations - displaying filters without counts
 
   // Pagination over filtered list
   const paginatedProducts = useMemo(() => {
@@ -371,7 +362,7 @@ export default function ProductListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
             </div>
             <StatusFilterPills
-              filters={filtersWithCounts}
+              filters={STATUS_FILTERS}
               activeKey={statusFilter}
               onChange={handleFilterChange}
             />
@@ -380,7 +371,7 @@ export default function ProductListPage() {
         {/* Desktop: always visible */}
         <div className="hidden md:block">
           <StatusFilterPills
-            filters={filtersWithCounts}
+            filters={STATUS_FILTERS}
             activeKey={statusFilter}
             onChange={handleFilterChange}
           />

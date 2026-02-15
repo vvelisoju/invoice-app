@@ -199,18 +199,7 @@ export default function CustomerListPage() {
     }
   }, [allCustomers, deletedCustomers, statusFilter])
 
-  // Compute counts for filter pills
-  const counts = useMemo(() => {
-    let active = 0, outstanding = 0
-    allCustomers.forEach((cust) => {
-      const balance = computeBalance(cust)
-      if (balance > 0) outstanding++
-      if (cust.invoices && cust.invoices.length > 0) active++
-    })
-    return { all: allCustomers.length, active, outstanding, deleted: deletedCustomers.length }
-  }, [allCustomers, deletedCustomers])
-
-  const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
+  // Removed count calculations - displaying filters without counts
 
   // Pagination over filtered list
   const paginatedCustomers = useMemo(() => {
@@ -459,7 +448,7 @@ export default function CustomerListPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
             </div>
             <StatusFilterPills
-              filters={filtersWithCounts}
+              filters={STATUS_FILTERS}
               activeKey={statusFilter}
               onChange={handleFilterChange}
             />
@@ -468,7 +457,7 @@ export default function CustomerListPage() {
         {/* Desktop: always visible */}
         <div className="hidden md:block">
           <StatusFilterPills
-            filters={filtersWithCounts}
+            filters={STATUS_FILTERS}
             activeKey={statusFilter}
             onChange={handleFilterChange}
           />

@@ -57,19 +57,11 @@ const TABLE_COLUMNS = [
   { key: 'total', label: 'Total', colSpan: 2, headerAlign: 'right', align: 'right' },
 ]
 
-// ── Customer Multi-Select Filter ────────────────────────────────────
-function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compact = false }) {
-  const [search, setSearch] = useState('')
+// ── Customer Single-Select Filter ────────────────────────────────────
+function CustomerSelectFilter({ customers, selectedId, onChange, compact = false }) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef(null)
   const dropdownRef = useRef(null)
-
-  const filtered = useMemo(() => {
-    const list = search
-      ? customers.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()))
-      : customers
-    return list
-  }, [customers, search])
 
   // Close on outside click
   useEffect(() => {
@@ -90,7 +82,6 @@ function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compac
     }
   }, [open])
 
-  // Position the dropdown relative to the anchor
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
   useEffect(() => {
     if (!open || !anchorRef.current) return
@@ -98,76 +89,58 @@ function CustomerMultiFilter({ customers, selectedIds, onToggle, onClear, compac
     setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
   }, [open])
 
-  const selectedCustomers = customers.filter(c => selectedIds.includes(c.id))
-
-  const inputRef = useRef(null)
+  const selectedCustomer = customers.find(c => c.id === selectedId)
 
   return (
-    <div ref={anchorRef}>
-      {/* Tag-input style container */}
-      <div
-        onClick={() => inputRef.current?.focus()}
-        className={`flex items-center flex-wrap gap-1 ${compact ? 'min-h-[34px] px-2.5 py-1' : 'min-h-[40px] px-3 py-1.5'} border border-border rounded-lg bg-white cursor-text transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary`}
+    <div ref={anchorRef} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center justify-between gap-2 ${compact ? 'px-2.5 py-1 min-h-[34px]' : 'px-3 py-1.5 min-h-[40px]'} border border-border rounded-lg bg-white hover:bg-gray-50 transition-all w-full text-left`}
       >
-        <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-gray-400 shrink-0`} />
-        {/* Selected chips inside the input */}
-        {selectedCustomers.map(c => (
-          <span
-            key={c.id}
-            className={`inline-flex items-center gap-0.5 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]'} bg-primary/8 text-primary rounded-md font-medium shrink-0`}
-          >
-            <span className="truncate max-w-[100px]">{c.name}</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggle(c) }}
-              className="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-primary/15 tap-target-auto shrink-0 ml-0.5"
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Users className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-gray-400 shrink-0`} />
+          <span className={`${compact ? 'text-[11px]' : 'text-xs'} truncate ${selectedCustomer ? 'text-textPrimary font-medium' : 'text-gray-400'}`}>
+            {selectedCustomer ? selectedCustomer.name : 'All Customers'}
           </span>
-        ))}
-        {/* Inline search input */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
-          placeholder={selectedCustomers.length ? 'Add customer...' : 'Search customers...'}
-          className={`flex-1 min-w-[80px] outline-none bg-transparent ${compact ? 'text-[11px] py-0' : 'text-xs py-0'} placeholder:text-gray-400 tap-target-auto`}
-        />
-        {selectedCustomers.length > 0 && (
+        </div>
+        {selectedCustomer && (
           <button
-            onClick={(e) => { e.stopPropagation(); onClear() }}
-            className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-textSecondary hover:text-red-500 font-medium shrink-0 tap-target-auto`}
+            onClick={(e) => { e.stopPropagation(); onChange(null) }}
+            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-gray-200 shrink-0"
           >
-            Clear
+            <X className="w-3 h-3 text-gray-500" />
           </button>
         )}
-      </div>
+      </button>
 
       {open && (
         <Portal>
           <div
             ref={dropdownRef}
             className="fixed z-50 bg-white border border-border rounded-lg shadow-xl overflow-y-auto"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 224 }}
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 280 }}
           >
-            {filtered.length === 0 ? (
-              <div className="px-3 py-3 text-xs text-textSecondary">No customers found</div>
-            ) : filtered.map(c => {
-              const isSelected = selectedIds.includes(c.id)
+            <button
+              onClick={() => { onChange(null); setOpen(false) }}
+              className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 flex items-center gap-2 ${
+                !selectedId ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
+              }`}
+            >
+              <span className="flex-1">All Customers</span>
+              {!selectedId && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
+            </button>
+            {customers.map(c => {
+              const isSelected = c.id === selectedId
               return (
                 <button
                   key={c.id}
-                  type="button"
-                  onClick={() => { onToggle(c); setSearch('') }}
-                  className={`w-full px-3 py-2 text-left text-xs text-textPrimary active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 tap-target-auto ${
-                    isSelected ? 'bg-primary/5' : ''
+                  onClick={() => { onChange(c.id); setOpen(false) }}
+                  className={`w-full px-3 py-2 text-left text-xs active:bg-blue-50 md:hover:bg-blue-50 border-b border-border/30 last:border-b-0 flex items-center gap-2 ${
+                    isSelected ? 'bg-primary/5 text-primary font-semibold' : 'text-textPrimary'
                   }`}
                 >
-                  <span className={`truncate flex-1 ${isSelected ? 'font-semibold text-primary' : ''}`}>{c.name}</span>
+                  <span className="truncate flex-1">{c.name}</span>
                   {isSelected && <span className="text-primary text-[10px] font-bold shrink-0">✓</span>}
-                  {!isSelected && c.phone && <span className="text-[10px] text-textSecondary shrink-0">{c.phone}</span>}
                 </button>
               )
             })}
@@ -216,8 +189,8 @@ export default function InvoiceListPage() {
   const searchTimeout = useRef(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  // Customer filter state — multi-select
-  const [selectedCustomerIds, setSelectedCustomerIds] = useState([])
+  // Customer filter state — single-select
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null)
 
   // Fetch customers for the dropdown
   const { data: customersData } = useQuery({
@@ -233,19 +206,19 @@ export default function InvoiceListPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const custId = params.get('customerId')
-    if (custId && selectedCustomerIds.length === 0) {
-      setSelectedCustomerIds([custId])
+    if (custId && !selectedCustomerId) {
+      setSelectedCustomerId(custId)
     }
   }, [location.search])
 
-  const handleCustomerToggle = (customer) => {
-    setSelectedCustomerIds(prev =>
-      prev.includes(customer.id)
-        ? prev.filter(id => id !== customer.id)
-        : [...prev, customer.id]
-    )
+  const handleCustomerChange = (customerId) => {
+    setSelectedCustomerId(customerId)
+    if (customerId) {
+      history.replace(`/invoices?customerId=${customerId}`)
+    } else {
+      history.replace('/invoices')
+    }
   }
-  const handleCustomerClear = () => { setSelectedCustomerIds([]); history.replace('/invoices') }
 
   useEffect(() => () => clearTimeout(searchTimeout.current), [])
 
@@ -256,7 +229,7 @@ export default function InvoiceListPage() {
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ['invoices', debouncedSearch, statusFilter, selectedCustomerIds],
+    queryKey: ['invoices', debouncedSearch, statusFilter, selectedCustomerId],
     queryFn: async ({ pageParam = 0 }) => {
       const params = {
         limit: 20,
@@ -264,7 +237,7 @@ export default function InvoiceListPage() {
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter === 'inactive' ? { active: 'false' } : statusFilter !== 'all' && { status: statusFilter, active: 'true' }),
         ...(statusFilter === 'all' && { active: 'true' }),
-        ...(selectedCustomerIds.length === 1 && { customerId: selectedCustomerIds[0] })
+        ...(selectedCustomerId && { customerId: selectedCustomerId })
       }
       const response = await invoiceApi.list(params)
       return response.data
@@ -297,30 +270,14 @@ export default function InvoiceListPage() {
     })
   }
 
-  // Filter by doc type + multi-customer (client-side for >1 customer)
+  // Filter by doc type (client-side)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
       const type = inv.documentType || 'invoice'
       if (docTypeFilters[type] === false) return false
-      if (selectedCustomerIds.length > 1 && !selectedCustomerIds.includes(inv.customerId)) return false
       return true
     })
-  }, [invoices, docTypeFilters, selectedCustomerIds])
-
-  // Compute counts for filter pills — use doc-type+customer filtered invoices across ALL statuses
-  const counts = useMemo(() => {
-    const c = { all: 0, ISSUED: 0, PAID: 0, OVERDUE: 0, DRAFT: 0 }
-    filteredInvoices.forEach((inv) => {
-      c.all++
-      if (inv.status === 'ISSUED') c.ISSUED++
-      else if (inv.status === 'PAID') c.PAID++
-      else if (inv.status === 'OVERDUE') c.OVERDUE++
-      else if (inv.status === 'DRAFT') c.DRAFT++
-    })
-    return c
-  }, [filteredInvoices])
-
-  const filtersWithCounts = STATUS_FILTERS.map((f) => ({ ...f, count: counts[f.key] ?? 0 }))
+  }, [invoices, docTypeFilters])
 
   // Compute summary totals (Prisma Decimals come as strings — must parseFloat)
   const summary = useMemo(() => {
@@ -516,16 +473,15 @@ export default function InvoiceListPage() {
           {showMobileFilters && (
             <div className="md:hidden space-y-2.5 mb-1">
               <StatusFilterPills
-                filters={filtersWithCounts}
+                filters={STATUS_FILTERS}
                 activeKey={statusFilter}
                 onChange={setStatusFilter}
               />
-              {/* Customer multi-filter — mobile */}
-              <CustomerMultiFilter
+              {/* Customer filter — mobile */}
+              <CustomerSelectFilter
                 customers={allCustomers}
-                selectedIds={selectedCustomerIds}
-                onToggle={handleCustomerToggle}
-                onClear={handleCustomerClear}
+                selectedId={selectedCustomerId}
+                onChange={handleCustomerChange}
               />
               {/* Doc type pills — mobile */}
               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
@@ -552,7 +508,7 @@ export default function InvoiceListPage() {
           {/* Desktop: status pills */}
           <div className="hidden md:block">
             <StatusFilterPills
-              filters={filtersWithCounts}
+              filters={STATUS_FILTERS}
               activeKey={statusFilter}
               onChange={setStatusFilter}
             />
@@ -563,13 +519,12 @@ export default function InvoiceListPage() {
       {/* Secondary Filters — desktop: customer filter (left) + doc type pills (right) */}
       <div className="hidden md:block bg-white border-b border-borderLight">
         <div className="max-w-7xl mx-auto px-8 py-1.5 flex items-center gap-3">
-          {/* Customer Multi-Filter — left */}
+          {/* Customer Filter — left */}
           <div className="shrink-0 w-72">
-            <CustomerMultiFilter
+            <CustomerSelectFilter
               customers={allCustomers}
-              selectedIds={selectedCustomerIds}
-              onToggle={handleCustomerToggle}
-              onClear={handleCustomerClear}
+              selectedId={selectedCustomerId}
+              onChange={handleCustomerChange}
               compact
             />
           </div>
