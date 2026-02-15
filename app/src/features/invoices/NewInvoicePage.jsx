@@ -344,7 +344,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     onError: (err) => {
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
-        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        const usagePayload = errorData.details?.usage || errorData.usage
+        setPlanLimitData(usagePayload)
         setShowPlanLimit(true)
         return
       }
@@ -665,8 +666,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
       <PlanLimitModal
         isOpen={showPlanLimit}
         onClose={() => setShowPlanLimit(false)}
-        usage={planLimitData?.usage || planLimitData}
-        plan={planLimitData?.plan || planLimitData}
+        resourceType="invoice"
+        usage={planLimitData}
       />
 
       {/* Business Settings Modal */}

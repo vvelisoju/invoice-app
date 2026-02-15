@@ -333,6 +333,13 @@ export default function AppSidebar({ mobile = false, onClose }) {
                 <span>Business Settings</span>
               </button>
               <button
+                onClick={() => navigate('/plans')}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:bg-primary/5 transition-all"
+              >
+                <Crown className="w-5 h-5 shrink-0" />
+                <span>Manage Subscription</span>
+              </button>
+              <button
                 onClick={() => { queryClient.clear(); logout(); history.replace('/auth/phone'); if (onClose) onClose() }}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-red-600 active:bg-red-50 transition-all"
               >

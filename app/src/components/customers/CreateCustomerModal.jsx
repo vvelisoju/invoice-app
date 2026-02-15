@@ -3,6 +3,7 @@ import { X, Loader2, UserPlus, Pencil } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerApi } from '../../lib/api'
 import Portal from '../Portal'
+import PlanLimitModal from '../PlanLimitModal'
 import { addDemoCustomer } from '../../lib/demoStorage'
 
 const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' }
@@ -21,6 +22,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
   const isEdit = !!customer
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [error, setError] = useState('')
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -52,7 +54,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
       handleClose()
     },
     onError: (err) => {
-      setError(err.response?.data?.error?.message || (isEdit ? 'Failed to update customer' : 'Failed to create customer'))
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        return
+      }
+      setError(errorData?.message || (isEdit ? 'Failed to update customer' : 'Failed to create customer'))
     }
   })
 
@@ -231,6 +238,13 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
         </form>
       </div>
     </div>
+    {/* Plan Limit Modal */}
+    <PlanLimitModal
+      isOpen={!!planLimitData}
+      onClose={() => setPlanLimitData(null)}
+      resourceType="customer"
+      usage={planLimitData}
+    />
     </Portal>
   )
 }

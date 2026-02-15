@@ -32,7 +32,7 @@ export async function getBusinessPlanUsage(businessId) {
     }
   })
 
-  // Count issued invoices this month
+  // Count issued invoices this month (fixed — not affected by deletes)
   const issuedThisMonth = usageCounter?.invoicesIssuedCount || await prisma.invoice.count({
     where: {
       businessId,
@@ -44,20 +44,34 @@ export async function getBusinessPlanUsage(businessId) {
     }
   })
 
+  // Count active customers and products (affected by deletes — user can delete to free up slots)
+  const [customerCount, productCount] = await Promise.all([
+    prisma.customer.count({ where: { businessId } }),
+    prisma.productService.count({ where: { businessId } })
+  ])
+
   const plan = business.plan || await getDefaultPlan()
   const entitlements = plan?.entitlements || {}
-  const monthlyLimit = entitlements.monthlyInvoicesLimit || 10 // Default free plan limit
+  const monthlyLimit = entitlements.monthlyInvoicesLimit || 10
+  const customersLimit = entitlements.customersLimit || 20
+  const productsLimit = entitlements.productsLimit || 20
 
   return {
     plan: {
       id: plan?.id,
       name: plan?.displayName || plan?.name || 'Free',
       monthlyInvoiceLimit: monthlyLimit,
+      customersLimit,
+      productsLimit,
       entitlements
     },
     usage: {
       invoicesIssued: issuedThisMonth,
       invoicesRemaining: Math.max(0, monthlyLimit - issuedThisMonth),
+      customersCount: customerCount,
+      customersRemaining: Math.max(0, customersLimit - customerCount),
+      productsCount: productCount,
+      productsRemaining: Math.max(0, productsLimit - productCount),
       periodStart: startOfMonth.toISOString(),
       periodEnd: endOfMonth.toISOString()
     },
@@ -72,7 +86,9 @@ export async function getBusinessPlanUsage(businessId) {
       cancelledReason: business.subscription.cancelledReason,
       amount: business.subscription.amount,
     } : null,
-    canIssueInvoice: issuedThisMonth < monthlyLimit
+    canIssueInvoice: issuedThisMonth < monthlyLimit,
+    canCreateCustomer: customerCount < customersLimit,
+    canCreateProduct: productCount < productsLimit
   }
 }
 
@@ -82,7 +98,33 @@ export async function checkCanIssueInvoice(businessId) {
   if (!usage.canIssueInvoice) {
     throw new ForbiddenError(
       `Monthly invoice limit reached (${usage.plan.monthlyInvoiceLimit}). Please upgrade your plan.`,
-      { code: 'PLAN_LIMIT_REACHED', usage }
+      { code: 'PLAN_LIMIT_REACHED', resourceType: 'invoice', usage }
+    )
+  }
+
+  return true
+}
+
+export async function checkCanCreateCustomer(businessId) {
+  const usage = await getBusinessPlanUsage(businessId)
+
+  if (!usage.canCreateCustomer) {
+    throw new ForbiddenError(
+      `Customer limit reached (${usage.plan.customersLimit}). Delete unused customers or upgrade your plan.`,
+      { code: 'PLAN_LIMIT_REACHED', resourceType: 'customer', usage }
+    )
+  }
+
+  return true
+}
+
+export async function checkCanCreateProduct(businessId) {
+  const usage = await getBusinessPlanUsage(businessId)
+
+  if (!usage.canCreateProduct) {
+    throw new ForbiddenError(
+      `Product limit reached (${usage.plan.productsLimit}). Delete unused products or upgrade your plan.`,
+      { code: 'PLAN_LIMIT_REACHED', resourceType: 'product', usage }
     )
   }
 

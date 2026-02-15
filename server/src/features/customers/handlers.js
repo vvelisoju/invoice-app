@@ -1,4 +1,5 @@
 import { searchCustomers, listCustomers, createCustomer, getCustomer, updateCustomer, deleteCustomer } from './service.js'
+import { checkCanCreateCustomer } from '../plans/service.js'
 
 export const handleSearchCustomers = async (request, reply) => {
   const businessId = request.user.businessId
@@ -15,6 +16,7 @@ export const handleListCustomers = async (request, reply) => {
 
 export const handleCreateCustomer = async (request, reply) => {
   const businessId = request.user.businessId
+  await checkCanCreateCustomer(businessId)
   const customer = await createCustomer(request.server.prisma, businessId, request.body)
   return reply.status(201).send(customer)
 }

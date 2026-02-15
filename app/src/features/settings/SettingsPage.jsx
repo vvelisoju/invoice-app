@@ -29,7 +29,8 @@ import {
   Layers,
   AlertTriangle,
   Info,
-  Package
+  Package,
+  Crown
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
@@ -832,7 +833,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
   )
 }
 
-export function AccountSection({ onLogout }) {
+export function AccountSection({ onLogout, onManageSubscription }) {
   const queryClient = useQueryClient()
   const setAuth = useAuthStore((state) => state.setAuth)
   const authUser = useAuthStore((state) => state.user)
@@ -1101,10 +1102,17 @@ export function AccountSection({ onLogout }) {
             <p className="text-[11px] md:text-xs text-textSecondary">Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
           </div>
         </div>
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 flex flex-wrap gap-3">
+          <button
+            onClick={onManageSubscription}
+            className="px-5 py-2.5 text-sm font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg border border-blue-100 flex items-center gap-2 transition-colors"
+          >
+            <Crown className="w-4 h-4" />
+            Manage Subscription
+          </button>
           <button
             onClick={onLogout}
-            className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-100 flex items-center justify-center gap-2 transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-100 flex items-center gap-2 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sign Out

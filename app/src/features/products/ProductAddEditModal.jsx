@@ -3,6 +3,7 @@ import { X, Loader2, PackagePlus, ChevronDown, Trash2, AlertTriangle } from 'luc
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productApi, taxRateApi } from '../../lib/api'
 import Portal from '../../components/Portal'
+import PlanLimitModal from '../../components/PlanLimitModal'
 import { addDemoProduct } from '../../lib/demoStorage'
 
 const EMPTY_FORM = { name: '', defaultRate: '', unit: '', taxRate: '', taxRateName: '', taxComponents: null, hsnCode: '' }
@@ -33,6 +34,7 @@ export default function ProductAddEditModal({
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [planLimitData, setPlanLimitData] = useState(null)
 
   // Unit combobox state
   const [unitInputValue, setUnitInputValue] = useState('')
@@ -133,6 +135,14 @@ export default function ProductAddEditModal({
       onCreated?.(created)
       onSuccess?.()
       onClose()
+    },
+    onError: (err) => {
+      const errorData = err.response?.data?.error
+      if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
+        setPlanLimitData(errorData.details?.usage || errorData.usage)
+        return
+      }
+      setErrors({ submit: errorData?.message || (isEdit ? 'Failed to update product' : 'Failed to create product') })
     }
   })
 
@@ -216,9 +226,9 @@ export default function ProductAddEditModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Error banner */}
-          {mutation.isError && (
+          {errors.submit && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {mutation.error?.response?.data?.error?.message || mutation.error?.message || 'Something went wrong'}
+              {errors.submit}
             </div>
           )}
 
@@ -451,6 +461,13 @@ export default function ProductAddEditModal({
         </form>
       </div>
     </div>
+    {/* Plan Limit Modal */}
+    <PlanLimitModal
+      isOpen={!!planLimitData}
+      onClose={() => setPlanLimitData(null)}
+      resourceType="product"
+      usage={planLimitData}
+    />
     </Portal>
   )
 }

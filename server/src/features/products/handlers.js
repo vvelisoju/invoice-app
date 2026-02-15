@@ -1,4 +1,5 @@
 import { listUnits, searchProducts, listProducts, createProduct, getProduct, updateProduct, deleteProduct } from './service.js'
+import { checkCanCreateProduct } from '../plans/service.js'
 
 export const handleListUnits = async (request, reply) => {
   const businessId = request.user.businessId
@@ -21,6 +22,7 @@ export const handleListProducts = async (request, reply) => {
 
 export const handleCreateProduct = async (request, reply) => {
   const businessId = request.user.businessId
+  await checkCanCreateProduct(businessId)
   const product = await createProduct(request.server.prisma, businessId, request.body)
   return reply.status(201).send(product)
 }
