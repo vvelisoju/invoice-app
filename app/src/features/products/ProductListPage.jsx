@@ -172,6 +172,7 @@ export default function ProductListPage() {
     mutationFn: (id) => productApi.restore(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
     }
   })
 
@@ -211,6 +212,7 @@ export default function ProductListPage() {
     mutationFn: (id) => productApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setDeleteTarget(null)
     }
   })

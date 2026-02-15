@@ -71,6 +71,7 @@ export default function ProductAddEditModal({
     mutationFn: () => productApi.delete(product.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setShowDeleteConfirm(false)
       onDelete?.()
       onClose()
@@ -132,6 +133,7 @@ export default function ProductAddEditModal({
       const created = response.data?.data || response.data
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['product-units'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       onCreated?.(created)
       onSuccess?.()
       onClose()

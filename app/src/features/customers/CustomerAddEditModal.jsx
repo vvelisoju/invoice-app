@@ -38,6 +38,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
     mutationFn: () => customerApi.delete(customer.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setShowDeleteConfirm(false)
       onDelete?.()
       onClose()
@@ -73,6 +74,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       onSuccess?.()
       onClose()
     },
@@ -80,6 +82,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
       const errorData = err.response?.data?.error
       if (errorData?.code === 'PLAN_LIMIT_REACHED' || errorData?.details?.code === 'PLAN_LIMIT_REACHED') {
         const usagePayload = errorData.details?.usage || errorData.usage
+        // usagePayload is already in the correct format: { plan, usage, canCreateCustomer, ... }
         setPlanLimitData(usagePayload)
         onClose()
         return

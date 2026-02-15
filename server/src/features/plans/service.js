@@ -45,8 +45,8 @@ export async function getBusinessPlanUsage(businessId) {
 
   // Count active customers and products (affected by deletes — user can delete to free up slots)
   const [customerCount, productCount] = await Promise.all([
-    prisma.customer.count({ where: { businessId } }),
-    prisma.productService.count({ where: { businessId } })
+    prisma.customer.count({ where: { businessId, deletedAt: null } }),
+    prisma.productService.count({ where: { businessId, deletedAt: null } })
   ])
 
   const plan = business.plan || await getDefaultPlan()

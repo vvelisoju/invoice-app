@@ -181,6 +181,7 @@ export default function CustomerListPage() {
     mutationFn: (id) => customerApi.restore(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
     }
   })
 
@@ -224,6 +225,7 @@ export default function CustomerListPage() {
     mutationFn: (id) => customerApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setDeleteTarget(null)
     }
   })
@@ -245,6 +247,7 @@ export default function CustomerListPage() {
     mutationFn: (ids) => Promise.all(ids.map(id => customerApi.delete(id))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       setSelectedIds(new Set())
       setShowBulkActions(false)
       setShowBulkDeleteConfirm(false)

@@ -50,6 +50,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
     onSuccess: (response) => {
       const result = response.data?.data || response.data
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['plan-usage'] })
       onCreated?.(result)
       handleClose()
     },
