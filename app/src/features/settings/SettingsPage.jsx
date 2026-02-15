@@ -1627,7 +1627,7 @@ export default function SettingsPage() {
                   formData={formData}
                   onChange={(newData) => {
                     setFormData(newData)
-                    setIsDirty(true)
+                    setDirtyTabs(prev => ({ ...prev, business: true }))
                   }}
                 />
               </div>
