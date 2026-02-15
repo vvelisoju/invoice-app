@@ -24,7 +24,7 @@ const AVATAR_COLORS = [
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Products' },
   { key: 'active', label: 'Active', badgeColor: 'bg-green-500' },
-  { key: 'archived', label: 'Archived', badgeColor: 'bg-gray-400' },
+  { key: 'archived', label: 'Inactive', badgeColor: 'bg-gray-400' },
 ]
 
 const TABLE_COLUMNS = [
@@ -288,7 +288,7 @@ export default function ProductListPage() {
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="w-10 h-10 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm"
+              className="w-10 h-10 flex items-center justify-center text-white bg-[#2563eb] active:bg-[#1d4ed8] rounded-lg shadow-sm"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -308,7 +308,7 @@ export default function ProductListPage() {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              className="px-4 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />
               Add Product

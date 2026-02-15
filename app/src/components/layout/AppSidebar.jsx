@@ -92,13 +92,15 @@ export default function AppSidebar({ mobile = false, onClose }) {
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
                       isActive
                         ? 'text-primary bg-primary/8 font-semibold'
+                        : isDefault
+                        ? 'text-textSecondary hover:text-primary bg-amber-50/50 hover:bg-primary/5'
                         : 'text-textSecondary hover:text-primary hover:bg-primary/5'
                     }`}
                   >
                     <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
                     <span className="flex-1 text-left">{type.label}</span>
                     {isDefault && (
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded shrink-0">DEFAULT</span>
                     )}
                   </button>
                   {!isDefault && (
@@ -115,14 +117,14 @@ export default function AppSidebar({ mobile = false, onClose }) {
             })}
           </nav>
 
-          {/* Manage types link */}
+          {/* Add More Types link */}
           <div className="px-2 mt-3 mb-4">
             <button
-              onClick={() => navigate('/settings?section=invoice')}
+              onClick={() => navigate('/settings?section=invoice&tab=types')}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-textSecondary/70 hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <Settings className="w-3.5 h-3.5" />
-              Manage Types
+              <Plus className="w-3.5 h-3.5" />
+              Add More Types
             </button>
           </div>
         </div>
@@ -285,13 +287,15 @@ export default function AppSidebar({ mobile = false, onClose }) {
                       className={`flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
                         isActiveType
                           ? 'text-primary bg-primary/8 font-semibold'
+                          : isDefault
+                          ? 'text-textSecondary active:text-primary bg-amber-50/50 active:bg-primary/5'
                           : 'text-textSecondary active:text-primary active:bg-primary/5'
                       }`}
                     >
                       <Icon className={`w-5 h-5 shrink-0 ${isActiveType ? 'text-primary' : 'text-gray-400'}`} />
                       <span className="flex-1 text-left">{type.label}</span>
                       {isDefault && (
-                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded shrink-0">DEFAULT</span>
                       )}
                     </button>
                     {!isDefault && (
