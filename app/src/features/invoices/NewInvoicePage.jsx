@@ -473,11 +473,19 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     return parts.join('\n')
   }
 
-  // Apply default terms and fromAddress only once on initial load (not on refetches)
+  // Apply default terms/notes and fromAddress only once on initial load (not on refetches)
   useEffect(() => {
     if (!businessProfile || defaultsAppliedRef.current) return
-    if (businessProfile.defaultTerms != null && !invoice.terms) {
-      updateField('terms', businessProfile.defaultTerms)
+    // Per-document-type defaults from documentTypeConfig, falling back to business-level legacy fields
+    const docConfig = businessProfile.documentTypeConfig || {}
+    const typeConf = docConfig[documentTypeKey] || {}
+    const defaultTerms = typeConf.defaultTerms || businessProfile.defaultTerms
+    const defaultNotes = typeConf.defaultNotes || businessProfile.defaultNotes
+    if (defaultTerms != null && !invoice.terms) {
+      updateField('terms', defaultTerms)
+    }
+    if (defaultNotes != null && !invoice.notes) {
+      updateField('notes', defaultNotes)
     }
     // Pre-populate fromAddress from business profile for new invoices
     if (!invoice.fromAddress) {

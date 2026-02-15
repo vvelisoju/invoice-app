@@ -426,6 +426,8 @@ export function getDocTypeConfig(typeKey, businessOverrides = null) {
     ...defaults,
     ...(overrides.prefix !== undefined && { prefix: overrides.prefix }),
     ...(overrides.nextNumber !== undefined && { nextNumber: overrides.nextNumber }),
+    ...(overrides.defaultNotes !== undefined && { defaultNotes: overrides.defaultNotes }),
+    ...(overrides.defaultTerms !== undefined && { defaultTerms: overrides.defaultTerms }),
     labels: {
       ...defaults.labels,
       ...(overrides.labels || {}),

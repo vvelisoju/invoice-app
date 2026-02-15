@@ -60,15 +60,12 @@ export default function PlanLimitModal({ isOpen, onClose, resourceType = 'invoic
   const colors = COLOR_MAP[config.color]
   const Icon = config.icon
 
-  const plan = usage?.data.plan
-  const usageData = usage?.data.usage
+  // Handle both unwrapped { plan, usage } and wrapped { data: { plan, usage } } formats
+  const resolved = usage?.data?.plan ? usage.data : usage
+  const plan = resolved?.plan
+  const usageData = resolved?.usage
   const used = config.getUsed(usageData)
   const limit = config.getLimit(plan)
-  
-  // Debug logging
-  if (isOpen) {
-    console.log('PlanLimitModal data:', { resourceType, usage, plan, usageData, used, limit })
-  }
   const isUnlimited = limit >= 999999
   const percentage = isUnlimited ? 0 : (limit > 0 ? Math.min(used / limit, 1) : 0)
 

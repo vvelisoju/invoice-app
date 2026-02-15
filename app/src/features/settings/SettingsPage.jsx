@@ -50,29 +50,11 @@ const SETTINGS_TABS = [
   { key: 'subscription', label: 'Manage Subscription', mobileLabel: 'Subscription', icon: Crown },
 ]
 
-function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
+function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChange, hasPaidPlan, legacyDefaults }) {
   const [expandedType, setExpandedType] = useState(null)
+  const history = useHistory()
 
-  const handleLabelChange = (typeKey, labelKey, value) => {
-    const current = documentTypeConfig || {}
-    const typeOverrides = current[typeKey] || {}
-    const labels = { ...(typeOverrides.labels || {}), [labelKey]: value }
-    // Remove empty overrides
-    if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.labels?.[labelKey]) {
-      delete labels[labelKey]
-    }
-    const updated = { ...current, [typeKey]: { ...typeOverrides, labels } }
-    // Clean up empty type entries
-    if (Object.keys(updated[typeKey].labels || {}).length === 0) {
-      delete updated[typeKey].labels
-    }
-    if (Object.keys(updated[typeKey] || {}).length === 0) {
-      delete updated[typeKey]
-    }
-    onChange(updated)
-  }
-
-  const handleTopLevelChange = (typeKey, field, value) => {
+  const handleFieldChange = (typeKey, field, value) => {
     const current = documentTypeConfig || {}
     const typeOverrides = { ...(current[typeKey] || {}) }
     if (field === 'nextNumber') {
@@ -88,8 +70,31 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
       } else {
         typeOverrides.prefix = value
       }
+    } else if (field === 'defaultNotes' || field === 'defaultTerms') {
+      if (!value) {
+        delete typeOverrides[field]
+      } else {
+        typeOverrides[field] = value
+      }
     }
     const updated = { ...current, [typeKey]: typeOverrides }
+    if (Object.keys(updated[typeKey] || {}).length === 0) {
+      delete updated[typeKey]
+    }
+    onChange(updated)
+  }
+
+  const handleLabelChange = (typeKey, labelKey, value) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = current[typeKey] || {}
+    const labels = { ...(typeOverrides.labels || {}), [labelKey]: value }
+    if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.labels?.[labelKey]) {
+      delete labels[labelKey]
+    }
+    const updated = { ...current, [typeKey]: { ...typeOverrides, labels } }
+    if (Object.keys(updated[typeKey].labels || {}).length === 0) {
+      delete updated[typeKey].labels
+    }
     if (Object.keys(updated[typeKey] || {}).length === 0) {
       delete updated[typeKey]
     }
@@ -100,9 +105,22 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
     return documentTypeConfig?.[typeKey]?.labels?.[labelKey] || ''
   }
 
-  const getTopLevel = (typeKey, field) => {
+  const getField = (typeKey, field) => {
     const val = documentTypeConfig?.[typeKey]?.[field]
     return val !== undefined && val !== null ? String(val) : ''
+  }
+
+  // For the legacy 'invoice' type, fall back to business-level defaults if no per-type override exists
+  const getFieldWithLegacy = (typeKey, field) => {
+    const perType = getField(typeKey, field)
+    if (perType) return perType
+    if (typeKey === 'invoice' && legacyDefaults) {
+      if (field === 'prefix' && legacyDefaults.invoicePrefix) return legacyDefaults.invoicePrefix
+      if (field === 'nextNumber' && legacyDefaults.nextInvoiceNumber) return String(legacyDefaults.nextInvoiceNumber)
+      if (field === 'defaultNotes' && legacyDefaults.defaultNotes) return legacyDefaults.defaultNotes
+      if (field === 'defaultTerms' && legacyDefaults.defaultTerms) return legacyDefaults.defaultTerms
+    }
+    return ''
   }
 
   const enabledDefaults = ALL_INVOICE_TYPES
@@ -110,121 +128,176 @@ function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }
     .map(t => ({ ...t, defaults: DOCUMENT_TYPE_DEFAULTS[t.key] }))
     .filter(t => t.defaults)
 
+  const inputClass = "w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+  const labelClass = "text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block"
+  const sectionTitleClass = "text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2"
+
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
       <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
-        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-          <Pencil className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+          <Layers className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
         </div>
         <div>
-          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Labels</h3>
-          <p className="text-[11px] md:text-xs text-textSecondary">Customize field labels, numbering & line item columns for each document type</p>
+          <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Document Type Settings</h3>
+          <p className="text-[11px] md:text-xs text-textSecondary">Configure numbering, defaults & labels for each document type</p>
         </div>
       </div>
       <div className="p-3 md:p-4 space-y-2">
         {enabledDefaults.map((type) => {
           const isExpanded = expandedType === type.key
           const Icon = type.icon
-          const hasOverrides = documentTypeConfig?.[type.key] && Object.keys(documentTypeConfig[type.key]).length > 0
+          const typeConf = documentTypeConfig?.[type.key] || {}
+          const hasOverrides = Object.keys(typeConf).length > 0
+          const previewPrefix = getFieldWithLegacy(type.key, 'prefix') || type.defaults.prefix
+          const previewNum = getFieldWithLegacy(type.key, 'nextNumber') || '1'
+          const previewInvNum = `${previewPrefix}${String(previewNum).padStart(4, '0')}`
+
           return (
             <div key={type.key} className="border border-border rounded-lg overflow-hidden">
               <button
                 onClick={() => setExpandedType(isExpanded ? null : type.key)}
                 className="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 md:hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className="w-4 h-4 text-gray-400 shrink-0" />
                   <span className="text-sm font-medium text-textPrimary">{type.label}</span>
+                  {!isExpanded && (
+                    <span className="text-[11px] text-textSecondary font-mono hidden sm:inline">{previewInvNum}</span>
+                  )}
                   {hasOverrides && (
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase">Customized</span>
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase shrink-0">Customized</span>
                   )}
                 </div>
-                {isExpanded ? (
-                  <ChevronRight className="w-4 h-4 text-textSecondary rotate-90 transition-transform" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-textSecondary transition-transform" />
-                )}
+                <ChevronRight className={`w-4 h-4 text-textSecondary transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
               </button>
               {isExpanded && (
-                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50 space-y-4">
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-gray-50/50 space-y-5">
                   {/* Numbering */}
                   <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Numbering</p>
+                    <p className={sectionTitleClass}>Numbering</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Prefix</label>
+                        <label className={labelClass}>Prefix</label>
                         <input
                           type="text"
-                          value={getTopLevel(type.key, 'prefix')}
-                          onChange={(e) => handleTopLevelChange(type.key, 'prefix', e.target.value)}
+                          value={getFieldWithLegacy(type.key, 'prefix')}
+                          onChange={(e) => handleFieldChange(type.key, 'prefix', e.target.value)}
                           placeholder={type.defaults.prefix || 'INV-'}
                           maxLength={10}
-                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Next Number</label>
+                        <label className={labelClass}>Next Number</label>
                         <input
                           type="number"
                           min="1"
-                          value={getTopLevel(type.key, 'nextNumber')}
-                          onChange={(e) => handleTopLevelChange(type.key, 'nextNumber', e.target.value)}
+                          value={getFieldWithLegacy(type.key, 'nextNumber')}
+                          onChange={(e) => handleFieldChange(type.key, 'nextNumber', e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-textSecondary mt-1.5">
+                      Next: <span className="font-mono font-semibold">{previewInvNum}</span>
+                    </p>
+                  </div>
+
+                  {/* Default Notes & Terms */}
+                  <div>
+                    <p className={sectionTitleClass}>Defaults</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className={labelClass}>Default Notes</label>
+                        <textarea
+                          value={getFieldWithLegacy(type.key, 'defaultNotes')}
+                          onChange={(e) => handleFieldChange(type.key, 'defaultNotes', e.target.value)}
+                          placeholder={`Notes to appear on every ${type.defaults.label?.toLowerCase() || 'document'}`}
+                          rows={2}
+                          className={`${inputClass} resize-none`}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Default Terms & Conditions</label>
+                        <textarea
+                          value={getFieldWithLegacy(type.key, 'defaultTerms')}
+                          onChange={(e) => handleFieldChange(type.key, 'defaultTerms', e.target.value)}
+                          placeholder="Terms & conditions"
+                          rows={2}
+                          className={`${inputClass} resize-none`}
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Section Labels */}
-                  <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Section Labels</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {[
-                        { key: 'fromSection', label: 'From Label' },
-                        { key: 'toSection', label: 'To Label' },
-                        { key: 'numberField', label: 'Number Label' },
-                        { key: 'dateField', label: 'Date Label' },
-                        { key: 'saveButton', label: 'Save Button' },
-                      ].map((field) => (
-                        <div key={field.key}>
-                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
-                          <input
-                            type="text"
-                            value={getOverride(type.key, field.key)}
-                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
-                            placeholder={type.defaults.labels[field.key]}
-                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                          />
+                  {/* Section Labels — Advanced Plan only */}
+                  {hasPaidPlan ? (
+                    <>
+                      <div>
+                        <p className={sectionTitleClass}>Section Labels</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {[
+                            { key: 'fromSection', label: 'From Label' },
+                            { key: 'toSection', label: 'To Label' },
+                            { key: 'numberField', label: 'Number Label' },
+                            { key: 'dateField', label: 'Date Label' },
+                            { key: 'saveButton', label: 'Save Button' },
+                          ].map((field) => (
+                            <div key={field.key}>
+                              <label className={labelClass}>{field.label}</label>
+                              <input
+                                type="text"
+                                value={getOverride(type.key, field.key)}
+                                onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                                placeholder={type.defaults.labels[field.key]}
+                                className={inputClass}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Line Item Labels */}
-                  <div>
-                    <p className="text-[10px] font-bold text-textSecondary uppercase tracking-widest mb-2">Line Item Labels</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {[
-                        { key: 'descriptionCol', label: 'Description' },
-                        { key: 'unitPriceCol', label: 'Unit Price' },
-                        { key: 'qtyCol', label: 'Quantity' },
-                        { key: 'amountCol', label: 'Amount' },
-                        { key: 'taxCol', label: 'Tax' },
-                      ].map((field) => (
-                        <div key={field.key}>
-                          <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{field.label}</label>
-                          <input
-                            type="text"
-                            value={getOverride(type.key, field.key)}
-                            onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
-                            placeholder={type.defaults.labels[field.key]}
-                            className="w-full px-3 py-2 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-textSecondary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                          />
+                      {/* Line Item Labels */}
+                      <div>
+                        <p className={sectionTitleClass}>Line Item Labels</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {[
+                            { key: 'descriptionCol', label: 'Description' },
+                            { key: 'unitPriceCol', label: 'Unit Price' },
+                            { key: 'qtyCol', label: 'Quantity' },
+                            { key: 'amountCol', label: 'Amount' },
+                            { key: 'taxCol', label: 'Tax' },
+                          ].map((field) => (
+                            <div key={field.key}>
+                              <label className={labelClass}>{field.label}</label>
+                              <input
+                                type="text"
+                                value={getOverride(type.key, field.key)}
+                                onChange={(e) => handleLabelChange(type.key, field.key, e.target.value)}
+                                placeholder={type.defaults.labels[field.key]}
+                                className={inputClass}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-gray-50 border border-border rounded-lg p-4 text-center">
+                      <Lock className="w-5 h-5 text-gray-300 mx-auto mb-2" />
+                      <p className="text-xs font-medium text-textPrimary mb-0.5">Custom Labels</p>
+                      <p className="text-[11px] text-textSecondary mb-2.5">Customize section & line item labels with a paid plan.</p>
+                      <button
+                        onClick={() => history.push('/plans')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors"
+                      >
+                        <Crown className="w-3 h-3" />
+                        Upgrade
+                      </button>
                     </div>
-                  </div>
+                  )}
 
                   <p className="text-[10px] text-textSecondary">
                     Leave blank to use defaults. Changes apply to new documents.
@@ -2018,31 +2091,21 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                    <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Defaults</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary">Default values applied to new invoices</p>
-                  </div>
-                </div>
-                <div className="p-4 md:p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
-                    <FieldInput label="Invoice Prefix" value={formData.invoicePrefix} onChange={(v) => handleChange('invoicePrefix', v)} placeholder="e.g., INV-" maxLength={10} description="Prefix added before invoice numbers" />
-                    <FieldInput label="Next Invoice Number" type="number" value={formData.nextInvoiceNumber} onChange={(v) => handleChange('nextInvoiceNumber', parseInt(v) || null)} placeholder="e.g., 1" description="Auto-incremented for each new invoice" />
-                    <div className="md:col-span-2">
-                      <FieldTextarea label="Default Notes" value={formData.defaultNotes} onChange={(v) => handleChange('defaultNotes', v)} placeholder="Notes to appear on every invoice" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <FieldTextarea label="Default Terms & Conditions" value={formData.defaultTerms} onChange={(v) => handleChange('defaultTerms', v)} placeholder="Terms & conditions" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Document Type Settings — unified section for all users */}
+              <DocumentTypeSettingsSection
+                enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
+                documentTypeConfig={formData.documentTypeConfig || null}
+                onChange={(config) => handleChange('documentTypeConfig', config)}
+                hasPaidPlan={!!formData.planId}
+                legacyDefaults={{
+                  invoicePrefix: formData.invoicePrefix,
+                  nextInvoiceNumber: formData.nextInvoiceNumber,
+                  defaultNotes: formData.defaultNotes,
+                  defaultTerms: formData.defaultTerms,
+                }}
+              />
 
-              {/* Advanced Invoice Settings — paid plan only */}
+              {/* Advanced: Document Types selector — paid plan only */}
               {formData.planId ? (
                 <div className="space-y-3 md:space-y-6">
                   <div className="flex items-center gap-2 pt-2">
@@ -2056,11 +2119,6 @@ export default function SettingsPage() {
                     defaultDocType={formData.defaultDocType || 'invoice'}
                     onDefaultChange={(docType) => handleChange('defaultDocType', docType)}
                   />
-                  <DocumentTypeLabelSection
-                    enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
-                    documentTypeConfig={formData.documentTypeConfig || null}
-                    onChange={(config) => handleChange('documentTypeConfig', config)}
-                  />
                 </div>
               ) : (
                 <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
@@ -2069,15 +2127,15 @@ export default function SettingsPage() {
                       <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
                     </div>
                     <div>
-                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Advanced Invoice Settings</h3>
-                      <p className="text-[11px] md:text-xs text-textSecondary">Document types, custom labels & more</p>
+                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">More Document Types</h3>
+                      <p className="text-[11px] md:text-xs text-textSecondary">Unlock 12 document types with a paid plan</p>
                     </div>
                   </div>
                   <div className="p-4 md:p-6 text-center">
                     <Lock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm font-medium text-textPrimary mb-1">Upgrade to unlock</p>
                     <p className="text-xs text-textSecondary mb-4 max-w-sm mx-auto">
-                      Customize document types, field labels, and more with a paid plan.
+                      Access all 12 document types including Proforma Invoice, Estimate, Credit Note, Purchase Order and more.
                     </p>
                     <a
                       href="/plans"
