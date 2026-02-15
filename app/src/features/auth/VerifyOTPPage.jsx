@@ -42,8 +42,13 @@ export default function VerifyOTPPage() {
   const verifyOTPMutation = useMutation({
     mutationFn: ({ phone, otp }) => authApi.verifyOTP(phone, otp),
     onSuccess: async (response) => {
-      const { token, user, business } = response.data
+      const { token, user, business, isNewUser } = response.data
       setAuth(token, user, business)
+
+      // Mark new users for welcome modal
+      if (isNewUser) {
+        localStorage.setItem('show_welcome', '1')
+      }
 
       // Check if there's pending demo invoice data to migrate
       const rawDemo = localStorage.getItem(DEMO_INVOICE_KEY)
@@ -119,6 +124,8 @@ export default function VerifyOTPPage() {
         } catch {}
 
         history.replace('/invoices/new?restore=demo')
+      } else if (isNewUser) {
+        setTimeout(() => history.replace('/home'), 500)
       } else {
         setTimeout(() => history.replace('/invoices/new'), 500)
       }

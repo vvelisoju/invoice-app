@@ -166,6 +166,7 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
   // Super admins don't need a business workspace
   let business = null
+  let isNewUser = false
   if (user.role !== 'SUPER_ADMIN') {
     business = await prisma.business.findFirst({
       where: { ownerUserId: user.id }
@@ -173,6 +174,7 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
     if (!business) {
       // Auto-create business workspace
+      isNewUser = true
       business = await prisma.business.create({
         data: {
           ownerUserId: user.id,
@@ -201,6 +203,7 @@ export const verifyOTP = async (prisma, phone, otp) => {
 
   return {
     token,
+    isNewUser,
     user: {
       id: user.id,
       phone: user.phone,

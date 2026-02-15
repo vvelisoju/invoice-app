@@ -390,56 +390,59 @@ export default function ProductListPage() {
       {/* Table */}
       <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
-          {/* Bulk Action Bar */}
+          {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
-              <span className="text-sm font-semibold text-primary">{selectedIds.size} selected</span>
-              <div className="w-px h-5 bg-blue-200" />
-              <button
-                onClick={() => {
-                  const selected = products.filter(p => selectedIds.has(p.id))
-                  const headers = ['Name', 'Default Rate', 'Tax Rate']
-                  const rows = selected.map(p => [
-                    `"${(p.name || '').replace(/"/g, '""')}"`,
-                    p.defaultRate != null ? Number(p.defaultRate).toFixed(2) : '',
-                    p.taxRate != null ? `${Number(p.taxRate)}%` : '',
-                  ])
-                  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-                  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url; a.download = `products_${Date.now()}.csv`
-                  document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                  URL.revokeObjectURL(url)
-                }}
-                className="text-xs font-medium text-primary hover:text-primaryHover flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
-              </button>
-              <button
-                onClick={() => {
-                  const ids = Array.from(selectedIds)
-                  if (ids.length === 1) {
-                    const p = products.find(pr => pr.id === ids[0])
-                    if (p) setDeleteTarget(p)
-                  } else {
-                    setDeleteTarget({ id: '__bulk__', name: `${ids.length} products`, _bulkIds: ids })
-                  }
-                }}
-                className="text-xs font-medium text-red-600 hover:text-red-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={() => setSelectedIds(new Set())}
-                className="text-xs text-textSecondary hover:text-textPrimary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-3 h-3" />
-                Clear
-              </button>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedIds.size} {selectedIds.size === 1 ? 'product' : 'products'} selected
+                </span>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear selection
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const selected = products.filter(p => selectedIds.has(p.id))
+                    const headers = ['Name', 'Default Rate', 'Tax Rate']
+                    const rows = selected.map(p => [
+                      `"${(p.name || '').replace(/"/g, '""')}"`,
+                      p.defaultRate != null ? Number(p.defaultRate).toFixed(2) : '',
+                      p.taxRate != null ? `${Number(p.taxRate)}%` : '',
+                    ])
+                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+                    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = `products_${Date.now()}.csv`
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={() => {
+                    const ids = Array.from(selectedIds)
+                    if (ids.length === 1) {
+                      const p = products.find(pr => pr.id === ids[0])
+                      if (p) setDeleteTarget(p)
+                    } else {
+                      setDeleteTarget({ id: '__bulk__', name: `${ids.length} products`, _bulkIds: ids })
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
             </div>
           )}
 

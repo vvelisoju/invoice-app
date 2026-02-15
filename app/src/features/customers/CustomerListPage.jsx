@@ -750,7 +750,11 @@ export default function CustomerListPage() {
             <p className="text-sm text-textSecondary text-center mb-6">
               {bulkDeleteMutation.isSuccess 
                 ? `${selectedIds.size} ${selectedIds.size === 1 ? 'customer' : 'customers'} deleted successfully.`
-                : `Are you sure you want to delete <span className="font-semibold text-textPrimary">${selectedIds.size} selected ${selectedIds.size === 1 ? 'customer' : 'customers'}</span>? This action cannot be undone.`
+                : (
+                  <>
+                    Are you sure you want to delete <span className="font-semibold text-textPrimary">{selectedIds.size} selected {selectedIds.size === 1 ? 'customer' : 'customers'}</span>? This action cannot be undone.
+                  </>
+                )
               }
             </p>
             {bulkDeleteMutation.isError && (

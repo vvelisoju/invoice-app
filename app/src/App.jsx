@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Route, Switch, Redirect, useHistory } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
@@ -27,6 +27,7 @@ import TemplateEditorPage from './features/templates/TemplateEditorPage'
 import CustomerListPage from './features/customers/CustomerListPage'
 import ProductListPage from './features/products/ProductListPage'
 import PlansPage from './features/plans/PlansPage'
+import WelcomeModal from './components/WelcomeModal'
 
 // Admin pages
 import AdminLayout from './features/admin/AdminLayout'
@@ -93,8 +94,14 @@ function ApiNavigateWirer() {
 function AuthenticatedApp() {
   usePushNotifications()
   useCapacitorListeners()
+
+  const [showWelcome, setShowWelcome] = useState(() => {
+    return localStorage.getItem('show_welcome') === '1'
+  })
+
   return (
     <AppLayout>
+      <WelcomeModal isOpen={showWelcome} onClose={() => setShowWelcome(false)} />
       <Switch>
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/invoices" component={InvoiceListPage} />
