@@ -1,9 +1,32 @@
 import { ZodError } from 'zod'
 import * as businessService from './service.js'
-import { updateBusinessSchema } from './validation.js'
+import {
+  updateBusinessSchema,
+  updateBusinessInfoSchema,
+  updateGstSettingsSchema,
+  updateBankSettingsSchema,
+  updateInvoiceSettingsSchema
+} from './validation.js'
 import { ValidationError } from '../../common/errors.js'
 import { uploadFile, deleteFile } from '../../common/storage.js'
 import { config } from '../../common/config.js'
+
+// Helper: validate with Zod and throw user-friendly ValidationError
+function validateBody(schema, body, request) {
+  try {
+    return schema.parse(body)
+  } catch (err) {
+    if (err instanceof ZodError) {
+      const messages = err.errors.map(e => {
+        const field = e.path.join('.')
+        return field ? `${field}: ${e.message}` : e.message
+      })
+      request.log.warn({ zodErrors: err.errors, body }, 'Validation failed')
+      throw new ValidationError(messages.length === 1 ? messages[0] : 'Please fix the following: ' + messages.join(', '), err.errors)
+    }
+    throw err
+  }
+}
 
 export async function getProfile(request, reply) {
   const business = await businessService.getBusinessProfile(request.businessId)
@@ -24,6 +47,34 @@ export async function updateProfile(request, reply) {
   request.log.info({ validatedKeys: Object.keys(validated) }, 'Business update payload')
   const business = await businessService.updateBusinessProfile(request.businessId, validated)
   return { data: business }
+}
+
+// ============================================================================
+// Section-specific handlers
+// ============================================================================
+
+export async function updateBusinessInfo(request, reply) {
+  const validated = validateBody(updateBusinessInfoSchema, request.body, request)
+  const business = await businessService.updateBusinessInfo(request.businessId, validated)
+  return { data: business, message: 'Business information saved successfully' }
+}
+
+export async function updateGstSettings(request, reply) {
+  const validated = validateBody(updateGstSettingsSchema, request.body, request)
+  const business = await businessService.updateGstSettings(request.businessId, validated)
+  return { data: business, message: 'GST settings saved successfully' }
+}
+
+export async function updateBankSettings(request, reply) {
+  const validated = validateBody(updateBankSettingsSchema, request.body, request)
+  const business = await businessService.updateBankSettings(request.businessId, validated)
+  return { data: business, message: 'Bank & payment details saved successfully' }
+}
+
+export async function updateInvoiceSettings(request, reply) {
+  const validated = validateBody(updateInvoiceSettingsSchema, request.body, request)
+  const business = await businessService.updateInvoiceSettings(request.businessId, validated)
+  return { data: business, message: 'Invoice settings saved successfully' }
 }
 
 export async function getStats(request, reply) {

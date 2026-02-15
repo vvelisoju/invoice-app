@@ -45,6 +45,7 @@ const SETTINGS_TABS = [
   { key: 'gst', label: 'GST Settings', mobileLabel: 'GST', icon: Receipt },
   { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
   { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
+  { key: 'templates', label: 'Invoice Templates', mobileLabel: 'Templates', icon: Palette },
 ]
 
 function DocumentTypeLabelSection({ enabledTypes, documentTypeConfig, onChange }) {
@@ -1114,18 +1115,42 @@ export function AccountSection({ onLogout }) {
   )
 }
 
+// Toast notification component
+function Toast({ toast, onDismiss }) {
+  if (!toast) return null
+  const isError = toast.type === 'error'
+  return (
+    <div className={`fixed top-4 right-4 z-[100] max-w-sm w-full animate-in slide-in-from-top-2 fade-in duration-200`}>
+      <div className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border ${
+        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'
+      }`}>
+        {isError
+          ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+          : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-green-500" />
+        }
+        <p className="text-sm font-medium flex-1">{toast.message}</p>
+        <button onClick={onDismiss} className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const history = useHistory()
   const location = useLocation()
   const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
   const [formData, setFormData] = useState({})
-  const [isDirty, setIsDirty] = useState(false)
+  const [dirtyTabs, setDirtyTabs] = useState({}) // { business: true, gst: false, ... }
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search)
     const section = params.get('section')
     return section && SETTINGS_TABS.some(t => t.key === section) ? section : 'business'
   })
+  const [toast, setToast] = useState(null) // { type: 'success'|'error', message: string }
+  const toastTimerRef = useRef(null)
   const emptyTaxForm = { name: '', rate: '', isDefault: false, isGroup: false, components: [{ name: '', rate: '' }, { name: '', rate: '' }] }
   const [taxForm, setTaxForm] = useState(emptyTaxForm)
   const [showTaxForm, setShowTaxForm] = useState(false) // 'add' | 'edit' | false
@@ -1134,6 +1159,23 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('')
   const tabsRef = useRef(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
+
+  // Toast helper
+  const showToast = useCallback((type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ type, message })
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000)
+  }, [])
+
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast(null)
+  }, [])
+
+  // Is any tab dirty?
+  const isDirty = Object.values(dirtyTabs).some(Boolean)
+  // Is the current tab dirty?
+  const isActiveTabDirty = !!dirtyTabs[activeTab]
 
   const handleTabScroll = useCallback(() => {
     const el = tabsRef.current
@@ -1164,13 +1206,60 @@ export default function SettingsPage() {
     }
   }, [business])
 
+  // Shared mutation success/error handlers
+  const onMutationSuccess = (response, tabKey) => {
+    queryClient.invalidateQueries({ queryKey: ['business'] })
+    setDirtyTabs(prev => ({ ...prev, [tabKey]: false }))
+    const msg = response?.data?.message || 'Settings saved successfully'
+    showToast('success', msg)
+  }
+
+  const onMutationError = (err) => {
+    const msg = err?.response?.data?.error?.message || err?.message || 'Failed to save. Please try again.'
+    showToast('error', msg)
+  }
+
+  // Per-tab mutations
+  const businessInfoMutation = useMutation({
+    mutationFn: (data) => businessApi.updateBusinessInfo(data),
+    onSuccess: (res) => onMutationSuccess(res, 'business'),
+    onError: onMutationError
+  })
+
+  const gstMutation = useMutation({
+    mutationFn: (data) => businessApi.updateGstSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'gst'),
+    onError: onMutationError
+  })
+
+  const bankMutation = useMutation({
+    mutationFn: (data) => businessApi.updateBankSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'bank'),
+    onError: onMutationError
+  })
+
+  const invoiceMutation = useMutation({
+    mutationFn: (data) => businessApi.updateInvoiceSettings(data),
+    onSuccess: (res) => onMutationSuccess(res, 'invoice'),
+    onError: onMutationError
+  })
+
+  // Legacy mutation (for backward compat — sidebar default change, etc.)
   const updateMutation = useMutation({
     mutationFn: (data) => businessApi.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] })
-      setIsDirty(false)
-    }
+      setDirtyTabs({})
+    },
+    onError: onMutationError
   })
+
+  // Which mutation is pending for the current tab?
+  const isSaving = activeTab === 'business' ? businessInfoMutation.isPending
+    : activeTab === 'gst' ? gstMutation.isPending
+    : activeTab === 'bank' ? bankMutation.isPending
+    : activeTab === 'invoice' ? invoiceMutation.isPending
+    : false
 
   // Tax Rates
   const { data: taxRates = [], isLoading: taxRatesLoading } = useQuery({
@@ -1284,31 +1373,36 @@ export default function SettingsPage() {
     }
   }
 
+  // Map fields to their owning tab
+  const fieldTabMap = {
+    name: 'business', phone: 'business', email: 'business', website: 'business', address: 'business', logoUrl: 'business',
+    gstEnabled: 'gst', gstin: 'gst', stateCode: 'gst', defaultTaxRate: 'gst',
+    bankName: 'bank', accountNumber: 'bank', ifscCode: 'bank', upiId: 'bank', signatureUrl: 'bank', signatureName: 'bank',
+    enableStatusWorkflow: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
+    defaultNotes: 'invoice', defaultTerms: 'invoice', enabledInvoiceTypes: 'invoice',
+    documentTypeConfig: 'invoice', defaultDocType: 'invoice',
+  }
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    setIsDirty(true)
+    const tab = fieldTabMap[field] || activeTab
+    setDirtyTabs(prev => ({ ...prev, [tab]: true }))
   }
 
   const handleSave = () => {
-    // Only send known editable fields — exclude server-only fields
-    const {
-      name, phone, email, website, address, logoUrl,
-      gstEnabled, gstin, stateCode, defaultTaxRate,
-      bankName, accountNumber, ifscCode, upiId,
-      signatureUrl, signatureName,
-      enableStatusWorkflow,
-      invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms,
-      enabledInvoiceTypes, documentTypeConfig, defaultDocType
-    } = formData
-    updateMutation.mutate({
-      name, phone, email, website, address, logoUrl,
-      gstEnabled, gstin, stateCode, defaultTaxRate,
-      bankName, accountNumber, ifscCode, upiId,
-      signatureUrl, signatureName,
-      enableStatusWorkflow,
-      invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms,
-      enabledInvoiceTypes, documentTypeConfig, defaultDocType
-    })
+    if (activeTab === 'business') {
+      const { name, phone, email, website, address, logoUrl } = formData
+      businessInfoMutation.mutate({ name, phone, email, website, address, logoUrl })
+    } else if (activeTab === 'gst') {
+      const { gstEnabled, gstin, stateCode, defaultTaxRate } = formData
+      gstMutation.mutate({ gstEnabled, gstin, stateCode, defaultTaxRate })
+    } else if (activeTab === 'bank') {
+      const { bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName } = formData
+      bankMutation.mutate({ bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName })
+    } else if (activeTab === 'invoice') {
+      const { enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
+      invoiceMutation.mutate({ enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
+    }
   }
 
   const handleLogout = () => {
@@ -1327,25 +1421,23 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Toast Notification */}
+      <Toast toast={toast} onDismiss={dismissToast} />
+
       {/* Mobile Header — compact, like Invoice Detail page */}
       <div className="md:hidden px-3 py-2 border-b border-border bg-white shrink-0">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold text-textPrimary">Settings</h1>
           <div className="flex items-center gap-2">
-            {isDirty ? (
+            {isActiveTabDirty ? (
               <button
                 onClick={handleSave}
-                disabled={updateMutation.isPending}
+                disabled={isSaving}
                 className="px-3 py-1.5 bg-primary active:bg-primaryHover text-white rounded-lg font-semibold text-xs flex items-center gap-1.5 disabled:opacity-60"
               >
-                {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save
               </button>
-            ) : updateMutation.isSuccess ? (
-              <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Saved
-              </span>
             ) : null}
           </div>
         </div>
@@ -1379,21 +1471,15 @@ export default function SettingsPage() {
           subtitle="Manage your business profile, tax configuration, and invoice defaults"
           actions={
             <>
-              {isDirty && (
+              {isActiveTabDirty && (
                 <button
                   onClick={handleSave}
-                  disabled={updateMutation.isPending}
+                  disabled={isSaving}
                   className="px-5 py-2.5 bg-primary md:hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
                 >
-                  {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Changes
                 </button>
-              )}
-              {!isDirty && updateMutation.isSuccess && (
-                <span className="text-sm text-green-600 flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Saved
-                </span>
               )}
             </>
           }
@@ -1936,8 +2022,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <TemplateSection />
-
               {/* Advanced Invoice Settings — paid plan only */}
               {formData.planId ? (
                 <div className="space-y-3 md:space-y-6">
@@ -1985,6 +2069,11 @@ export default function SettingsPage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Invoice Templates Tab — separate from Invoice Settings */}
+          {activeTab === 'templates' && (
+            <TemplateSection />
           )}
 
           
