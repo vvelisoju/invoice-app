@@ -430,7 +430,7 @@ function TaxButton({ item, index, onUpdate, taxRates }) {
   }
 
   const label = item.taxRate
-    ? `${Number(item.taxRate)}%${item.taxRateName ? ' ' + item.taxRateName : ''}`
+    ? `${Number(item.taxRate)}%`
     : '+ Tax'
 
   return (

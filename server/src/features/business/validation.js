@@ -32,6 +32,7 @@ export const updateBusinessSchema = z.object({
 
   // Invoice workflow
   enableStatusWorkflow: z.boolean().optional(),
+  enablePoNumber: z.boolean().optional(),
   
   // Invoice defaults
   invoicePrefix: z.preprocess(
@@ -92,6 +93,7 @@ export const updateBankSettingsSchema = z.object({
 
 export const updateInvoiceSettingsSchema = z.object({
   enableStatusWorkflow: z.boolean().optional(),
+  enablePoNumber: z.boolean().optional(),
   invoicePrefix: z.preprocess(
     (val) => (val === null || val === undefined) ? undefined : val,
     z.string().max(10).optional()

@@ -25,6 +25,7 @@ const getDocLabels = (invoice) => {
     taxCol: cfg.labels?.taxCol || 'Tax',
     showShipTo: cfg.fields?.showShipTo !== false,
     showDueDate: cfg.fields?.showDueDate !== false,
+    showPoNumber: cfg.fields?.showPoNumber !== false,
     showLogo: cfg.fields?.showLogo !== false,
     showTerms: cfg.fields?.showTerms !== false,
     showSignature: cfg.fields?.showSignature !== false,
@@ -57,11 +58,10 @@ const formatDate = (dateString) => {
 // Resolve logo/signature: prefer invoice-level snapshot, fallback to business profile
 // Format per-line-item tax label for display in the table
 const formatItemTax = (item) => {
-  if (!item.taxRate && !item.taxRateName) return ''
+  if (!item.taxRate) return ''
   const rate = Number(item.taxRate)
-  if (rate && item.taxRateName) return `${rate}% ${item.taxRateName}`
   if (rate) return `${rate}%`
-  return item.taxRateName
+  return ''
 }
 
 // Check if any line item has per-item tax data
@@ -80,14 +80,14 @@ function computeTaxBreakdown(lineItems) {
         comps.forEach((c) => {
           const key = `${c.name}_${c.rate}`
           const amt = (lineTotal * Number(c.rate)) / 100
-          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0, isComponent: true }
           breakdown[key].amount += amt
         })
       } else {
         const rate = Number(item.taxRate)
         const key = String(rate)
         const amt = (lineTotal * rate) / 100
-        if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+        if (!breakdown[key]) breakdown[key] = { name: 'Tax', rate, amount: 0 }
         breakdown[key].amount += amt
       }
     }
@@ -116,7 +116,7 @@ function TaxBreakdownRows({ invoice, doc, labelStyle, valueStyle, rowStyle }) {
   if (entries.length > 0) {
     return entries.map((entry, i) => (
       <View key={i} style={rowStyle}>
-        <Text style={labelStyle}>{entry.name} ({entry.rate}%)</Text>
+        <Text style={labelStyle}>{entry.isComponent ? entry.name : 'Tax'} ({entry.rate}%)</Text>
         <Text style={valueStyle}>{formatCurrency(entry.amount)}</Text>
       </View>
     ))
@@ -159,11 +159,12 @@ const getBillTo = (invoice) => {
 }
 
 const getShipTo = (invoice) => {
-  if (invoice.shipTo) return invoice.shipTo.split('\n').filter(Boolean)
-  const parts = []
-  if (invoice.customer?.name) parts.push(invoice.customer.name)
-  if (invoice.customer?.address) parts.push(invoice.customer.address)
-  return parts
+  if (!invoice.shipTo) return []
+  // Hide ship-to if it's identical to bill-to (auto-populated incorrectly)
+  const shipNorm = invoice.shipTo.trim()
+  const billNorm = (invoice.billTo || '').trim()
+  if (shipNorm === billNorm) return []
+  return shipNorm.split('\n').filter(Boolean)
 }
 
 // Render multi-line address block for PDF
@@ -241,6 +242,7 @@ export function CleanTemplate({ invoice }) {
             <Text style={cleanStyles.invoiceNumber}>#{invoice.invoiceNumber}</Text>
             <Text>{doc.dateLabel}: {formatDate(invoice.date)}</Text>
             {doc.showDueDate && invoice.dueDate && <Text>Due: {formatDate(invoice.dueDate)}</Text>}
+            {doc.showPoNumber && invoice.poNumber && <Text>P.O.#: {invoice.poNumber}</Text>}
           </View>
         </View>
         <View style={cleanStyles.section}>
@@ -414,6 +416,12 @@ export function ModernRedTemplate({ invoice }) {
                   <Text style={modernRedStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
                 </View>
               )}
+              {doc.showPoNumber && invoice.poNumber && (
+                <View style={modernRedStyles.metaRow}>
+                  <Text style={modernRedStyles.metaLabel}>P.O.#</Text>
+                  <Text style={modernRedStyles.metaValue}>{invoice.poNumber}</Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={modernRedStyles.divider} />
@@ -426,7 +434,7 @@ export function ModernRedTemplate({ invoice }) {
                 detailStyle={modernRedStyles.addressDetail}
               />
             </View>
-            {doc.showShipTo && (
+            {doc.showShipTo && getShipTo(invoice).length > 0 && (
               <View style={modernRedStyles.addressBlock}>
                 <Text style={modernRedStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
@@ -555,6 +563,12 @@ export function ClassicRedTemplate({ invoice }) {
                   <Text style={classicRedStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
                 </View>
               )}
+              {doc.showPoNumber && invoice.poNumber && (
+                <View style={classicRedStyles.metaRow}>
+                  <Text style={classicRedStyles.metaLabel}>P.O.#</Text>
+                  <Text style={classicRedStyles.metaValue}>{invoice.poNumber}</Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={classicRedStyles.addressRow}>
@@ -566,7 +580,7 @@ export function ClassicRedTemplate({ invoice }) {
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            {doc.showShipTo && (
+            {doc.showShipTo && getShipTo(invoice).length > 0 && (
               <View style={classicRedStyles.addressBlock}>
                 <Text style={classicRedStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
@@ -671,6 +685,7 @@ export function WexlerTemplate({ invoice }) {
             <Text style={wexlerStyles.accentMetaText}>{doc.numberLabel} {invoice.invoiceNumber}</Text>
             <Text style={wexlerStyles.accentMetaValue}>{formatDate(invoice.date)}</Text>
             {doc.showDueDate && invoice.dueDate && <Text style={wexlerStyles.accentMetaText}>Due: {formatDate(invoice.dueDate)}</Text>}
+            {doc.showPoNumber && invoice.poNumber && <Text style={wexlerStyles.accentMetaText}>P.O.#: {invoice.poNumber}</Text>}
           </View>
         </View>
         <View style={wexlerStyles.content}>
@@ -691,7 +706,7 @@ export function WexlerTemplate({ invoice }) {
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            {doc.showShipTo && (
+            {doc.showShipTo && getShipTo(invoice).length > 0 && (
               <View style={wexlerStyles.addressBlock}>
                 <Text style={wexlerStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
@@ -818,6 +833,12 @@ export function PlexerTemplate({ invoice }) {
                   <Text style={plexerStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
                 </View>
               )}
+              {doc.showPoNumber && invoice.poNumber && (
+                <View style={plexerStyles.metaRow}>
+                  <Text style={plexerStyles.metaLabel}>P.O.#</Text>
+                  <Text style={plexerStyles.metaValue}>{invoice.poNumber}</Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={plexerStyles.separator} />
@@ -830,7 +851,7 @@ export function PlexerTemplate({ invoice }) {
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            {doc.showShipTo && (
+            {doc.showShipTo && getShipTo(invoice).length > 0 && (
               <View style={plexerStyles.addressBlock}>
                 <Text style={plexerStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
@@ -953,6 +974,12 @@ export function ContemporaryTemplate({ invoice }) {
                   <Text style={contemporaryStyles.metaValue}>{formatDate(invoice.dueDate)}</Text>
                 </>
               )}
+              {doc.showPoNumber && invoice.poNumber && (
+                <>
+                  <Text style={contemporaryStyles.metaLabel}>P.O.#</Text>
+                  <Text style={contemporaryStyles.metaValue}>{invoice.poNumber}</Text>
+                </>
+              )}
               <View style={contemporaryStyles.totalBadge}>
                 <Text style={contemporaryStyles.totalBadgeLabel}>{doc.heading} Total</Text>
                 <Text style={contemporaryStyles.totalBadgeValue}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
@@ -970,7 +997,7 @@ export function ContemporaryTemplate({ invoice }) {
                 detailStyle={{ fontSize: 9, color: '#6B7280' }}
               />
             </View>
-            {doc.showShipTo && (
+            {doc.showShipTo && getShipTo(invoice).length > 0 && (
               <View style={contemporaryStyles.addressBlock}>
                 <Text style={contemporaryStyles.addressLabel}>Ship To</Text>
                 <AddressBlock

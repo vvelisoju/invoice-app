@@ -30,7 +30,8 @@ import {
   AlertTriangle,
   Info,
   Package,
-  Crown
+  Crown,
+  Hash
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
@@ -1471,7 +1472,7 @@ export default function SettingsPage() {
     name: 'business', phone: 'business', email: 'business', website: 'business', address: 'business', logoUrl: 'business',
     gstEnabled: 'gst', gstin: 'gst', stateCode: 'gst', defaultTaxRate: 'gst',
     bankName: 'bank', accountNumber: 'bank', ifscCode: 'bank', upiId: 'bank', signatureUrl: 'bank', signatureName: 'bank',
-    enableStatusWorkflow: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
+    enableStatusWorkflow: 'invoice', enablePoNumber: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
     defaultNotes: 'invoice', defaultTerms: 'invoice', enabledInvoiceTypes: 'invoice',
     documentTypeConfig: 'invoice', defaultDocType: 'invoice',
   }
@@ -1493,8 +1494,8 @@ export default function SettingsPage() {
       const { bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName } = formData
       bankMutation.mutate({ bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName })
     } else if (activeTab === 'invoice') {
-      const { enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
-      invoiceMutation.mutate({ enableStatusWorkflow, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
+      const { enableStatusWorkflow, enablePoNumber, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
+      invoiceMutation.mutate({ enableStatusWorkflow, enablePoNumber, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
     }
   }
 
@@ -2087,6 +2088,32 @@ export default function SettingsPage() {
                     {formData.enableStatusWorkflow
                       ? '✓ Invoices will be saved as Draft first. You can then Issue and Mark as Paid separately.'
                       : '✓ Invoices are saved as Paid immediately — ideal for businesses that don\'t need payment tracking.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* PO Number on Customers */}
+              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                    <Hash className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Purchase Order (PO) Number</h3>
+                    <p className="text-[11px] md:text-xs text-textSecondary">Attach PO numbers to customers for auto-fill</p>
+                  </div>
+                </div>
+                <div className="p-4 md:p-6">
+                  <FieldToggle
+                    label="Enable PO Number on Customers"
+                    description="When enabled, you can add a PO number to each customer. It will auto-populate when selecting a customer on a new invoice."
+                    checked={formData.enablePoNumber || false}
+                    onChange={(v) => handleChange('enablePoNumber', v)}
+                  />
+                  <p className="text-[11px] text-textSecondary mt-3 ml-1">
+                    {formData.enablePoNumber
+                      ? '✓ PO Number field is visible on customer forms and auto-fills on invoices.'
+                      : '✓ PO Number is hidden — enable to track purchase orders per customer.'}
                   </p>
                 </div>
               </div>

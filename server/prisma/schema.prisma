@@ -98,6 +98,7 @@ model Business {
   
   // Invoice workflow
   enableStatusWorkflow Boolean @default(false) // false = save as Paid directly; true = Draft → Issued → Paid
+  enablePoNumber       Boolean @default(false) // When true, allow PO number on customers & auto-populate on invoices
   
   // Invoice defaults
   invoicePrefix      String  @default("INV-")
@@ -174,6 +175,7 @@ model Customer {
   gstin      String?  // Customer GST number
   stateCode  String?  // For place of supply
   address    String?
+  poNumber   String?  // Purchase Order number (when enablePoNumber is on)
   
   deletedAt DateTime?
   createdAt DateTime @default(now())
@@ -243,6 +245,7 @@ model Invoice {
   documentType  String        @default("invoice") // e.g. invoice, quote, receipt, etc.
   date          DateTime      @default(now())
   dueDate       DateTime?
+  poNumber      String?       // Purchase Order number
   status        InvoiceStatus @default(DRAFT)
   
   // Amounts (all in business currency, assumed INR for India)

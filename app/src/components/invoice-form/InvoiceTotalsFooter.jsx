@@ -129,7 +129,7 @@ function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBre
             {taxBreakdown.map((tax) => (
               <div key={`${tax.rate}_${tax.name}`} className="flex justify-between items-center px-2">
                 <span className="text-sm font-medium text-textSecondary">
-                  {tax.name} <span className="text-xs text-textSecondary/70">({tax.rate}%)</span>
+                  {tax.isComponent ? tax.name : 'Tax'} <span className="text-xs text-textSecondary/70">({tax.rate}%)</span>
                 </span>
                 <span className="text-sm font-semibold text-textPrimary">{formatCurrency(tax.amount)}</span>
               </div>
@@ -203,7 +203,7 @@ export default function InvoiceTotalsFooter({
             const key = `${comp.name}_${compRate}`
             const compAmount = (lineTotal * compRate) / 100
             if (!breakdown[key]) {
-              breakdown[key] = { rate: compRate, name: comp.name, amount: 0 }
+              breakdown[key] = { rate: compRate, name: comp.name, amount: 0, isComponent: true }
             }
             breakdown[key].amount += compAmount
           })
@@ -213,9 +213,7 @@ export default function InvoiceTotalsFooter({
           const key = String(rate)
           const taxAmount = (lineTotal * rate) / 100
           if (!breakdown[key]) {
-            breakdown[key] = { rate, name: item.taxRateName || `Tax ${rate}%`, amount: 0 }
-          } else if (!breakdown[key].name.includes(item.taxRateName) && item.taxRateName) {
-            breakdown[key].name = item.taxRateName
+            breakdown[key] = { rate, name: 'Tax', amount: 0 }
           }
           breakdown[key].amount += taxAmount
         }

@@ -24,9 +24,9 @@ const INDIAN_STATES = [
   { code: '37', name: 'Andhra Pradesh' },
 ]
 
-const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' }
+const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '', poNumber: '' }
 
-export default function CustomerAddEditModal({ isOpen, onClose, customer = null, onSuccess, onDelete }) {
+export default function CustomerAddEditModal({ isOpen, onClose, customer = null, onSuccess, onDelete, enablePoNumber = false }) {
   const queryClient = useQueryClient()
   const isEdit = !!customer
   const [form, setForm] = useState(EMPTY_FORM)
@@ -55,6 +55,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
           gstin: customer.gstin || '',
           stateCode: customer.stateCode || '',
           address: customer.address || '',
+          poNumber: customer.poNumber || '',
         })
       } else {
         setForm(EMPTY_FORM)
@@ -111,6 +112,7 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
       gstin: form.gstin || null,
       stateCode: form.stateCode || null,
       address: form.address || null,
+      poNumber: form.poNumber?.trim() || null,
     }
     mutation.mutate(payload)
   }
@@ -234,6 +236,24 @@ export default function CustomerAddEditModal({ isOpen, onClose, customer = null,
               </select>
             </div>
           </div>
+
+          {/* PO Number (conditional) */}
+          {enablePoNumber && (
+            <div>
+              <label className="flex items-center gap-1.5 text-sm font-medium text-textPrimary mb-1.5">
+                <Hash className="w-3.5 h-3.5 text-gray-400" />
+                PO Number
+              </label>
+              <input
+                type="text"
+                value={form.poNumber}
+                onChange={(e) => updateField('poNumber', e.target.value)}
+                placeholder="Purchase Order number"
+                maxLength={50}
+                className="w-full px-3 py-2.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
+              />
+            </div>
+          )}
 
           {/* Address */}
           <div>

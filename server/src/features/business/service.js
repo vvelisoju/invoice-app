@@ -27,6 +27,7 @@ export async function getBusinessProfile(businessId) {
       defaultTerms: true,
       defaultTaxRate: true,
       enableStatusWorkflow: true,
+      enablePoNumber: true,
       enabledInvoiceTypes: true,
       documentTypeConfig: true,
       defaultDocType: true,
@@ -67,6 +68,7 @@ const BUSINESS_SELECT = {
   defaultTerms: true,
   defaultTaxRate: true,
   enableStatusWorkflow: true,
+  enablePoNumber: true,
   enabledInvoiceTypes: true,
   documentTypeConfig: true,
   defaultDocType: true,
@@ -140,6 +142,7 @@ export async function updateInvoiceSettings(businessId, data) {
   if (data.defaultNotes !== undefined) updateData.defaultNotes = data.defaultNotes
   if (data.defaultTerms !== undefined) updateData.defaultTerms = data.defaultTerms
   if (data.enableStatusWorkflow !== undefined) updateData.enableStatusWorkflow = data.enableStatusWorkflow
+  if (data.enablePoNumber !== undefined) updateData.enablePoNumber = data.enablePoNumber
   if (data.enabledInvoiceTypes !== undefined) updateData.enabledInvoiceTypes = data.enabledInvoiceTypes
   if (data.documentTypeConfig !== undefined) updateData.documentTypeConfig = data.documentTypeConfig
   if (data.defaultDocType !== undefined) updateData.defaultDocType = data.defaultDocType || 'invoice'
@@ -205,6 +208,7 @@ export async function updateBusinessProfile(businessId, data) {
   if (data.defaultNotes !== undefined) updateData.defaultNotes = data.defaultNotes
   if (data.defaultTerms !== undefined) updateData.defaultTerms = data.defaultTerms
   if (data.enableStatusWorkflow !== undefined) updateData.enableStatusWorkflow = data.enableStatusWorkflow
+  if (data.enablePoNumber !== undefined) updateData.enablePoNumber = data.enablePoNumber
   if (data.enabledInvoiceTypes !== undefined) updateData.enabledInvoiceTypes = data.enabledInvoiceTypes
   if (data.documentTypeConfig !== undefined) updateData.documentTypeConfig = data.documentTypeConfig
   if (data.defaultDocType !== undefined) updateData.defaultDocType = data.defaultDocType || 'invoice'

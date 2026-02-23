@@ -160,6 +160,7 @@ export const createInvoice = async (prisma, businessId, data) => {
       documentType: data.documentType || 'invoice',
       date: data.date ? new Date(data.date) : new Date(),
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      poNumber: data.poNumber || null,
       status: initialStatus,
       issuedAt: !business.enableStatusWorkflow ? new Date() : null,
       paidAt: !business.enableStatusWorkflow ? new Date() : null,

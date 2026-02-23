@@ -5,6 +5,7 @@ import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
 import springedge from 'springedge'
 import { emit as emitNotification } from '../notifications/service.js'
+import { createDefaultGSTIntrastateTaxes } from '../tax-rates/service.js'
 
 const forceSms = () => process.env.FORCE_SMS === 'true' && !!config.sms.springEdgeApiKey
 const isProduction = () => (config.nodeEnv === 'production' || forceSms()) && !!config.sms.springEdgeApiKey
@@ -180,6 +181,11 @@ export const verifyOTP = async (prisma, phone, otp) => {
           ownerUserId: user.id,
           name: `Business ${phone.slice(-4)}` // Temporary name
         }
+      })
+
+      // Seed default GST intrastate tax groups (fire-and-forget)
+      createDefaultGSTIntrastateTaxes(business.id).catch((err) => {
+        logger.error({ err, businessId: business.id }, '[Auth] Failed to seed default GST tax groups')
       })
 
       // Emit welcome notification for new users

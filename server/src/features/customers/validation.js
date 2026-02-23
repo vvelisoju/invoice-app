@@ -10,7 +10,8 @@ export const createCustomerSchema = z.object({
   email: z.string().email().optional().nullable(),
   gstin: z.string().length(15).optional().nullable(),
   stateCode: z.string().optional().nullable(),
-  address: z.string().optional().nullable()
+  address: z.string().optional().nullable(),
+  poNumber: z.string().max(50).optional().nullable()
 })
 
 export const updateCustomerSchema = z.object({
@@ -19,5 +20,6 @@ export const updateCustomerSchema = z.object({
   email: z.string().email().optional().nullable(),
   gstin: z.string().length(15).optional().nullable(),
   stateCode: z.string().optional().nullable(),
-  address: z.string().optional().nullable()
+  address: z.string().optional().nullable(),
+  poNumber: z.string().max(50).optional().nullable()
 })

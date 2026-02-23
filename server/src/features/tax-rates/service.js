@@ -1,11 +1,76 @@
 import { prisma } from '../../common/prisma.js'
 import { NotFoundError, ForbiddenError } from '../../common/errors.js'
+import { logger } from '../../common/logger.js'
+
+// ============================================================================
+// Default GST Intrastate Tax Groups (CGST + SGST)
+// ============================================================================
+
+const DEFAULT_GST_GROUPS = [
+  { name: 'GST 0%',  rate: 0,  isDefault: false },
+  { name: 'GST 5%',  rate: 5,  isDefault: false },
+  { name: 'GST 12%', rate: 12, isDefault: false },
+  { name: 'GST 18%', rate: 18, isDefault: true  },
+  { name: 'GST 28%', rate: 28, isDefault: false },
+]
+
+/**
+ * Create default GST intrastate tax groups (CGST + SGST) for a business.
+ * Idempotent — skips if any tax rates already exist for the business.
+ * Wrapped in a DB transaction for atomicity.
+ */
+export async function createDefaultGSTIntrastateTaxes(businessId) {
+  return prisma.$transaction(async (tx) => {
+    // Idempotency: skip if business already has tax rates
+    const existing = await tx.taxRate.count({ where: { businessId } })
+    if (existing > 0) {
+      logger.info({ businessId, existing }, '[GST Seed] Tax rates already exist, skipping')
+      return null
+    }
+
+    const created = await Promise.all(
+      DEFAULT_GST_GROUPS.map((group) =>
+        tx.taxRate.create({
+          data: {
+            businessId,
+            name: group.name,
+            rate: group.rate,
+            isDefault: group.isDefault,
+            components: [
+              { name: 'CGST', rate: group.rate / 2 },
+              { name: 'SGST', rate: group.rate / 2 },
+            ],
+          },
+        })
+      )
+    )
+
+    logger.info({ businessId, count: created.length }, '[GST Seed] Default intrastate tax groups created')
+    return created
+  })
+}
 
 export async function listTaxRates(businessId) {
-  const taxRates = await prisma.taxRate.findMany({
+  let taxRates = await prisma.taxRate.findMany({
     where: { businessId },
     orderBy: [{ isDefault: 'desc' }, { rate: 'asc' }]
   })
+
+  // Auto-seed default GST groups if business has none yet
+  if (taxRates.length === 0) {
+    try {
+      logger.info({ businessId }, '[GST Seed] No tax rates found, auto-seeding defaults')
+      const seeded = await createDefaultGSTIntrastateTaxes(businessId)
+      if (seeded) {
+        taxRates = await prisma.taxRate.findMany({
+          where: { businessId },
+          orderBy: [{ isDefault: 'desc' }, { rate: 'asc' }]
+        })
+      }
+    } catch (err) {
+      logger.error({ err, businessId }, '[GST Seed] Auto-seed failed in listTaxRates')
+    }
+  }
 
   // Enrich each tax rate with product usage count
   const enriched = await Promise.all(

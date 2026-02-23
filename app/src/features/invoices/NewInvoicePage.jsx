@@ -298,6 +298,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         documentType: documentTypeKey,
         date: invoice.date,
         dueDate: invoice.dueDate || null,
+        poNumber: invoice.poNumber || null,
         lineItems: validLineItems,
         discountTotal: parseFloat(invoice.discountTotal) || 0,
         taxRate: invoice.taxRate ? parseFloat(invoice.taxRate) : null,
@@ -533,6 +534,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             onCustomerSelect={(customer) => {
               setSelectedCustomer(customer)
               setCustomer(customer)
+              if (businessProfile?.enablePoNumber && customer?.poNumber) {
+                updateField('poNumber', customer.poNumber)
+              }
             }}
             onCreateNewCustomer={async (name) => {
               if (!isDemo) {
@@ -651,9 +655,13 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           customer={editCustomer}
           initialName={createCustomerName}
           demoMode
+          enablePoNumber={businessProfile?.enablePoNumber || false}
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            if (businessProfile?.enablePoNumber && customer?.poNumber) {
+              updateField('poNumber', customer.poNumber)
+            }
             setEditCustomer(null)
           }}
         />
@@ -663,9 +671,13 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           onClose={() => { setShowCreateCustomer(false); setEditCustomer(null) }}
           customer={editCustomer}
           initialName={createCustomerName}
+          enablePoNumber={businessProfile?.enablePoNumber || false}
           onCreated={(customer) => {
             setSelectedCustomer(customer)
             setCustomer(customer)
+            if (businessProfile?.enablePoNumber && customer?.poNumber) {
+              updateField('poNumber', customer.poNumber)
+            }
             setEditCustomer(null)
           }}
         />

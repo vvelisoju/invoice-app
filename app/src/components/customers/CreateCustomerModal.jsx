@@ -6,7 +6,7 @@ import Portal from '../Portal'
 import PlanLimitModal from '../PlanLimitModal'
 import { addDemoCustomer } from '../../lib/demoStorage'
 
-const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '' }
+const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', address: '', poNumber: '' }
 
 /**
  * Reusable modal for creating or editing a customer.
@@ -17,7 +17,7 @@ const EMPTY_FORM = { name: '', phone: '', email: '', gstin: '', stateCode: '', a
  * - customer?: object — if provided, modal is in edit mode
  * - initialName?: string — pre-fill the name field (create mode only)
  */
-export default function CreateCustomerModal({ isOpen, onClose, onCreated, customer = null, initialName = '', demoMode }) {
+export default function CreateCustomerModal({ isOpen, onClose, onCreated, customer = null, initialName = '', demoMode, enablePoNumber = false }) {
   const queryClient = useQueryClient()
   const isEdit = !!customer
   const [formData, setFormData] = useState(EMPTY_FORM)
@@ -34,6 +34,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
           gstin: customer.gstin || '',
           stateCode: customer.stateCode || '',
           address: customer.address || '',
+          poNumber: customer.poNumber || '',
         })
       } else {
         setFormData({ ...EMPTY_FORM, name: initialName || '' })
@@ -88,7 +89,8 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
       ...(formData.email && { email: formData.email.trim() }),
       ...(formData.gstin && { gstin: formData.gstin.trim().toUpperCase() }),
       ...(formData.stateCode && { stateCode: formData.stateCode.trim() }),
-      ...(formData.address && { address: formData.address.trim() })
+      ...(formData.address && { address: formData.address.trim() }),
+      ...(formData.poNumber && { poNumber: formData.poNumber.trim() })
     }
     if (demoMode) {
       const result = addDemoCustomer(payload)
@@ -200,6 +202,21 @@ export default function CreateCustomerModal({ isOpen, onClose, onCreated, custom
               />
             </div>
           </div>
+
+          {/* PO Number (conditional) */}
+          {enablePoNumber && (
+            <div>
+              <label className="block text-xs font-medium text-textSecondary mb-1.5 ml-0.5">PO Number</label>
+              <input
+                type="text"
+                value={formData.poNumber}
+                onChange={(e) => handleChange('poNumber', e.target.value)}
+                placeholder="Purchase Order number"
+                maxLength={50}
+                className="w-full px-3.5 py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              />
+            </div>
+          )}
 
           {/* Address */}
           <div>

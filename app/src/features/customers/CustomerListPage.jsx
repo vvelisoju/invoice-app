@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { Plus, Search, Users, FileText, Pencil, Trash2, AlertTriangle, Loader2, SlidersHorizontal, Star, FolderOpen, RotateCcw } from 'lucide-react'
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { customerApi } from '../../lib/api'
+import { customerApi, businessApi } from '../../lib/api'
 import {
   DataTable,
   StatusFilterPills,
@@ -71,6 +71,15 @@ export default function CustomerListPage() {
   const history = useHistory()
   const location = useLocation()
   const queryClient = useQueryClient()
+
+  // Fetch business profile to check enablePoNumber
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    }
+  })
 
   // Read sidebar filter from URL query param
   const urlFilter = new URLSearchParams(location.search).get('filter') || 'all'
@@ -605,6 +614,7 @@ export default function CustomerListPage() {
         onClose={() => { setShowAddModal(false); setEditingCustomer(null) }}
         customer={editingCustomer}
         onSuccess={() => { setShowAddModal(false); setEditingCustomer(null) }}
+        enablePoNumber={businessProfile?.enablePoNumber || false}
       />
 
       {/* Delete Confirmation Modal */}

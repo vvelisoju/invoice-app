@@ -42,9 +42,9 @@ export default function InvoiceLineItemRow({
             <button
               onClick={() => onTaxClick?.(index)}
               className="flex-1 bg-green-50 active:bg-green-100 md:hover:bg-green-100 text-green-700 text-xs font-medium py-2 md:py-1.5 px-3 rounded border border-green-200/50 transition-colors truncate"
-              title={item.taxName || `Tax ${item.tax}%`}
+              title={`${item.tax}%`}
             >
-              {item.taxName || `${item.tax}%`}
+              {`${item.tax}%`}
             </button>
           ) : (
             <button

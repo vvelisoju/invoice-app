@@ -24,6 +24,7 @@ const getDocLabels = (invoice) => {
     taxCol: cfg.labels?.taxCol || 'Tax',
     showShipTo: cfg.fields?.showShipTo !== false,
     showDueDate: cfg.fields?.showDueDate !== false,
+    showPoNumber: cfg.fields?.showPoNumber !== false,
     showLogo: cfg.fields?.showLogo !== false,
     showTerms: cfg.fields?.showTerms !== false,
     showSignature: cfg.fields?.showSignature !== false,
@@ -55,11 +56,10 @@ const formatDate = (dateString) => {
 
 // Format per-line-item tax label for display in the table
 const formatItemTax = (item) => {
-  if (!item.taxRate && !item.taxRateName) return ''
+  if (!item.taxRate) return ''
   const rate = Number(item.taxRate)
-  if (rate && item.taxRateName) return `${rate}% ${item.taxRateName}`
   if (rate) return `${rate}%`
-  return item.taxRateName
+  return ''
 }
 
 // Check if any line item has per-item tax data
@@ -77,14 +77,14 @@ function computeTaxBreakdown(lineItems) {
         comps.forEach((c) => {
           const key = `${c.name}_${c.rate}`
           const amt = (lineTotal * Number(c.rate)) / 100
-          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0 }
+          if (!breakdown[key]) breakdown[key] = { name: c.name, rate: Number(c.rate), amount: 0, isComponent: true }
           breakdown[key].amount += amt
         })
       } else {
         const rate = Number(item.taxRate)
         const key = String(rate)
         const amt = (lineTotal * rate) / 100
-        if (!breakdown[key]) breakdown[key] = { name: item.taxRateName || 'Tax', rate, amount: 0 }
+        if (!breakdown[key]) breakdown[key] = { name: 'Tax', rate, amount: 0 }
         breakdown[key].amount += amt
       }
     }
@@ -127,11 +127,12 @@ const getBillTo = (invoice) => {
 }
 
 const getShipTo = (invoice) => {
-  if (invoice.shipTo) return invoice.shipTo.split('\n').filter(Boolean)
-  const parts = []
-  if (invoice.customer?.name) parts.push(invoice.customer.name)
-  if (invoice.customer?.address) parts.push(invoice.customer.address)
-  return parts
+  if (!invoice.shipTo) return []
+  // Hide ship-to if it's identical to bill-to (auto-populated incorrectly)
+  const shipNorm = invoice.shipTo.trim()
+  const billNorm = (invoice.billTo || '').trim()
+  if (shipNorm === billNorm) return []
+  return shipNorm.split('\n').filter(Boolean)
 }
 
 // ============================================================================
@@ -249,6 +250,12 @@ function HeaderCentered({ invoice, doc, palette, layout }) {
             <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatDate(invoice.dueDate)}</Text>
           </View>
         )}
+        {doc.showPoNumber && invoice.poNumber && (
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            <Text style={{ fontSize: 8, color: palette.textMuted }}>P.O.#:</Text>
+            <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{invoice.poNumber}</Text>
+          </View>
+        )}
       </View>
     </View>
   )
@@ -292,6 +299,9 @@ function HeaderMinimal({ invoice, doc, palette, layout }) {
         {doc.showDueDate && invoice.dueDate && (
           <Text style={{ fontSize: 9, color: palette.textLight, marginTop: 1 }}>Due: {formatDate(invoice.dueDate)}</Text>
         )}
+        {doc.showPoNumber && invoice.poNumber && (
+          <Text style={{ fontSize: 9, color: palette.textLight, marginTop: 1 }}>P.O.#: {invoice.poNumber}</Text>
+        )}
       </View>
     </View>
   )
@@ -323,6 +333,12 @@ function HeaderDualColumn({ invoice, doc, palette, layout }) {
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 }}>
               <Text style={{ fontSize: 9, color: palette.textLight, marginRight: 10, width: 70, textAlign: 'right' }}>Due Date</Text>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 80 }}>{formatDate(invoice.dueDate)}</Text>
+            </View>
+          )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 }}>
+              <Text style={{ fontSize: 9, color: palette.textLight, marginRight: 10, width: 70, textAlign: 'right' }}>P.O.#</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 80 }}>{invoice.poNumber}</Text>
             </View>
           )}
         </View>
@@ -358,6 +374,12 @@ function HeaderSplitPanel({ invoice, doc, palette, layout }) {
             <Text style={{ fontSize: 10, fontWeight: 'bold', color: palette.text }}>{formatDate(invoice.dueDate)}</Text>
           </View>
         )}
+        {doc.showPoNumber && invoice.poNumber && (
+          <View style={{ marginTop: 4 }}>
+            <Text style={{ fontSize: 8, color: palette.textMuted, textTransform: 'uppercase' }}>P.O.#</Text>
+            <Text style={{ fontSize: 10, fontWeight: 'bold', color: palette.text }}>{invoice.poNumber}</Text>
+          </View>
+        )}
       </View>
     </View>
   )
@@ -391,6 +413,12 @@ function HeaderFullColor({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 11, color: palette.headerText, fontWeight: 'bold', marginBottom: 4 }}>{formatDate(invoice.dueDate)}</Text>
             </>
           )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <>
+              <Text style={{ fontSize: 7, color: palette.headerTextMuted, textTransform: 'uppercase' }}>P.O.#</Text>
+              <Text style={{ fontSize: 11, color: palette.headerText, fontWeight: 'bold', marginBottom: 4 }}>{invoice.poNumber}</Text>
+            </>
+          )}
           {showBadge && (
             <View style={{ backgroundColor: '#FFFFFF', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 4, marginTop: 10 }}>
               <Text style={{ fontSize: 7, color: palette.primary, textTransform: 'uppercase', fontWeight: 'bold' }}>{doc.heading} Total</Text>
@@ -417,6 +445,7 @@ function HeaderAccentBand({ invoice, doc, palette, layout }) {
         <Text style={{ fontSize: 9, color: palette.primaryMuted, marginBottom: 2 }}>{doc.numberLabel} {invoice.invoiceNumber}</Text>
         <Text style={{ fontSize: 11, color: palette.headerText, fontWeight: 'bold' }}>{formatDate(invoice.date)}</Text>
         {doc.showDueDate && invoice.dueDate && <Text style={{ fontSize: 9, color: palette.primaryMuted }}>Due: {formatDate(invoice.dueDate)}</Text>}
+        {doc.showPoNumber && invoice.poNumber && <Text style={{ fontSize: 9, color: palette.primaryMuted }}>P.O.#: {invoice.poNumber}</Text>}
       </View>
     </View>
   )
@@ -454,9 +483,15 @@ function MetaBlock({ invoice, doc, palette, layout }) {
             <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{formatDate(invoice.date)}</Text>
           </View>
           {doc.showDueDate && invoice.dueDate && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
               <Text style={{ fontSize: 8, color: palette.primaryDark, textTransform: 'uppercase', fontWeight: 'bold' }}>Due Date</Text>
               <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{formatDate(invoice.dueDate)}</Text>
+            </View>
+          )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 8, color: palette.primaryDark, textTransform: 'uppercase', fontWeight: 'bold' }}>P.O.#</Text>
+              <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{invoice.poNumber}</Text>
             </View>
           )}
         </View>
@@ -474,9 +509,15 @@ function MetaBlock({ invoice, doc, palette, layout }) {
             <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{formatDate(invoice.date)}</Text>
           </View>
           {doc.showDueDate && invoice.dueDate && (
-            <View>
+            <View style={{ marginBottom: 3 }}>
               <Text style={{ fontSize: 7, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>Due Date</Text>
               <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{formatDate(invoice.dueDate)}</Text>
+            </View>
+          )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <View>
+              <Text style={{ fontSize: 7, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>P.O.#</Text>
+              <Text style={{ fontSize: 10, color: palette.text, fontWeight: 'bold' }}>{invoice.poNumber}</Text>
             </View>
           )}
         </View>
@@ -500,6 +541,12 @@ function MetaBlock({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 80 }}>{formatDate(invoice.dueDate)}</Text>
             </View>
           )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 }}>
+              <Text style={{ fontSize: 9, color: palette.textLight, marginRight: 10, width: 70, textAlign: 'right' }}>P.O.#</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 80 }}>{invoice.poNumber}</Text>
+            </View>
+          )}
         </View>
       )
 
@@ -515,9 +562,15 @@ function MetaBlock({ invoice, doc, palette, layout }) {
             <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatDate(invoice.date)}</Text>
           </View>
           {doc.showDueDate && invoice.dueDate && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
               <Text style={{ fontSize: 8, color: palette.textMuted, fontWeight: 'bold' }}>Due Date</Text>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatDate(invoice.dueDate)}</Text>
+            </View>
+          )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 8, color: palette.textMuted, fontWeight: 'bold' }}>P.O.#</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{invoice.poNumber}</Text>
             </View>
           )}
         </View>
@@ -531,6 +584,9 @@ function MetaBlock({ invoice, doc, palette, layout }) {
           <Text style={{ fontSize: 9, color: palette.textLight }}>{doc.dateLabel}: {formatDate(invoice.date)}</Text>
           {doc.showDueDate && invoice.dueDate && (
             <Text style={{ fontSize: 9, color: palette.textLight }}>Due: {formatDate(invoice.dueDate)}</Text>
+          )}
+          {doc.showPoNumber && invoice.poNumber && (
+            <Text style={{ fontSize: 9, color: palette.textLight }}>P.O.#: {invoice.poNumber}</Text>
           )}
         </View>
       )
@@ -614,7 +670,8 @@ function AddressSection({ invoice, doc, palette, layout }) {
     ? { flex: 1, borderWidth: 1, borderColor: palette.border, padding: 10 }
     : { flex: 1 }
 
-  const showShip = layout.showShipTo && doc.showShipTo
+  const shipToLines = getShipTo(invoice)
+  const showShip = layout.showShipTo && doc.showShipTo && shipToLines.length > 0
   const isThreeCol = layout.addressLayout === 'three-column'
 
   if (layout.addressLayout === 'stacked') {
@@ -641,7 +698,7 @@ function AddressSection({ invoice, doc, palette, layout }) {
       {showShip && (
         <View style={blockStyle}>
           <Text style={addressLabelStyle}>Ship To</Text>
-          <AddressBlock lines={getShipTo(invoice)} nameStyle={nameStyle} detailStyle={detailStyle} />
+          <AddressBlock lines={shipToLines} nameStyle={nameStyle} detailStyle={detailStyle} />
         </View>
       )}
     </View>
@@ -786,7 +843,7 @@ function TotalsSection({ invoice, doc, palette, layout }) {
         if (entries.length > 0) {
           return entries.map((entry, i) => (
             <View key={i} style={{ flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 }}>
-              <Text style={{ fontSize: 9, color: palette.textLight }}>{entry.name} ({entry.rate}%)</Text>
+              <Text style={{ fontSize: 9, color: palette.textLight }}>{entry.isComponent ? entry.name : 'Tax'} ({entry.rate}%)</Text>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{formatCurrency(entry.amount)}</Text>
             </View>
           ))

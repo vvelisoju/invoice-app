@@ -64,7 +64,8 @@ export const createCustomer = async (prisma, businessId, data) => {
       email: data.email || null,
       gstin: data.gstin || null,
       stateCode: data.stateCode || null,
-      address: data.address || null
+      address: data.address || null,
+      poNumber: data.poNumber || null
     }
   })
 
