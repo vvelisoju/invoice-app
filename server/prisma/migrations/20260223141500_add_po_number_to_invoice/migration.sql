@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Invoice" ADD COLUMN "poNumber" TEXT;
+ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "poNumber" TEXT;
