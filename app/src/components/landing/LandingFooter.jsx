@@ -57,7 +57,7 @@ function LandingFooter() {
                 />
                 <span className="text-base font-bold text-white">{BRANDING.name}</span>
               </div>
-              <p className="text-sm text-gray-400 leading-relaxed mb-5">{BRANDING.tagline}</p>
+              <p className="text-sm text-gray-400 leading-relaxed mb-5">{BRANDING.tagline}. Free GST invoice generator for freelancers and small businesses in India.</p>
               {/* Social Media Links */}
               <div className="flex items-center gap-3">
                 <a href="https://x.com/invoicebaba" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white transition-colors" aria-label="Twitter / X">
@@ -76,7 +76,7 @@ function LandingFooter() {
             </div>
 
             {/* Product */}
-            <div>
+            <nav aria-label="Product links">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Product</h4>
               <ul className="space-y-2.5">
                 {[
@@ -92,25 +92,25 @@ function LandingFooter() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
 
             {/* Company */}
-            <div>
+            <nav aria-label="Company links">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Company</h4>
               <ul className="space-y-2.5">
                 <li><Link to="/contact" className="text-sm text-gray-400 hover:text-white transition-colors">Contact</Link></li>
               </ul>
-            </div>
+            </nav>
 
             {/* Legal */}
-            <div>
+            <nav aria-label="Legal links">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Legal</h4>
               <ul className="space-y-2.5">
                 <li><Link to="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link to="/refund-policy" className="text-sm text-gray-400 hover:text-white transition-colors">Refund Policy</Link></li>
               </ul>
-            </div>
+            </nav>
           </div>
         </div>
 

@@ -4,6 +4,8 @@ import { Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../../lib/api'
 import { isNative } from '../../lib/capacitor'
+import SEOHead from '../../components/SEOHead'
+import { SEO_PAGES } from '../../config/seoPages'
 
 export default function PhonePage() {
   const [phone, setPhone] = useState('')
@@ -35,8 +37,15 @@ export default function PhonePage() {
     requestOTPMutation.mutate(phone)
   }
 
+  const pageSeo = SEO_PAGES.authPhone
+
   return (
     <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+      <SEOHead
+        title={pageSeo.title}
+        description={pageSeo.description}
+        path={pageSeo.path}
+      />
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">

@@ -1,0 +1,51 @@
+{
+  "name": "Invoice Baba - Free GST Invoice Generator for Indian Businesses",
+  "short_name": "Invoice Baba",
+  "description": "Create professional GST-compliant invoices in under 2 minutes. Free invoice generator for freelancers & small businesses in India. Works offline, share via WhatsApp.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/brand/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/brand/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/brand/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/brand/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.invoicebaba.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/invoice-baba/id0000000000"
+    }
+  ],
+  "prefer_related_applications": false
+}

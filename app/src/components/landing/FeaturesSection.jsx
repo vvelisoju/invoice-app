@@ -50,7 +50,7 @@ function FeaturesSection() {
   }
 
   return (
-    <section id="features" className="py-16 sm:py-20 lg:py-24 bg-white">
+    <section id="features" aria-label="Invoice Baba Features — GST Invoices, Offline, WhatsApp Sharing" className="py-16 sm:py-20 lg:py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4">

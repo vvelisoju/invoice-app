@@ -14,7 +14,7 @@ function TemplatesSection() {
   ]
 
   return (
-    <section id="templates" className="py-16 sm:py-20 lg:py-24 bg-white">
+    <section id="templates" aria-label="Professional invoice templates for Indian businesses" className="py-16 sm:py-20 lg:py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-700 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4">

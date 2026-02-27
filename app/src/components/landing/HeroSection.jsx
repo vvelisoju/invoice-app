@@ -12,7 +12,7 @@ function HeroSection() {
   ]
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
+    <section aria-label="Invoice Baba — Free GST Invoice Generator" className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
       {/* Decorative blobs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
@@ -32,6 +32,7 @@ function HeroSection() {
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"> GST Invoices </span>
               in Under 2 Minutes
             </h1>
+            <h2 className="sr-only">Invoice Baba — Free Invoice Generator for Small Businesses in India</h2>
 
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
               The simplest invoicing app for freelancers and small businesses. Create, customize, and share beautiful PDF invoices — even offline.

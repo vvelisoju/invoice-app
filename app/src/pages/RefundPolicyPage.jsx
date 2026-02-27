@@ -1,12 +1,20 @@
 import LandingHeader from '../components/landing/LandingHeader'
 import LandingFooter from '../components/landing/LandingFooter'
 import { BRANDING } from '../config/branding'
+import SEOHead from '../components/SEOHead'
+import { SEO_PAGES } from '../config/seoPages'
 
 function RefundPolicyPage() {
   const currentYear = new Date().getFullYear()
+  const pageSeo = SEO_PAGES.refundPolicy
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      <SEOHead
+        title={pageSeo.title}
+        description={pageSeo.description}
+        path={pageSeo.path}
+      />
       <LandingHeader />
       <main className="flex-1">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">

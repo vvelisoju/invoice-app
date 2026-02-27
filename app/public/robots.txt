@@ -1,0 +1,31 @@
+# Invoice Baba - https://invoicebaba.com
+# Robots.txt for search engine crawling
+
+User-agent: *
+Allow: /
+Allow: /terms
+Allow: /privacy
+Allow: /refund-policy
+Allow: /contact
+Allow: /demo
+Allow: /auth/phone
+
+# Block authenticated/internal app routes from indexing
+Disallow: /home
+Disallow: /invoices
+Disallow: /customers
+Disallow: /products
+Disallow: /settings
+Disallow: /account
+Disallow: /plans
+Disallow: /reports
+Disallow: /templates
+Disallow: /admin
+Disallow: /auth/verify
+
+# Block API and assets that don't need indexing
+Disallow: /api/
+Disallow: /assets/logs*
+
+# Sitemap location
+Sitemap: https://invoicebaba.com/sitemap.xml

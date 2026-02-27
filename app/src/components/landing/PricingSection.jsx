@@ -121,7 +121,7 @@ function PricingSection() {
   })
 
   return (
-    <section id="pricing" className="py-16 sm:py-20 lg:py-24 bg-gray-900">
+    <section id="pricing" aria-label="Invoice Baba pricing plans — Free and Pro" className="py-16 sm:py-20 lg:py-24 bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4">

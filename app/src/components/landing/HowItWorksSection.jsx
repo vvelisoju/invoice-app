@@ -35,7 +35,7 @@ function HowItWorksSection() {
   }
 
   return (
-    <section id="how-it-works" className="py-16 sm:py-20 lg:py-24 bg-gray-50">
+    <section id="how-it-works" aria-label="How to create GST invoices with Invoice Baba" className="py-16 sm:py-20 lg:py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4">

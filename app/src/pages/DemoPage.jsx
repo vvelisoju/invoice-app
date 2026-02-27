@@ -1,12 +1,21 @@
 import { useHistory } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import NewInvoicePage from '../features/invoices/NewInvoicePage'
+import SEOHead from '../components/SEOHead'
+import { SEO_PAGES } from '../config/seoPages'
 
 function DemoPage() {
   const history = useHistory()
+  const pageSeo = SEO_PAGES.demo
 
   return (
     <div className="min-h-screen bg-bgPrimary flex flex-col">
+      <SEOHead
+        title={pageSeo.title}
+        description={pageSeo.description}
+        path={pageSeo.path}
+        jsonLd={pageSeo.jsonLd}
+      />
       <header className="bg-bgSecondary border-b border-border px-4 md:px-6 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <img
