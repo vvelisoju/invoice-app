@@ -95,7 +95,7 @@ function SignatureSection({ signatureUrl, signatureName, onSignatureClick, colla
 function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBreakdown, totalTaxFromItems, currency, formatCurrency, onDiscountChange }) {
   return (
     <div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex justify-between items-center px-2">
           <span className="text-sm font-medium text-textSecondary">Subtotal</span>
           <span className="text-sm font-semibold text-textPrimary">{formatCurrency(subtotal)}</span>
@@ -146,10 +146,10 @@ function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBre
         )}
       </div>
 
-      <div className="mt-4 md:mt-6 pt-4 md:pt-5 border-t border-border border-dashed">
+      <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border border-dashed">
         <div className="flex justify-between items-end px-2">
           <div className="flex flex-col">
-            <span className="text-lg md:text-xl font-bold text-textPrimary">TOTAL</span>
+            <span className="text-base md:text-lg font-bold text-textPrimary">TOTAL</span>
             <div className="flex items-center gap-1 mt-1 cursor-pointer group">
               <span className="text-xs font-bold text-primary bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 group-hover:bg-blue-100 transition-colors">
                 {currency}
@@ -157,7 +157,7 @@ function TotalsBlock({ subtotal, discountTotal, taxRate, taxTotal, total, taxBre
               <Pencil className="w-2.5 h-2.5 text-textSecondary opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
-          <span className="text-xl md:text-2xl font-bold text-primary tracking-tight">
+          <span className="text-lg md:text-xl font-bold text-primary tracking-tight">
             {formatCurrency(totalTaxFromItems > 0 ? (subtotal - discountTotal + totalTaxFromItems) : total)}
           </span>
         </div>
@@ -227,9 +227,9 @@ export default function InvoiceTotalsFooter({
   const [sigCollapsed, setSigCollapsed] = useState(true)
 
   return (
-    <div className="pt-4 md:pt-6 border-t border-border">
+    <div className="pt-3 md:pt-4 border-t border-border">
       {/* Desktop: 2-column grid (Terms left, Totals+Signature right) */}
-      <div className="hidden md:grid md:grid-cols-2 gap-10">
+      <div className="hidden md:grid md:grid-cols-2 gap-6">
         {showTerms ? (
           <TermsSection terms={terms} onTermsChange={onTermsChange} />
         ) : <div />}
@@ -241,7 +241,7 @@ export default function InvoiceTotalsFooter({
             onDiscountChange={onDiscountChange}
           />
           {showSignature && (
-            <div className="mt-6">
+            <div className="mt-4">
               <SignatureSection
                 signatureUrl={signatureUrl} signatureName={signatureName}
                 onSignatureClick={onSignatureClick} collapsed={false} onToggle={() => {}}
@@ -252,7 +252,7 @@ export default function InvoiceTotalsFooter({
       </div>
 
       {/* Mobile: single column — Totals → Signature → Terms */}
-      <div className="md:hidden space-y-5">
+      <div className="md:hidden space-y-3">
         <TotalsBlock
           subtotal={subtotal} discountTotal={discountTotal} taxRate={taxRate}
           taxTotal={taxTotal} total={total} taxBreakdown={taxBreakdown}

@@ -312,17 +312,17 @@ export default function ProductListPage() {
           <>
             <button
               onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors ${
+              className={`w-7 h-7 flex items-center justify-center rounded-md border transition-colors ${
                 showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
               }`}
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <SlidersHorizontal className="w-3 h-3" />
             </button>
             <button
               onClick={handleAddProduct}
-              className="w-10 h-10 flex items-center justify-center text-white bg-[#2563eb] active:bg-[#1d4ed8] rounded-lg shadow-sm"
+              className="w-7 h-7 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-md shadow-sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </>
         }
@@ -334,15 +334,15 @@ export default function ProductListPage() {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search products..."
-                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="pl-7 pr-2 py-1 text-xs border border-border rounded-md w-full sm:w-48 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+              <Search className="w-3 h-3 absolute left-2 top-1.5 text-gray-400" />
             </div>
             <button
               onClick={handleAddProduct}
-              className="px-4 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-primary hover:bg-primaryHover rounded-md transition-colors flex items-center gap-1 shadow-sm"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3 h-3" />
               Add Product
             </button>
           </>
@@ -350,16 +350,16 @@ export default function ProductListPage() {
       >
         {/* Mobile: collapsible filters */}
         {showMobileFilters && (
-          <div className="md:hidden space-y-3 mb-1">
+          <div className="md:hidden space-y-1.5">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search products..."
-                className="pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg w-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="pl-7 pr-2 py-1 text-xs border border-border rounded-md w-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
-              <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
+              <Search className="w-3 h-3 absolute left-2 top-1.5 text-gray-400" />
             </div>
             <StatusFilterPills
               filters={STATUS_FILTERS}
@@ -379,11 +379,11 @@ export default function ProductListPage() {
       </PageToolbar>
 
       {/* Table */}
-      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
+      <div className="flex-1 px-3 md:px-6 py-2.5 md:py-3 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <div className="mb-2.5 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-blue-900">
                   {selectedIds.size} {selectedIds.size === 1 ? 'product' : 'products'} selected
@@ -448,7 +448,7 @@ export default function ProductListPage() {
             selectable={true}
             onSelectionChange={setSelectedIds}
             isLoading={isLoading}
-            emptyIcon={<Package className="w-16 h-16 text-gray-300 mb-4" />}
+            emptyIcon={<Package className="w-12 h-12 text-gray-300 mb-3" />}
             emptyTitle={statusFilter !== 'all' ? 'No products match this filter' : 'No products yet'}
             emptyMessage={statusFilter !== 'all' ? 'Try a different filter or add new products' : 'Add your first product or service to get started'}
             renderMobileCard={(product) => {
@@ -482,7 +482,7 @@ export default function ProductListPage() {
             } : undefined}
             footer={
               products.length > 0 && (
-                <div className="border-t border-border bg-gray-50 px-6 py-3 flex items-center justify-between">
+                <div className="border-t border-border bg-gray-50 px-4 py-2 flex items-center justify-between">
                   <div className="text-xs text-textSecondary">
                     Showing <span className="font-medium text-textPrimary">{page * PAGE_SIZE + 1}</span> to{' '}
                     <span className="font-medium text-textPrimary">{Math.min((page + 1) * PAGE_SIZE, products.length)}</span> of{' '}
@@ -520,10 +520,6 @@ export default function ProductListPage() {
         </div>
       </div>
 
-      {/* Footer — hidden on mobile */}
-      <div className="hidden md:block text-center py-4 bg-bgPrimary">
-        <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
-      </div>
 
       {/* Add / Edit Product Modal */}
       <ProductAddEditModal

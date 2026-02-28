@@ -67,27 +67,27 @@ export default function DataTable({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
       </div>
     )
   }
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-        {emptyIcon || <FileText className="w-16 h-16 text-gray-300 mb-4" />}
-        <h2 className="text-lg font-semibold text-textSecondary mb-1">{emptyTitle}</h2>
+      <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+        {emptyIcon || <FileText className="w-12 h-12 text-gray-300 mb-3" />}
+        <h2 className="text-sm font-semibold text-textSecondary mb-0.5">{emptyTitle}</h2>
         {emptyMessage && <p className="text-sm text-textSecondary">{emptyMessage}</p>}
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden flex flex-col" style={{ minHeight: 300 }}>
+    <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden flex flex-col" style={{ minHeight: 200 }}>
       {/* Desktop Table Header — hidden on mobile */}
       <div
-        className="hidden md:grid gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-textSecondary uppercase tracking-wider items-center border-b border-border"
+        className="hidden md:grid gap-3 px-5 py-2 bg-gray-50 text-[11px] font-semibold text-textSecondary uppercase tracking-wider items-center border-b border-border"
         style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
       >
         {selectable && (
@@ -120,14 +120,14 @@ export default function DataTable({
               {renderMobileCard ? (
                 <div
                   onClick={() => (onMobileRowClick || onRowClick)?.(row)}
-                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
+                  className={`md:hidden px-3 py-2 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
                 >
                   {renderMobileCard(row, index)}
                 </div>
               ) : (
                 <div
                   onClick={() => (onMobileRowClick || onRowClick)?.(row)}
-                  className={`md:hidden px-4 py-3 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
+                  className={`md:hidden px-3 py-2 border-b border-borderLight active:bg-gray-50 transition-colors ${(onMobileRowClick || onRowClick) ? 'cursor-pointer' : ''} ${extraClass}`}
                 >
                   {/* Default mobile: show first and last cells */}
                   <div className="flex items-center justify-between gap-3">
@@ -147,7 +147,7 @@ export default function DataTable({
               {/* Desktop Grid Row */}
               <div
                 onClick={() => onRowClick?.(row)}
-                className={`hidden md:grid gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors group text-sm ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
+                className={`hidden md:grid gap-3 px-5 py-2.5 items-center hover:bg-gray-50 transition-colors group text-sm ${onRowClick ? 'cursor-pointer' : ''} ${extraClass}`}
                 style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
               >
                 {selectable && (
@@ -172,7 +172,7 @@ export default function DataTable({
 
       {/* Load More */}
       {loadMore?.hasMore && (
-        <div className="px-6 py-4 text-center border-t border-border">
+        <div className="px-5 py-2.5 text-center border-t border-border">
           <button
             onClick={loadMore.onLoadMore}
             disabled={loadMore.isLoading}

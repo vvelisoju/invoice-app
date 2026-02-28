@@ -253,9 +253,9 @@ export default function InvoiceHeaderSection({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-5 md:gap-8 mb-6 md:mb-8">
+    <div className="flex flex-col md:flex-row gap-3 md:gap-5 mb-4 md:mb-5">
       {/* Left Column: From, Bill To, Ship To */}
-      <div className={`flex-1 ${isAdvanced ? 'space-y-4 md:space-y-5' : 'space-y-4 md:space-y-6'}`}>
+      <div className={`flex-1 ${isAdvanced ? 'space-y-3 md:space-y-4' : 'space-y-3 md:space-y-4'}`}>
         {/* From Section — editable with auto-suggestion */}
         <div className="group relative transition-all">
           <div className="flex items-center justify-between mb-2">
@@ -601,7 +601,7 @@ export default function InvoiceHeaderSection({
       </div>
 
       {/* Right Column: Logo & Metadata */}
-      <div className="w-full md:w-72 flex flex-col gap-4 md:gap-6">
+      <div className="w-full md:w-72 flex flex-col gap-3 md:gap-4">
         {/* Mobile: compact summary row for Invoice # & Date */}
         <div className="md:hidden">
           <button
@@ -645,29 +645,29 @@ export default function InvoiceHeaderSection({
 
         {/* Invoice Meta — hidden on mobile when collapsed */}
         <div className={`${metaCollapsed ? 'hidden md:block' : ''}`}>
-          <div className="bg-bgPrimary/30 rounded-xl p-4 md:p-5 border border-transparent active:border-border md:hover:border-border transition-all space-y-3 md:space-y-4">
+          <div className="bg-bgPrimary/30 rounded-xl p-3 md:p-4 border border-transparent active:border-border md:hover:border-border transition-all space-y-2.5 md:space-y-3">
             <div>
-              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">{labels.numberField || 'Invoice #'}</label>
+              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{labels.numberField || 'Invoice #'}</label>
               <div className="relative">
                 <input
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => onInvoiceNumberChange(e.target.value)}
                   placeholder="Auto-generated"
-                  className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm font-semibold text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm font-semibold text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                 />
                 <Hash className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary/30" />
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">
+              <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">
                 {isAdvanced ? (labels.dateField || 'Invoice Date') : 'Date'}
               </label>
               <input
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => onInvoiceDateChange(e.target.value)}
-                className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
 
@@ -676,24 +676,24 @@ export default function InvoiceHeaderSection({
               <>
                 {fields.showPoNumber !== false && (
                 <div>
-                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">P.O.#</label>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">P.O.#</label>
                   <input
                     type="text"
                     value={poNumber}
                     onChange={(e) => onPoNumberChange(e.target.value)}
                     placeholder="Purchase Order (optional)"
-                    className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
                 )}
                 {fields.showDueDate !== false && (
                 <div>
-                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1.5 block">Due Date</label>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">Due Date</label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => onDueDateChange(e.target.value)}
-                    className="w-full px-3 py-2.5 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
                 )}

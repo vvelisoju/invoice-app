@@ -465,47 +465,47 @@ export default function InvoiceListPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header — compact */}
-      <div className="bg-white border-b border-border px-4 md:px-8 pt-2.5 md:pt-3 pb-2 md:pb-2.5">
+      {/* Header — single compact bar */}
+      <div className="bg-white border-b border-border px-4 md:px-8 pt-1.5 md:pt-2 pb-1.5 md:pb-2">
         <div className="max-w-7xl mx-auto">
           {/* Mobile: title + actions */}
-          <div className="flex items-center justify-between md:hidden mb-2">
-            <h1 className="text-base font-bold text-textPrimary truncate">Documents</h1>
-            <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-between md:hidden mb-1">
+            <h1 className="text-sm font-bold text-textPrimary truncate">Documents</h1>
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowMobileFilters(!showMobileFilters)}
-                className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors tap-target-auto ${
+                className={`w-7 h-7 flex items-center justify-center rounded-md border transition-colors tap-target-auto ${
                   showMobileFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-textSecondary active:bg-gray-50'
                 }`}
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="w-3 h-3" />
               </button>
               <button
                 onClick={() => history.push('/invoices/new')}
-                className="w-9 h-9 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-lg shadow-sm tap-target-auto"
+                className="w-7 h-7 flex items-center justify-center text-white bg-primary active:bg-primaryHover rounded-md shadow-sm tap-target-auto"
               >
-                <Plus className="w-4.5 h-4.5" />
+                <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {/* Desktop: title row */}
-          <div className="hidden md:flex items-center justify-between mb-2">
-            <h1 className="text-lg font-bold text-textPrimary">Documents</h1>
+          <div className="hidden md:flex items-center justify-between mb-1">
+            <h1 className="text-sm font-semibold text-textPrimary">Documents</h1>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleExport}
                 disabled={filteredInvoices.length === 0}
-                className="px-3 py-1.5 text-xs font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-40"
+                className="px-2 py-1 text-[11px] font-medium text-textSecondary hover:text-textPrimary hover:bg-gray-50 rounded-md transition-colors flex items-center gap-1 disabled:opacity-40"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3 h-3" />
                 Export
               </button>
               <button
                 onClick={() => history.push('/invoices/new')}
-                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primaryHover rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                className="px-2.5 py-1 text-[11px] font-semibold text-white bg-primary hover:bg-primaryHover rounded-md transition-colors flex items-center gap-1 shadow-sm"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3 h-3" />
                 New Document
               </button>
             </div>
@@ -513,27 +513,25 @@ export default function InvoiceListPage() {
 
           {/* Mobile: collapsible filters */}
           {showMobileFilters && (
-            <div className="md:hidden space-y-2.5 mb-1">
+            <div className="md:hidden space-y-1.5">
               <StatusFilterPills
                 filters={STATUS_FILTERS}
                 activeKey={statusFilter}
                 onChange={setStatusFilter}
               />
-              {/* Customer filter — mobile */}
               <CustomerSelectFilter
                 customers={allCustomers}
                 selectedId={selectedCustomerId}
                 onChange={handleCustomerChange}
               />
-              {/* Doc type pills — mobile */}
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
                 {filteredDocTypeOptions.map((opt) => {
                   const active = !allDocTypesSelected && (docTypeFilters[opt.key] !== false)
                   return (
                     <button
                       key={opt.key}
                       onClick={() => handleDocTypePillClick(opt.key)}
-                      className={`px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap shrink-0 border transition-colors tap-target-auto ${
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap shrink-0 border transition-colors tap-target-auto ${
                         active
                           ? 'bg-primary/10 text-primary border-primary/30'
                           : 'text-textSecondary border-border active:bg-gray-50'
@@ -547,40 +545,32 @@ export default function InvoiceListPage() {
             </div>
           )}
 
-          {/* Desktop: status pills */}
-          <div className="hidden md:block">
+          {/* Desktop: Row 1 — status pills + customer filter */}
+          <div className="hidden md:flex items-center gap-2 mb-1">
             <StatusFilterPills
               filters={STATUS_FILTERS}
               activeKey={statusFilter}
               onChange={setStatusFilter}
             />
+            <div className="h-4 w-px bg-border shrink-0" />
+            <div className="shrink-0 w-48">
+              <CustomerSelectFilter
+                customers={allCustomers}
+                selectedId={selectedCustomerId}
+                onChange={handleCustomerChange}
+                compact
+              />
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Secondary Filters — desktop: customer filter (left) + doc type pills (right) */}
-      <div className="hidden md:block bg-white border-b border-borderLight">
-        <div className="max-w-7xl mx-auto px-8 py-1.5 flex items-center gap-3">
-          {/* Customer Filter — left */}
-          <div className="shrink-0 w-72">
-            <CustomerSelectFilter
-              customers={allCustomers}
-              selectedId={selectedCustomerId}
-              onChange={handleCustomerChange}
-              compact
-            />
-          </div>
-          {/* Divider */}
-          <div className="h-5 w-px bg-border shrink-0" />
-          {/* Document Type pills — smaller */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0">
+          {/* Desktop: Row 2 — document type pills */}
+          <div className="hidden md:flex items-center gap-0.5 overflow-x-auto no-scrollbar">
             {filteredDocTypeOptions.map((opt) => {
               const active = !allDocTypesSelected && (docTypeFilters[opt.key] !== false)
               return (
                 <button
                   key={opt.key}
                   onClick={() => handleDocTypePillClick(opt.key)}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap shrink-0 border transition-colors ${
+                  className={`px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap shrink-0 border transition-colors ${
                     active
                       ? 'bg-primary/10 text-primary border-primary/30'
                       : 'text-textSecondary border-border hover:bg-gray-50 hover:text-textPrimary'
@@ -596,7 +586,7 @@ export default function InvoiceListPage() {
 
       {/* Bulk Action Toolbar */}
       {selectedIds.length > 0 && (
-        <div className="bg-primary/5 border-b border-primary/20 px-4 md:px-8 py-2">
+        <div className="bg-primary/5 border-b border-primary/20 px-4 md:px-8 py-1.5">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <span className="text-sm font-medium text-textPrimary">
               {selectedIds.length} document{selectedIds.length !== 1 ? 's' : ''} selected
@@ -621,7 +611,7 @@ export default function InvoiceListPage() {
       )}
 
       {/* Table Section */}
-      <div className="flex-1 px-3 md:px-8 py-4 md:py-6 pb-mobile-nav overflow-y-auto">
+      <div className="flex-1 px-3 md:px-6 py-2.5 md:py-3 pb-mobile-nav overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <DataTable
             columns={TABLE_COLUMNS}
@@ -635,7 +625,7 @@ export default function InvoiceListPage() {
             onSelectAll={handleSelectAll}
             onSelectOne={handleSelectOne}
             isLoading={isLoading}
-            emptyIcon={<FileText className="w-16 h-16 text-gray-300 mb-4" />}
+            emptyIcon={<FileText className="w-12 h-12 text-gray-300 mb-3" />}
             emptyTitle="No documents yet"
             emptyMessage="Create your first invoice to get started"
             renderMobileCard={(invoice) => {
@@ -683,10 +673,6 @@ export default function InvoiceListPage() {
         </div>
       </div>
 
-      {/* Footer — hidden on mobile */}
-      <div className="hidden md:block text-center py-4 bg-bgPrimary">
-        <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
-      </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

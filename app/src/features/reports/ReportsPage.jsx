@@ -192,20 +192,20 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-bgPrimary p-3 md:p-6 pb-mobile-nav">
-      <div className="max-w-7xl mx-auto flex flex-col gap-4">
+    <div className="flex-1 overflow-y-auto bg-bgPrimary p-2 md:p-3 pb-mobile-nav">
+      <div className="max-w-7xl mx-auto flex flex-col gap-1.5">
 
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <h1 className="text-lg md:text-xl font-bold text-textPrimary">Reports</h1>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5">
+          <h1 className="text-sm font-semibold text-textPrimary">Reports</h1>
+          <div className="flex items-center gap-1.5">
             {/* Document Type Selector */}
             <div className="flex-1 md:flex-initial">
               <div className="relative">
                 <select
                   value={selectedDocType}
                   onChange={(e) => setSelectedDocType(e.target.value)}
-                  className="w-full md:w-48 pl-3 pr-8 py-2 text-sm border border-border rounded-lg appearance-none cursor-pointer bg-white focus:ring-primary focus:border-primary"
+                  className="w-full md:w-40 pl-2.5 pr-7 py-1 text-xs border border-border rounded-md appearance-none cursor-pointer bg-white focus:ring-primary focus:border-primary"
                 >
                   {availableDocTypes.map(type => (
                     <option key={type.key} value={type.key}>
@@ -219,7 +219,7 @@ export default function ReportsPage() {
             </div>
             <button
               onClick={() => setShowCAModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors shrink-0"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-md bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors shrink-0"
             >
               <Download className="w-3.5 h-3.5" /> CA Package
             </button>
@@ -262,7 +262,7 @@ export default function ReportsPage() {
         )}
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-white border border-border rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
           {TABS.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.key
@@ -270,13 +270,13 @@ export default function ReportsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 shrink-0 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1 shrink-0 px-2 md:px-2.5 py-1 rounded-md text-[10px] md:text-[11px] font-medium whitespace-nowrap transition-colors border ${
                   isActive
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-textSecondary active:bg-gray-100 md:hover:bg-gray-100 active:text-textPrimary md:hover:text-textPrimary'
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'text-textSecondary border-border active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary'
                 }`}
               >
-                <Icon className="w-4 h-4 hidden md:block" />
+                <Icon className="w-3 h-3 hidden md:block" />
                 {tab.label}
               </button>
             )

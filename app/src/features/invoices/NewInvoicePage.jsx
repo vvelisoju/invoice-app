@@ -503,9 +503,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const fromAddress = invoice.fromAddress || ''
 
   return (
-    <div className="p-2 md:p-6 relative">
+    <div className="p-1.5 md:p-4 relative">
       {/* Document Container */}
-      <div className="max-w-5xl mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[600px] md:min-h-[800px] flex flex-col relative">
+      <div className="max-w-5xl mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[500px] md:min-h-[700px] flex flex-col relative">
         {/* Toolbar: Basic/Advanced toggle + Invoice Title + Save */}
         <InvoiceFormToolbar
           formMode={formMode}
@@ -518,13 +518,13 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
 
         {/* Error */}
         {error && (
-          <div className="mx-3 md:mx-8 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="mx-2.5 md:mx-6 mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
             {error}
           </div>
         )}
 
         {/* Invoice Form Content */}
-        <div className="p-3 md:p-10 flex-1">
+        <div className="p-2.5 md:p-6 flex-1">
           {/* Header Section: From, Bill To, Ship To, Logo, Meta */}
           <InvoiceHeaderSection
             formMode={formMode}
@@ -633,7 +633,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             type="button"
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="bg-primary text-white py-3 px-4 flex items-center justify-center gap-2 active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer w-full font-semibold text-sm tap-target-auto disabled:opacity-60"
+            className="bg-primary text-white py-2.5 px-4 flex items-center justify-center gap-2 active:bg-primaryHover md:hover:bg-primaryHover transition-colors cursor-pointer w-full font-semibold text-sm tap-target-auto disabled:opacity-60"
           >
             {saveMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -645,10 +645,6 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         </div>
       </div>
 
-      {/* Footer — hidden on mobile */}
-      <div className="hidden md:block text-center mt-4 md:mt-6 mb-4">
-        <p className="text-xs text-textSecondary">© 2026 Invoice Baba. All rights reserved.</p>
-      </div>
 
       {/* Create / Edit Customer Modal */}
       {isDemo ? (

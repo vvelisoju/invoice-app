@@ -135,7 +135,7 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+      <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
           <Layers className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
         </div>
@@ -330,7 +330,7 @@ function InvoiceTypesSection({ enabledTypes, onChange, defaultDocType, onDefault
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+      <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
           <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
         </div>
@@ -467,7 +467,7 @@ function TemplateSection() {
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+      <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2.5 md:gap-3">
           <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
             <Palette className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-600" />
@@ -715,7 +715,7 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+      <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
           <ImageIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-600" />
         </div>
@@ -828,7 +828,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+      <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
           <PenLine className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
         </div>
@@ -1044,7 +1044,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
     <div className="space-y-3 md:space-y-6">
       {/* Profile Information */}
       <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+        <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5 md:gap-3">
             <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
               <User className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
@@ -1092,7 +1092,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
 
       {/* Phone Number */}
       <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
           <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
             <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
           </div>
@@ -1197,7 +1197,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
 
       {/* Account Info */}
       <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+        <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
           <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
             <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-600" />
           </div>
@@ -1236,7 +1236,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
 
       {/* Danger Zone — Delete Account */}
       <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-red-100 flex items-center gap-2.5 md:gap-3">
+        <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-red-100 flex items-center gap-2.5 md:gap-3">
           <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
           </div>
@@ -1626,40 +1626,36 @@ export default function SettingsPage() {
       {/* Toast Notification */}
       <Toast toast={toast} onDismiss={dismissToast} />
 
-      {/* Mobile Header — compact, like Invoice Detail page */}
-      <div className="md:hidden px-3 py-2 border-b border-border bg-white shrink-0">
-        <div className="flex items-center justify-between">
-          <h1 className="text-sm font-bold text-textPrimary">Settings</h1>
-          <div className="flex items-center gap-2">
-            {isActiveTabDirty ? (
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-3 py-1.5 bg-primary active:bg-primaryHover text-white rounded-lg font-semibold text-xs flex items-center gap-1.5 disabled:opacity-60"
-              >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                Save
-              </button>
-            ) : null}
-          </div>
+      {/* Mobile Header + Tabs — combined */}
+      <div className="md:hidden px-3 pt-1 pb-0.5 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-xs font-bold text-textPrimary">Settings</h1>
+          {isActiveTabDirty ? (
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-2 py-0.5 bg-primary active:bg-primaryHover text-white rounded-md font-semibold text-[10px] flex items-center gap-1 disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Save
+            </button>
+          ) : null}
         </div>
       </div>
-
-      {/* Mobile Tab Bar — scrollable, like Invoice Detail action bar */}
-      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
+      <div className="md:hidden flex items-center gap-1 px-3 py-1 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
         {SETTINGS_TABS.map((tab) => {
           const active = activeTab === tab.key
           return (
             <button
               key={tab.key}
               onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
-              className={`px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors ${
+              className={`px-2 py-1 text-[10px] font-medium rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors border ${
                 active
-                  ? 'text-primary bg-blue-50 border border-blue-200'
-                  : 'text-textSecondary active:text-textPrimary active:bg-gray-50 border border-border'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'text-textSecondary border-border active:text-textPrimary active:bg-gray-50'
               }`}
             >
-              <tab.icon className={`w-3.5 h-3.5 ${active ? 'text-primary' : 'text-gray-400'}`} />
+              <tab.icon className={`w-3 h-3 ${active ? 'text-white' : 'text-gray-400'}`} />
               {tab.mobileLabel}
             </button>
           )
@@ -1670,16 +1666,15 @@ export default function SettingsPage() {
       <div className="hidden md:block">
         <PageToolbar
           title="Settings"
-          subtitle="Manage your business profile, tax configuration, and invoice defaults"
           actions={
             <>
               {isActiveTabDirty && (
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-5 py-2.5 bg-primary md:hover:bg-primaryHover text-white rounded-lg transition-all font-semibold text-sm shadow-sm flex items-center gap-2 disabled:opacity-60"
+                  className="px-3 py-1 bg-primary md:hover:bg-primaryHover text-white rounded-md transition-all font-semibold text-[11px] shadow-sm flex items-center gap-1.5 disabled:opacity-60"
                 >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Save Changes
                 </button>
               )}
@@ -1687,11 +1682,11 @@ export default function SettingsPage() {
           }
         >
           {/* Tab Navigation — Desktop */}
-          <div className="relative mt-2">
+          <div className="relative">
             <div
               ref={tabsRef}
               onScroll={handleTabScroll}
-              className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+              className="flex items-center gap-0.5 overflow-x-auto -mx-1 px-1 no-scrollbar"
             >
               {SETTINGS_TABS.map((tab) => {
                 const active = activeTab === tab.key
@@ -1699,13 +1694,13 @@ export default function SettingsPage() {
                   <button
                     key={tab.key}
                     onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                    className={`px-2 md:px-2.5 py-1 text-[10px] md:text-[11px] font-medium rounded-md transition-colors flex items-center gap-1 whitespace-nowrap shrink-0 border ${
                       active
-                        ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
-                        : 'text-textSecondary hover:text-textPrimary hover:bg-gray-50 border border-transparent'
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'text-textSecondary border-border hover:text-textPrimary hover:bg-gray-50'
                     }`}
                   >
-                    <tab.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
+                    <tab.icon className={`w-3 h-3 ${active ? 'text-white' : 'text-gray-400'}`} />
                     {tab.label}
                   </button>
                 )
@@ -1716,13 +1711,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 px-3 md:px-8 py-3 md:py-6 pb-mobile-nav overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-3 md:space-y-6">
+      <div className="flex-1 px-3 md:px-6 py-2.5 md:py-3 pb-mobile-nav overflow-y-auto">
+        <div className="max-w-4xl mx-auto space-y-2.5 md:space-y-4">
 
           {/* Business Information Tab */}
           {activeTab === 'business' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+              <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
                 <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                   <Building2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
                 </div>
@@ -1751,7 +1746,7 @@ export default function SettingsPage() {
 
               {/* Tax Rates & Groups Card */}
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center justify-between">
+                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center justify-between">
                   <div className="flex items-center gap-2.5 md:gap-3">
                     <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
                       <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
@@ -2135,7 +2130,7 @@ export default function SettingsPage() {
           {/* Bank & Payment Tab */}
           {activeTab === 'bank' && (
             <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+              <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
                 <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
                   <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
                 </div>
@@ -2176,7 +2171,7 @@ export default function SettingsPage() {
 
               {/* Invoice Status Workflow */}
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
                     <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-600" />
                   </div>
@@ -2202,7 +2197,7 @@ export default function SettingsPage() {
 
               {/* PO Number on Customers */}
               <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
                     <Hash className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
                   </div>
@@ -2257,7 +2252,7 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border flex items-center gap-2.5 md:gap-3">
+                  <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
                     <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                       <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
                     </div>
