@@ -79,7 +79,8 @@ export const authApi = {
   updateProfile: (data) => api.patch('/auth/profile', data),
   initiatePhoneChange: (newPhone) => api.post('/auth/change-phone', { newPhone }),
   confirmPhoneChange: (newPhone, otp) => api.post('/auth/confirm-phone-change', { newPhone, otp }),
-  logout: () => api.post('/auth/logout')
+  logout: () => api.post('/auth/logout'),
+  deleteAccount: () => api.delete('/auth/account')
 }
 
 // Invoice API

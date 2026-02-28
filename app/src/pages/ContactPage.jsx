@@ -1,25 +1,20 @@
 import LandingHeader from '../components/landing/LandingHeader'
 import LandingFooter from '../components/landing/LandingFooter'
+import NativeLegalPageWrapper from '../components/NativeLegalPageWrapper'
 import { BRANDING } from '../config/branding'
 import { Mail, MapPin, Clock } from 'lucide-react'
 import SEOHead from '../components/SEOHead'
 import { SEO_PAGES } from '../config/seoPages'
+import { isNative } from '../lib/capacitor'
 
 function ContactPage() {
   const pageSeo = SEO_PAGES.contact
 
-  return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <SEOHead
-        title={pageSeo.title}
-        description={pageSeo.description}
-        path={pageSeo.path}
-        jsonLd={pageSeo.jsonLd}
-      />
-      <LandingHeader />
-      <main className="flex-1">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">Contact Us</h1>
+  const isMobileApp = isNative()
+
+  const content = (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+      <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-2">Contact Us</h1>
           <p className="text-gray-500 mb-10">We'd love to hear from you. Reach out to us anytime.</p>
 
           <div className="grid sm:grid-cols-2 gap-8">
@@ -74,7 +69,28 @@ function ContactPage() {
               <li>Transaction ID (for payment-related queries)</li>
             </ul>
           </div>
-        </div>
+    </div>
+  )
+
+  if (isMobileApp) {
+    return (
+      <NativeLegalPageWrapper title="Contact Us">
+        {content}
+      </NativeLegalPageWrapper>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <SEOHead
+        title={pageSeo.title}
+        description={pageSeo.description}
+        path={pageSeo.path}
+        jsonLd={pageSeo.jsonLd}
+      />
+      <LandingHeader />
+      <main className="flex-1">
+        {content}
         <LandingFooter />
       </main>
     </div>

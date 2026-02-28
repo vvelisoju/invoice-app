@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useHistory, Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../../lib/api'
@@ -40,7 +40,7 @@ export default function PhonePage() {
   const pageSeo = SEO_PAGES.authPhone
 
   return (
-    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'min-h-dvh overflow-y-auto' : 'min-h-screen'}`}>
       <SEOHead
         title={pageSeo.title}
         description={pageSeo.description}
@@ -54,6 +54,11 @@ export default function PhonePage() {
             alt="Invoice Baba"
             className="h-16 mx-auto mb-4"
           />
+          {isMobileApp && (
+            <p className="text-textSecondary text-xs mb-3">
+              Create GST invoices in under 2 minutes
+            </p>
+          )}
           <p className="text-textSecondary text-sm">
             Enter your phone number to get started
           </p>
@@ -98,6 +103,14 @@ export default function PhonePage() {
             We'll send you a 6-digit verification code
           </p>
         </div>
+
+        {/* Legal links — required for app store compliance */}
+        <p className="text-center text-xs text-textSecondary mt-6 px-2">
+          By continuing, you agree to our{' '}
+          <Link to="/terms" className="text-primary active:underline md:hover:underline">Terms of Service</Link>
+          {' '}and{' '}
+          <Link to="/privacy" className="text-primary active:underline md:hover:underline">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   )

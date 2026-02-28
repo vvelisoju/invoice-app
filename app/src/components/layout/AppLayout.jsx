@@ -5,6 +5,7 @@ import { Home, FileText, Users, Package, PieChart, Plus } from 'lucide-react'
 import { businessApi } from '../../lib/api'
 import AppHeader from './AppHeader'
 import AppSidebar from './AppSidebar'
+import OfflineBanner from '../OfflineBanner'
 import { getActiveTabKey } from './navigationConfig'
 
 const BOTTOM_NAV_ITEMS = [
@@ -38,6 +39,7 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
+      <OfflineBanner />
       <AppHeader onMenuToggle={() => setDrawerOpen(!drawerOpen)} />
 
       {/* Mobile Drawer Overlay */}

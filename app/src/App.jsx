@@ -6,6 +6,8 @@ import { AppLayout } from './components/layout'
 import { usePushNotifications } from './features/notifications/usePushNotifications'
 import { setApiNavigate } from './lib/api'
 import { isNative } from './lib/capacitor'
+import { shouldPromptReview } from './lib/appReview'
+import ReviewPrompt from './components/ReviewPrompt'
 
 import LandingPage from './pages/LandingPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -99,9 +101,20 @@ function AuthenticatedApp() {
     return localStorage.getItem('show_welcome') === '1'
   })
 
+  const [showReview, setShowReview] = useState(false)
+
+  // Check for review prompt after a short delay on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (shouldPromptReview()) setShowReview(true)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <AppLayout>
       <WelcomeModal isOpen={showWelcome} onClose={() => setShowWelcome(false)} />
+      <ReviewPrompt isOpen={showReview && !showWelcome} onClose={() => setShowReview(false)} />
       <Switch>
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/invoices" component={InvoiceListPage} />

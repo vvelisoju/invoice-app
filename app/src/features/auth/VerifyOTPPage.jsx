@@ -195,7 +195,7 @@ export default function VerifyOTPPage() {
   }
 
   return (
-    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-bgPrimary flex items-center justify-center p-4 ${isMobileApp ? 'min-h-dvh overflow-y-auto' : 'min-h-screen'}`}>
       <div className="w-full max-w-md">
         {/* Header — matches login screen */}
         <div className="text-center mb-10">

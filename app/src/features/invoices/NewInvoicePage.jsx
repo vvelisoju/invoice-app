@@ -13,6 +13,7 @@ import PlanLimitModal from '../../components/PlanLimitModal'
 import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
+import { trackInvoiceCreated } from '../../lib/appReview'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
 import ImageUploadModal from '../../components/settings/ImageUploadModal'
 import {
@@ -339,6 +340,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         queryClient.invalidateQueries({ queryKey: ['invoices'] })
         // Update customer list (invoice counts may have changed)
         queryClient.invalidateQueries({ queryKey: ['customers'] })
+        // Track for in-app review prompt
+        trackInvoiceCreated()
         // Navigate to the created invoice
         history.push(`/invoices/${data.id}`)
       }

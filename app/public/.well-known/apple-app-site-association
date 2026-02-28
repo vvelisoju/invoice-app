@@ -1,0 +1,25 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAM_ID.com.codevel.invoicebaba",
+        "paths": [
+          "/invoices/*",
+          "/home",
+          "/customers",
+          "/products",
+          "/settings",
+          "/reports",
+          "/auth/phone",
+          "/auth/verify"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "TEAM_ID.com.codevel.invoicebaba"
+    ]
+  }
+}

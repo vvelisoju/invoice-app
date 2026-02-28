@@ -1,4 +1,4 @@
-import { requestOTP, verifyOTP, getCurrentUser, updateUserProfile, initiatePhoneChange, confirmPhoneChange } from './service.js'
+import { requestOTP, verifyOTP, getCurrentUser, updateUserProfile, initiatePhoneChange, confirmPhoneChange, deleteAccount } from './service.js'
 
 export const handleRequestOTP = async (request, reply) => {
   const { phone } = request.body
@@ -37,4 +37,9 @@ export const handleConfirmPhoneChange = async (request, reply) => {
 export const handleLogout = async (request, reply) => {
   // Since we're using JWT, logout is handled client-side by removing the token
   return reply.status(200).send({ message: 'Logged out successfully' })
+}
+
+export const handleDeleteAccount = async (request, reply) => {
+  const result = await deleteAccount(request.server.prisma, request.user.userId)
+  return reply.status(200).send(result)
 }

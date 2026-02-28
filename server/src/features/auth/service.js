@@ -3,6 +3,7 @@ import { config } from '../../common/config.js'
 import { logger } from '../../common/logger.js'
 import { generateToken } from '../../common/auth.js'
 import { ValidationError, UnauthorizedError, RateLimitError } from '../../common/errors.js'
+import { deleteFile } from '../../common/storage.js'
 import springedge from 'springedge'
 import { emit as emitNotification } from '../notifications/service.js'
 import { createDefaultGSTIntrastateTaxes } from '../tax-rates/service.js'
@@ -137,8 +138,8 @@ export const verifyOTP = async (prisma, phone, otp) => {
     throw new UnauthorizedError('Too many failed attempts. Please request a new OTP')
   }
 
-  // Verify OTP (demo accounts also accept default OTP 999999)
-  const isDemoBypass = (phone === '9494644848' || phone === '9999999999') && otp === '999999'
+  // Verify OTP (demo bypass only in non-production environments)
+  const isDemoBypass = !isProduction() && (phone === '9494644848' || phone === '9999999999') && otp === '999999'
   if (otpRequest.otp !== otp && !isDemoBypass) {
     // Increment attempts
     await prisma.otpRequest.update({
@@ -301,6 +302,76 @@ export const initiatePhoneChange = async (prisma, userId, newPhone) => {
   await sendOTP(newPhone, otp)
 
   return { message: 'OTP sent to new phone number', expiresIn: config.otp.expiryMinutes * 60 }
+}
+
+/**
+ * Permanently delete a user account and all associated data.
+ * Cascade chain: User → Business → Customers, Products, Invoices, LineItems, TaxRates, UsageCounters, TemplateConfigs
+ * Also: User → OtpRequests, DeviceTokens, NotificationReads
+ * Manual cleanup: SubscriptionInvoices (no cascade), GCS files (logo, signature), AuditLogs
+ */
+export const deleteAccount = async (prisma, userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      businesses: {
+        select: {
+          id: true,
+          logoUrl: true,
+          signatureUrl: true,
+          subscriptionId: true,
+        }
+      }
+    }
+  })
+
+  if (!user) {
+    throw new UnauthorizedError('User not found')
+  }
+
+  // Collect GCS file URLs for cleanup
+  const filesToDelete = []
+  const businessIds = []
+
+  for (const biz of user.businesses) {
+    businessIds.push(biz.id)
+    if (biz.logoUrl) filesToDelete.push(biz.logoUrl)
+    if (biz.signatureUrl) filesToDelete.push(biz.signatureUrl)
+  }
+
+  // 1. Delete subscription invoices (not cascade-linked to User)
+  if (businessIds.length > 0) {
+    await prisma.subscriptionInvoice.deleteMany({
+      where: { businessId: { in: businessIds } }
+    })
+  }
+
+  // 2. Clean up audit logs referencing this user/businesses
+  await prisma.auditLog.deleteMany({
+    where: {
+      OR: [
+        { userId },
+        ...(businessIds.length > 0 ? [{ businessId: { in: businessIds } }] : [])
+      ]
+    }
+  })
+
+  // 3. Delete the user — Prisma cascades handle:
+  //    User → OtpRequests, DeviceTokens, NotificationReads
+  //    User → Businesses → Customers, Products, Invoices, LineItems, TaxRates,
+  //                        UsageCounters, BusinessTemplateConfigs
+  await prisma.user.delete({ where: { id: userId } })
+
+  // 4. Delete GCS files (fire-and-forget, non-blocking)
+  for (const url of filesToDelete) {
+    deleteFile(url).catch((err) => {
+      logger.warn({ err, url }, '[DeleteAccount] Failed to delete GCS file')
+    })
+  }
+
+  logger.info({ userId, businessIds }, '[DeleteAccount] Account permanently deleted')
+
+  return { message: 'Account deleted successfully' }
 }
 
 export const confirmPhoneChange = async (prisma, userId, newPhone, otp) => {

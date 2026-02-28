@@ -911,8 +911,36 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
 
 export function AccountSection({ onLogout, onManageSubscription }) {
   const queryClient = useQueryClient()
+  const history = useHistory()
   const setAuth = useAuthStore((state) => state.setAuth)
+  const logout = useAuthStore((state) => state.logout)
   const authUser = useAuthStore((state) => state.user)
+
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onSuccess: () => {
+      // Clear all local data
+      queryClient.clear()
+      localStorage.clear()
+      sessionStorage.clear()
+      logout()
+      history.replace('/auth/phone')
+    },
+    onError: (err) => {
+      setDeleteError(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete account. Please try again.')
+    }
+  })
+
+  const handleDeleteAccount = () => {
+    if (deleteConfirmText !== 'DELETE') return
+    setDeleteError('')
+    deleteAccountMutation.mutate()
+  }
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
@@ -1175,7 +1203,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
           </div>
           <div>
             <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Account</h3>
-            <p className="text-[11px] md:text-xs text-textSecondary">Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
+            <p className="text-[11px] md:text-xs text-textSecondary">Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} · v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'}</p>
           </div>
         </div>
         <div className="p-4 md:p-6 flex flex-wrap gap-3">
@@ -1203,6 +1231,86 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             <LogOut className="w-4 h-4" />
             Sign Out
           </button>
+        </div>
+      </div>
+
+      {/* Danger Zone — Delete Account */}
+      <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-red-100 flex items-center gap-2.5 md:gap-3">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
+          </div>
+          <div>
+            <h3 className="text-xs md:text-sm font-semibold text-red-700">Danger Zone</h3>
+            <p className="text-[11px] md:text-xs text-red-500">Irreversible actions</p>
+          </div>
+        </div>
+        <div className="p-4 md:p-6">
+          {!showDeleteConfirm ? (
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-textPrimary">Delete Account</p>
+                <p className="text-xs text-textSecondary mt-0.5">
+                  Permanently delete your account, business data, all invoices, customers, and products. This cannot be undone.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 active:bg-red-100 md:hover:bg-red-100 rounded-lg border border-red-200 flex items-center gap-1.5 transition-colors shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-3 bg-red-50 rounded-lg border border-red-100">
+                <p className="text-sm text-red-800 font-medium">Are you sure? This will permanently delete:</p>
+                <ul className="mt-2 text-xs text-red-700 space-y-1 list-disc pl-4">
+                  <li>Your account and profile</li>
+                  <li>All business data and settings</li>
+                  <li>All invoices, quotes, and receipts</li>
+                  <li>All customers and products</li>
+                  <li>Uploaded logos and signatures</li>
+                </ul>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-textSecondary block mb-1.5">
+                  Type <span className="font-bold text-red-600">DELETE</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => { setDeleteConfirmText(e.target.value.toUpperCase()); setDeleteError('') }}
+                  placeholder="DELETE"
+                  className="w-full max-w-[200px] px-3.5 py-2.5 bg-white border border-red-200 rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 tracking-widest text-center font-mono"
+                  autoComplete="off"
+                />
+              </div>
+              {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETE' || deleteAccountMutation.isPending}
+                  className="px-4 py-2.5 text-sm font-semibold text-white bg-red-600 active:bg-red-700 md:hover:bg-red-700 rounded-lg flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {deleteAccountMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  Delete My Account
+                </button>
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); setDeleteError('') }}
+                  disabled={deleteAccountMutation.isPending}
+                  className="px-4 py-2.5 text-sm font-medium text-textSecondary active:bg-gray-100 md:hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

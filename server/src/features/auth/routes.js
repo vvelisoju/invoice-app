@@ -1,4 +1,4 @@
-import { handleRequestOTP, handleVerifyOTP, handleGetCurrentUser, handleUpdateProfile, handleInitiatePhoneChange, handleConfirmPhoneChange, handleLogout } from './handlers.js'
+import { handleRequestOTP, handleVerifyOTP, handleGetCurrentUser, handleUpdateProfile, handleInitiatePhoneChange, handleConfirmPhoneChange, handleLogout, handleDeleteAccount } from './handlers.js'
 import { authMiddleware } from '../../common/auth.js'
 
 export const authRoutes = async (fastify) => {
@@ -81,4 +81,9 @@ export const authRoutes = async (fastify) => {
   fastify.post('/auth/logout', {
     preHandler: authMiddleware
   }, handleLogout)
+
+  // Delete account permanently (protected)
+  fastify.delete('/auth/account', {
+    preHandler: authMiddleware
+  }, handleDeleteAccount)
 }
