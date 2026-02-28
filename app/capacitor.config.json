@@ -7,7 +7,7 @@
     "iosScheme": "https"
   },
   "ios": {
-    "contentInset": "automatic",
+    "contentInset": "never",
     "allowsLinkPreview": false,
     "backgroundColor": "#FFFFFF",
     "preferredContentMode": "mobile"

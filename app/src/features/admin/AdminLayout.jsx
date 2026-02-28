@@ -53,9 +53,9 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="bg-gray-50 font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
+    <div className="bg-gray-50 font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col">
       {/* ── Mobile Header ─────────────────────────────────────────── */}
-      <header className="md:hidden bg-gray-900 text-white px-4 flex items-center justify-between shrink-0"
+      <header className="md:hidden bg-gray-900 text-white px-4 flex items-center justify-between shrink-0 safe-top"
         style={{ minHeight: '52px' }}
       >
         <div className="flex items-center gap-2">
@@ -83,8 +83,8 @@ export default function AdminLayout({ children }) {
             className="fixed inset-0 bg-black/40 z-30 md:hidden"
             onClick={() => setDrawerOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 w-72 z-40 md:hidden bg-gray-900 text-white flex flex-col safe-top">
-            <div className="p-4 border-b border-gray-700 flex items-center gap-2 shrink-0">
+          <aside className="fixed inset-y-0 left-0 w-72 z-40 md:hidden bg-gray-900 text-white flex flex-col">
+            <div className="p-4 border-b border-gray-700 flex items-center gap-2 shrink-0 safe-top">
               <Shield className="w-6 h-6 text-blue-400" />
               <div>
                 <h1 className="font-bold text-sm">Invoice Baba</h1>

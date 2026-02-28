@@ -47,7 +47,7 @@ export default function AppLayout({ children }) {
   })
 
   return (
-    <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
+    <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col">
       <OfflineBanner />
       {/* Hide header on mobile for fullscreen pages */}
       <div className={isMobileFS ? 'hidden md:block' : ''}>
@@ -61,7 +61,7 @@ export default function AppLayout({ children }) {
             className="fixed inset-0 bg-black/40 z-30 md:hidden"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 w-72 z-40 md:hidden safe-top">
+          <div className="fixed inset-y-0 left-0 w-72 z-40 md:hidden">
             <AppSidebar mobile onClose={() => setDrawerOpen(false)} />
           </div>
         </>
