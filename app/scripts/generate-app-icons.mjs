@@ -79,23 +79,9 @@ const ANDROID_SPLASH_LAND = [
 const IOS_ICONS = join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset')
 const IOS_SPLASH = join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets', 'Splash.imageset')
 
-const IOS_ICON_SIZES = [
-  { name: 'AppIcon-20x20@1x.png', size: 20 },
-  { name: 'AppIcon-20x20@2x.png', size: 40 },
-  { name: 'AppIcon-20x20@3x.png', size: 60 },
-  { name: 'AppIcon-29x29@1x.png', size: 29 },
-  { name: 'AppIcon-29x29@2x.png', size: 58 },
-  { name: 'AppIcon-29x29@3x.png', size: 87 },
-  { name: 'AppIcon-40x40@1x.png', size: 40 },
-  { name: 'AppIcon-40x40@2x.png', size: 80 },
-  { name: 'AppIcon-40x40@3x.png', size: 120 },
-  { name: 'AppIcon-60x60@2x.png', size: 120 },
-  { name: 'AppIcon-60x60@3x.png', size: 180 },
-  { name: 'AppIcon-76x76@1x.png', size: 76 },
-  { name: 'AppIcon-76x76@2x.png', size: 152 },
-  { name: 'AppIcon-83.5x83.5@2x.png', size: 167 },
-  { name: 'AppIcon-512@2x.png', size: 1024 },
-]
+// Modern Xcode 15+ requires a single 1024x1024 universal icon
+const IOS_ICON_NAME = 'AppIcon-1024x1024.png'
+const IOS_ICON_SIZE = 1024
 
 // ─── Generate Functions ─────────────────────────────────────────────
 
@@ -200,45 +186,30 @@ async function generateIOSIcons() {
   console.log('\n🍎 Generating iOS app icons...')
   ensureDir(IOS_ICONS)
 
-  for (const { name, size } of IOS_ICON_SIZES) {
-    await sharp(ICON_SRC)
-      .resize(size, size, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
-      .png()
-      .toFile(join(IOS_ICONS, name))
+  // Generate single 1024x1024 icon (modern Xcode 15+ format)
+  await sharp(ICON_SRC)
+    .resize(IOS_ICON_SIZE, IOS_ICON_SIZE, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .png()
+    .toFile(join(IOS_ICONS, IOS_ICON_NAME))
 
-    console.log(`  ✓ ${name}: ${size}x${size}`)
-  }
+  console.log(`  ✓ ${IOS_ICON_NAME}: ${IOS_ICON_SIZE}x${IOS_ICON_SIZE}`)
 
-  // Generate Contents.json for Xcode
+  // Modern Contents.json — single universal icon, Xcode auto-generates all sizes
   const contents = {
-    images: IOS_ICON_SIZES.map(({ name, size }) => {
-      // Parse scale from filename
-      const scaleMatch = name.match(/@(\d)x/)
-      const scale = scaleMatch ? parseInt(scaleMatch[1]) : 1
-      const points = size / scale
-
-      // Determine idiom
-      let idiom = 'iphone'
-      if (points === 76 || points === 83.5) idiom = 'ipad'
-      if (points === 20 || points === 29 || points === 40) {
-        // These sizes are used for both
-        if (scale === 1) idiom = 'ipad'
+    images: [
+      {
+        filename: IOS_ICON_NAME,
+        idiom: 'universal',
+        platform: 'ios',
+        size: '1024x1024'
       }
-      if (size === 1024) idiom = 'ios-marketing'
-
-      return {
-        filename: name,
-        idiom,
-        scale: `${scale}x`,
-        size: `${points}x${points}`,
-      }
-    }),
+    ],
     info: { author: 'xcode', version: 1 }
   }
 
   const { writeFileSync } = await import('fs')
   writeFileSync(join(IOS_ICONS, 'Contents.json'), JSON.stringify(contents, null, 2))
-  console.log('  ✓ Contents.json')
+  console.log('  ✓ Contents.json (modern single-icon format)')
 }
 
 async function generateIOSSplash() {
