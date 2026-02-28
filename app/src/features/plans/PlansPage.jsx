@@ -24,6 +24,8 @@ import { pdf } from '@react-pdf/renderer'
 import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
 import { downloadPDF, sharePDF, printPDF } from '../invoices/utils/pdfGenerator.jsx'
+import { isNative } from '../../lib/capacitor'
+import { openExternalUrl } from '../../lib/nativeBrowser'
 import SubscriptionInvoicePdf from './SubscriptionInvoicePdf'
 const PdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
@@ -454,7 +456,19 @@ export default function PlansPage() {
     }
   })
 
+  // Web URL for 'Manage on Web' strategy — native apps redirect to web for payments
+  const webBaseUrl = import.meta.env.VITE_WEB_URL || 'https://invoicebaba.com'
+
+  const openPlansOnWeb = () => {
+    openExternalUrl(`${webBaseUrl}/plans`)
+  }
+
   const handleSubscribe = (planId) => {
+    // On native: redirect to web for payment (App Store / Play Store compliance)
+    if (isNative()) {
+      openPlansOnWeb()
+      return
+    }
     setProcessingPlan(planId)
     subscribeMutation.mutate({ planId, period: billingPeriod })
   }
@@ -704,21 +718,33 @@ export default function PlansPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   {!subscription.cancelledAt ? (
                     <>
-                      <button
-                        onClick={() => handleSubscribe(currentPlanId)}
-                        disabled={!!processingPlan}
-                        className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Renew Now
-                      </button>
-                      <button
-                        onClick={() => setShowCancelConfirm(true)}
-                        className="px-3 py-2 text-xs font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg border border-red-200 flex items-center gap-1.5"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        Cancel Subscription
-                      </button>
+                      {isNative() ? (
+                        <button
+                          onClick={openPlansOnWeb}
+                          className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-1.5"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          Manage on Web
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleSubscribe(currentPlanId)}
+                            disabled={!!processingPlan}
+                            className="px-3 py-2 text-xs font-medium text-primary active:bg-blue-50 md:hover:bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Renew Now
+                          </button>
+                          <button
+                            onClick={() => setShowCancelConfirm(true)}
+                            className="px-3 py-2 text-xs font-medium text-red-600 active:bg-red-50 md:hover:bg-red-50 rounded-lg border border-red-200 flex items-center gap-1.5"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Cancel Subscription
+                          </button>
+                        </>
+                      )}
                     </>
                   ) : (
                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -875,6 +901,11 @@ export default function PlansPage() {
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 Processing...
+                              </>
+                            ) : isNative() ? (
+                              <>
+                                <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                Subscribe on Web
                               </>
                             ) : (
                               <>

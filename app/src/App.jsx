@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { useAuthStore } from './store/authStore'
 import { AppLayout } from './components/layout'
 import { usePushNotifications } from './features/notifications/usePushNotifications'
-import { setApiNavigate } from './lib/api'
+import { setApiNavigate, setApiAuthLogout } from './lib/api'
 import { isNative } from './lib/capacitor'
 import { shouldPromptReview } from './lib/appReview'
 import ReviewPrompt from './components/ReviewPrompt'
@@ -86,10 +86,15 @@ function useCapacitorListeners() {
  */
 function ApiNavigateWirer() {
   const history = useHistory()
+  const logout = useAuthStore((state) => state.logout)
   useEffect(() => {
     setApiNavigate((path) => history.push(path))
-    return () => setApiNavigate(null)
-  }, [history])
+    setApiAuthLogout(() => logout())
+    return () => {
+      setApiNavigate(null)
+      setApiAuthLogout(null)
+    }
+  }, [history, logout])
   return null
 }
 

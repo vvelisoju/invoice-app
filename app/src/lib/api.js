@@ -32,6 +32,10 @@ let isRedirectingTo401 = false
 let _navigateTo = null
 export function setApiNavigate(fn) { _navigateTo = fn }
 
+// Auth store logout callback — set externally to clear in-memory Zustand state
+let _authLogout = null
+export function setApiAuthLogout(fn) { _authLogout = fn }
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
@@ -57,14 +61,22 @@ api.interceptors.response.use(
       const isOnDemoPage = window.location.pathname === '/demo'
       if (!isSafeEndpoint && !isRedirectingTo401 && !isOnDemoPage) {
         isRedirectingTo401 = true
-        // Clear all browser storage to prevent stale data leaking between sessions
-        localStorage.clear()
-        sessionStorage.clear()
+        // Clear in-memory Zustand auth state + push tokens via store logout
+        if (_authLogout) {
+          _authLogout()
+        } else {
+          // Fallback: clear storage manually
+          localStorage.clear()
+          sessionStorage.clear()
+        }
         if (_navigateTo) {
           _navigateTo('/auth/phone')
         } else {
           window.location.href = '/auth/phone'
         }
+        // Reset the guard after a short delay so future 401s are handled
+        // (e.g. user logs back in and token expires again later)
+        setTimeout(() => { isRedirectingTo401 = false }, 2000)
       }
     }
     return Promise.reject(error)
