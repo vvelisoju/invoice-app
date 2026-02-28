@@ -21,12 +21,21 @@ const BOTTOM_NAV_ITEMS = [
  * Desktop: fixed Header (top) + Sidebar (left) + scrollable Content (right).
  * Mobile: Header (top) + scrollable Content + Bottom Nav (bottom).
  */
+// Routes that should be fullscreen on mobile (no header / no bottom nav)
+const MOBILE_FULLSCREEN_PATTERNS = [
+  /^\/invoices\/new(\?.*)?$/,
+  /^\/invoices\/[^/]+\/edit(\?.*)?$/,
+]
+
 export default function AppLayout({ children }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const history = useHistory()
   const location = useLocation()
   const activeTabKey = getActiveTabKey(location.pathname)
   const isHome = location.pathname === '/home'
+  const isMobileFullscreen = MOBILE_FULLSCREEN_PATTERNS.some(p => p.test(location.pathname + location.search.replace(/\?/, '?')))
+  // Simplified: just test pathname
+  const isMobileFS = MOBILE_FULLSCREEN_PATTERNS.some(p => p.test(location.pathname))
 
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
@@ -40,7 +49,10 @@ export default function AppLayout({ children }) {
   return (
     <div className="bg-bgPrimary font-sans text-textPrimary antialiased h-dvh overflow-hidden flex flex-col safe-top">
       <OfflineBanner />
-      <AppHeader onMenuToggle={() => setDrawerOpen(!drawerOpen)} />
+      {/* Hide header on mobile for fullscreen pages */}
+      <div className={isMobileFS ? 'hidden md:block' : ''}>
+        <AppHeader onMenuToggle={() => setDrawerOpen(!drawerOpen)} />
+      </div>
 
       {/* Mobile Drawer Overlay */}
       {drawerOpen && (
@@ -57,13 +69,13 @@ export default function AppLayout({ children }) {
 
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
-        <main className="flex-1 overflow-y-auto bg-bgPrimary pb-mobile-nav">
+        <main className={`flex-1 overflow-y-auto bg-bgPrimary ${isMobileFS ? '' : 'pb-mobile-nav'}`}>
           {children}
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-20 safe-bottom safe-x">
+      {/* Mobile Bottom Navigation — hidden for fullscreen pages */}
+      <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-20 safe-bottom safe-x ${isMobileFS ? 'hidden' : ''}`}>
         <div className="flex items-center justify-around h-16">
           {BOTTOM_NAV_ITEMS.map((item) => {
             const Icon = item.icon

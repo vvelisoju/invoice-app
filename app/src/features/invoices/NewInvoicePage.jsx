@@ -523,10 +523,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
   const fromAddress = invoice.fromAddress || ''
 
   return (
-    <div className="p-1.5 md:p-4 relative">
-      {/* Document Container */}
-      <div className="max-w-5xl mx-auto bg-bgSecondary rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-[500px] md:min-h-[700px] flex flex-col relative">
-        {/* Toolbar: Basic/Advanced toggle + Invoice Title + Save */}
+    <div className="md:p-4 relative">
+      {/* Document Container — full-bleed on mobile, card on desktop */}
+      <div className="max-w-5xl mx-auto bg-bgSecondary md:rounded-xl md:shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] min-h-dvh md:min-h-[700px] flex flex-col relative">
+        {/* Toolbar: Back + Basic/Advanced toggle + Invoice Title + Save */}
         <InvoiceFormToolbar
           formMode={formMode}
           onFormModeChange={handleFormModeChange}
@@ -538,6 +538,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           onDocumentTypeChange={handleDocumentTypeChange}
           availableDocTypes={availableDocTypes}
           isEditMode={isEditMode}
+          onBack={() => history.goBack()}
         />
 
         {/* Error */}
@@ -652,7 +653,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         </div>
 
         {/* Bottom Action Bar */}
-        <div className="bg-primary rounded-b-xl mt-auto safe-bottom">
+        <div className="bg-primary md:rounded-b-xl mt-auto safe-bottom">
           <button
             type="button"
             onClick={handleSave}

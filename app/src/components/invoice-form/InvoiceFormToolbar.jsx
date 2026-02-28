@@ -1,4 +1,4 @@
-import { Save, Loader2, ChevronDown } from 'lucide-react'
+import { Save, Loader2, ChevronDown, ArrowLeft } from 'lucide-react'
 
 export default function InvoiceFormToolbar({
   formMode, onFormModeChange, onPreview, onSave, isSaving,
@@ -7,16 +7,26 @@ export default function InvoiceFormToolbar({
   documentTypeKey,
   onDocumentTypeChange,
   availableDocTypes,
-  isEditMode
+  isEditMode,
+  onBack
 }) {
   const saveLabel = docTypeConfig?.labels?.saveButton || 'Save Invoice'
   const forceBasic = docTypeConfig?.fields?.lineItemsLayout === 'basic' || docTypeConfig?.fields?.lineItemsLayout === 'simple'
   const canChangeType = !isEditMode && availableDocTypes && availableDocTypes.length > 1
 
   return (
-    <div className="px-2.5 md:px-6 py-1.5 md:py-2 border-b border-border flex justify-between items-center bg-white rounded-t-xl sticky top-0 z-10 gap-2">
-      {/* Left: Document type select + Basic/Advanced toggle */}
+    <div className="safe-top px-2.5 md:px-6 py-1.5 md:py-2 border-b border-border flex justify-between items-center bg-white md:rounded-t-xl sticky top-0 z-10 gap-2">
+      {/* Left: Back button (mobile) + Document type select + Basic/Advanced toggle */}
       <div className="flex items-center gap-1.5 md:gap-2.5 min-w-0">
+        {/* Back button — mobile only (app header is hidden) */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-textSecondary active:bg-bgPrimary shrink-0 -ml-1"
+          >
+            <ArrowLeft className="w-4.5 h-4.5" />
+          </button>
+        )}
         {/* Document Type — select or read-only label */}
         {canChangeType ? (
           <div className="relative shrink-0">
