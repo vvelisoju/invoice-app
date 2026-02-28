@@ -41,8 +41,14 @@ await fastify.register(helmet, {
   crossOriginEmbedderPolicy: false,
 })
 
+// Capacitor native apps send these origins — always allow them
+const NATIVE_APP_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost']
+const allowedOrigins = isProduction
+  ? [...config.corsOrigin.split(',').map(s => s.trim()), ...NATIVE_APP_ORIGINS]
+  : true
+
 await fastify.register(cors, {
-  origin: isProduction ? config.corsOrigin.split(',').map(s => s.trim()) : true,
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
