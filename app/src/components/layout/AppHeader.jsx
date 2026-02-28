@@ -97,7 +97,7 @@ export default function AppHeader({ onMenuToggle }) {
   )
 
   return (
-    <nav className="bg-bgSecondary border-b border-border h-14 flex items-center px-3 md:px-6 shrink-0 z-20 justify-between safe-top">
+    <nav className="bg-bgSecondary border-b border-border py-2 flex items-center px-3 md:px-6 shrink-0 z-20 justify-between safe-top">
       <div className="flex items-center min-w-0">
         {/* Mobile Menu Button */}
         <button

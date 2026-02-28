@@ -186,7 +186,7 @@ export default function AppSidebar({ mobile = false, onClose }) {
   return (
     <aside className="h-full bg-bgSecondary flex flex-col shadow-xl">
       {/* Drawer Header — Logo + Close */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0 safe-top">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0 safe-top">
         <div className="flex items-center min-w-0">
           <img
             src="/assets/brand/logo-full-transparent.png"

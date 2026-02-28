@@ -75,7 +75,7 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
 /* Bottom padding that clears the mobile bottom nav (h-16 = 4rem) + safe area + breathing room.
    On desktop (md:) this is zeroed out since there is no bottom nav. */
 .pb-mobile-nav {
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
   .pb-mobile-nav {
