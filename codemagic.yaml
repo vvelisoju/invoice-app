@@ -8,6 +8,8 @@ workflows:
       app_store_connect: Lokalhunt - API Key
     
     environment:
+      groups:
+        - production
       vars:
         BUNDLE_ID: com.codevel.invoicebaba
         APP_STORE_APP_ID: 6759199018
@@ -33,6 +35,9 @@ workflows:
           cd app
           # Create .env file from Codemagic environment variables
           echo "VITE_API_URL=$VITE_API_URL" > .env
+          echo "VITE_WEB_URL=${VITE_WEB_URL:-https://invoicebaba.com}" >> .env
+          echo "VITE_RAZORPAY_KEY_ID=$VITE_RAZORPAY_KEY_ID" >> .env
+          echo "VITE_RAZORPAY_DESCRIPTION=$VITE_RAZORPAY_DESCRIPTION" >> .env
           echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
           echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
           echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
@@ -40,6 +45,8 @@ workflows:
           echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
           echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
           echo "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" >> .env
+          echo ".env contents:"
+          cat .env | sed 's/=.*/=***/'  # Print keys only for debugging
       
       - name: Build web app
         script: |
@@ -53,6 +60,11 @@ workflows:
           rm -rf ios
           # Add iOS platform fresh
           npx cap add ios
+      
+      - name: Generate iOS app icons and splash screens
+        script: |
+          cd app
+          node scripts/generate-app-icons.mjs
       
       - name: Add GoogleService-Info.plist
         script: |
@@ -99,6 +111,7 @@ workflows:
         - keystore_reference
       groups:
         - google_play
+        - production
       vars:
         PACKAGE_NAME: "com.codevel.invoicebaba"
       node: v20.11.0
@@ -114,6 +127,9 @@ workflows:
         script: |
           cd app
           echo "VITE_API_URL=$VITE_API_URL" > .env
+          echo "VITE_WEB_URL=${VITE_WEB_URL:-https://invoicebaba.com}" >> .env
+          echo "VITE_RAZORPAY_KEY_ID=$VITE_RAZORPAY_KEY_ID" >> .env
+          echo "VITE_RAZORPAY_DESCRIPTION=$VITE_RAZORPAY_DESCRIPTION" >> .env
           echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
           echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
           echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
@@ -121,6 +137,8 @@ workflows:
           echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
           echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
           echo "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" >> .env
+          echo ".env contents:"
+          cat .env | sed 's/=.*/=***/'  # Print keys only for debugging
       
       - name: Build web app
         script: |
@@ -141,7 +159,7 @@ workflows:
       - name: Generate app icons
         script: |
           cd app
-          node scripts/generate-android-icons.mjs
+          node scripts/generate-app-icons.mjs
       
       - name: Add google-services.json
         script: |
