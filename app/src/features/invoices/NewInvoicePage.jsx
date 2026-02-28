@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useHistory, useLocation, useParams } from 'react-router-dom'
 import { Save, Loader2, ChevronDown } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
@@ -11,7 +11,7 @@ import CreateCustomerModal from '../../components/customers/CreateCustomerModal'
 import ProductAddEditModal from '../products/ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
-import { ALL_INVOICE_TYPES } from '../../components/layout/navigationConfig'
+import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import { DOCUMENT_TYPE_DEFAULTS, getDocTypeConfig } from '../../config/documentTypeDefaults'
 import { trackInvoiceCreated } from '../../lib/appReview'
 import BusinessSettingsModal from '../../components/settings/BusinessSettingsModal'
@@ -118,6 +118,26 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
 
   // Compute resolved config (defaults merged with business overrides)
   const docTypeConfig = getDocTypeConfig(documentTypeKey, businessProfile?.documentTypeConfig)
+
+  // Available document types for the toolbar select
+  const availableDocTypes = useMemo(() => {
+    const enabledKeys = businessProfile?.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES
+    return ALL_INVOICE_TYPES.filter(t => enabledKeys.includes(t.key))
+  }, [businessProfile?.enabledInvoiceTypes])
+
+  // Handle document type change from toolbar select
+  const handleDocumentTypeChange = (typeKey) => {
+    const found = ALL_INVOICE_TYPES.find(t => t.key === typeKey)
+    if (!found) return
+    setDocumentTypeKey(typeKey)
+    setInvoiceTitle(found.label)
+    // Update URL param so refreshing preserves the selection
+    const params = new URLSearchParams(location.search)
+    params.set('type', typeKey)
+    history.replace({ pathname: location.pathname, search: params.toString() })
+    // Reset defaults flag so new doc-type defaults (terms/notes/number) get applied
+    defaultsAppliedRef.current = false
+  }
 
   // Force basic mode when document type config requires simple/basic layout
   const forceBasic = docTypeConfig?.fields?.lineItemsLayout === 'basic' || docTypeConfig?.fields?.lineItemsLayout === 'simple'
@@ -514,6 +534,10 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           isSaving={saveMutation.isPending}
           invoiceTitle={invoiceTitle}
           docTypeConfig={docTypeConfig}
+          documentTypeKey={documentTypeKey}
+          onDocumentTypeChange={handleDocumentTypeChange}
+          availableDocTypes={availableDocTypes}
+          isEditMode={isEditMode}
         />
 
         {/* Error */}
