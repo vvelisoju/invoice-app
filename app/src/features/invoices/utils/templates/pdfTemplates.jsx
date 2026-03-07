@@ -194,28 +194,28 @@ function BrandedFooter({ showBranding = true }) {
 // ============================================================================
 
 const cleanStyles = StyleSheet.create({
-  page: { padding: 40, fontSize: 10, fontFamily: 'Helvetica' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+  page: { padding: 30, fontSize: 10, fontFamily: 'Helvetica' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   invoiceInfo: { textAlign: 'right' },
-  invoiceNumber: { fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#666', textTransform: 'uppercase' },
-  table: { marginTop: 10 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#f5f5f5', padding: 8, fontWeight: 'bold' },
-  tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  invoiceNumber: { fontSize: 10, fontWeight: 'bold', marginBottom: 2 },
+  section: { marginBottom: 12 },
+  sectionTitle: { fontSize: 9, fontWeight: 'bold', marginBottom: 4, color: '#666', textTransform: 'uppercase' },
+  table: { marginTop: 5 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f5f5f5', paddingVertical: 5, paddingHorizontal: 6, fontWeight: 'bold' },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#eee' },
   colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsSection: { marginTop: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#ddd' },
-  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
-  totalLabel: { width: 100, textAlign: 'right', marginRight: 20, color: '#666' },
-  totalValue: { width: 80, textAlign: 'right' },
-  grandTotal: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8, paddingTop: 8, borderTopWidth: 2, borderTopColor: '#333' },
-  grandTotalLabel: { width: 100, textAlign: 'right', marginRight: 20, fontSize: 14, fontWeight: 'bold' },
-  grandTotalValue: { width: 80, textAlign: 'right', fontSize: 14, fontWeight: 'bold' },
-  notes: { marginTop: 30, padding: 10, backgroundColor: '#f9f9f9' },
-  notesTitle: { fontSize: 10, fontWeight: 'bold', marginBottom: 4 },
-  notesText: { fontSize: 9, color: '#666' },
-  footer: { position: 'absolute', bottom: 40, left: 40, right: 40 },
+  totalsSection: { marginTop: 10, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#ddd' },
+  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 },
+  totalLabel: { width: 90, textAlign: 'right', marginRight: 15, color: '#666', fontSize: 8 },
+  totalValue: { width: 75, textAlign: 'right', fontSize: 8 },
+  grandTotal: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4, paddingTop: 4, borderTopWidth: 2, borderTopColor: '#333' },
+  grandTotalLabel: { width: 90, textAlign: 'right', marginRight: 15, fontSize: 12, fontWeight: 'bold' },
+  grandTotalValue: { width: 75, textAlign: 'right', fontSize: 12, fontWeight: 'bold' },
+  notes: { marginTop: 12, padding: 8, backgroundColor: '#f9f9f9' },
+  notesTitle: { fontSize: 8, fontWeight: 'bold', marginBottom: 2 },
+  notesText: { fontSize: 8, color: '#666' },
+  footer: { position: 'absolute', bottom: 30, left: 30, right: 30 },
   footerText: { fontSize: 9, color: '#999', textAlign: 'center' },
 })
 
@@ -229,13 +229,13 @@ export function CleanTemplate({ invoice }) {
         <View style={cleanStyles.header}>
           <View>
             {doc.showLogo && getLogoUrl(invoice) && (
-              <Image src={getLogoUrl(invoice)} style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 6 }} />
+              <Image src={getLogoUrl(invoice)} style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 3 }} />
             )}
             <Text style={cleanStyles.title}>{doc.heading}</Text>
             <AddressBlock
               lines={getFromAddress(invoice)}
-              nameStyle={{ marginTop: 8, fontSize: 12 }}
-              detailStyle={{ color: '#666', marginTop: 4 }}
+              nameStyle={{ marginTop: 4, fontSize: 10 }}
+              detailStyle={{ color: '#666', marginTop: 1, fontSize: 8 }}
             />
           </View>
           <View style={cleanStyles.invoiceInfo}>
@@ -249,8 +249,8 @@ export function CleanTemplate({ invoice }) {
           <Text style={cleanStyles.sectionTitle}>{doc.toLabel}</Text>
           <AddressBlock
             lines={getBillTo(invoice)}
-            nameStyle={{ fontSize: 12, fontWeight: 'bold' }}
-            detailStyle={{ color: '#666', marginTop: 2 }}
+            nameStyle={{ fontSize: 10, fontWeight: 'bold' }}
+            detailStyle={{ color: '#666', marginTop: 1, fontSize: 8 }}
           />
         </View>
         <View style={cleanStyles.table}>
@@ -314,32 +314,32 @@ export function CleanTemplate({ invoice }) {
 function BankAndSignature({ invoice, color = '#333' }) {
   const hasBankDetails = invoice.business?.bankName || invoice.business?.upiId
   return (
-    <View style={{ flexDirection: 'row', marginTop: 30, justifyContent: 'space-between' }}>
+    <View style={{ flexDirection: 'row', marginTop: 16, justifyContent: 'space-between' }}>
       {hasBankDetails && (
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 6, color, textTransform: 'uppercase' }}>Payment Details</Text>
-          {invoice.business?.bankName && <Text style={{ fontSize: 9, marginBottom: 2 }}>Bank: {invoice.business.bankName}</Text>}
-          {invoice.business?.accountNumber && <Text style={{ fontSize: 9, marginBottom: 2 }}>A/C: {invoice.business.accountNumber}</Text>}
-          {invoice.business?.ifscCode && <Text style={{ fontSize: 9, marginBottom: 2 }}>IFSC: {invoice.business.ifscCode}</Text>}
-          {invoice.business?.upiId && <Text style={{ fontSize: 9, marginTop: 4 }}>UPI: {invoice.business.upiId}</Text>}
+          <Text style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 4, color, textTransform: 'uppercase' }}>Payment Details</Text>
+          {invoice.business?.bankName && <Text style={{ fontSize: 8, marginBottom: 1 }}>Bank: {invoice.business.bankName}</Text>}
+          {invoice.business?.accountNumber && <Text style={{ fontSize: 8, marginBottom: 1 }}>A/C: {invoice.business.accountNumber}</Text>}
+          {invoice.business?.ifscCode && <Text style={{ fontSize: 8, marginBottom: 1 }}>IFSC: {invoice.business.ifscCode}</Text>}
+          {invoice.business?.upiId && <Text style={{ fontSize: 8, marginTop: 2 }}>UPI: {invoice.business.upiId}</Text>}
         </View>
       )}
-      <View style={{ width: 180, textAlign: 'right', alignItems: 'flex-end' }}>
-        <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 6, color, textTransform: 'uppercase' }}>Authorized Signatory</Text>
+      <View style={{ width: 160, textAlign: 'right', alignItems: 'flex-end' }}>
+        <Text style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 4, color, textTransform: 'uppercase' }}>Authorized Signatory</Text>
         {getSignatureUrl(invoice) ? (
-          <Image src={getSignatureUrl(invoice)} style={{ width: 100, height: 40, objectFit: 'contain', marginTop: 4 }} />
+          <Image src={getSignatureUrl(invoice)} style={{ width: 80, height: 32, objectFit: 'contain', marginTop: 2 }} />
         ) : invoice.business?.signatureName ? (
-          <View style={{ marginTop: 4, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, backgroundColor: '#FEFCE8', width: '100%', alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontFamily: 'Times-Italic', color: '#1F2937' }}>{invoice.business.signatureName}</Text>
-            <Text style={{ fontSize: 7, color: '#9CA3AF', marginTop: 2, textTransform: 'uppercase' }}>Authorized Signatory</Text>
+          <View style={{ marginTop: 2, paddingVertical: 4, paddingHorizontal: 10, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 3, backgroundColor: '#FEFCE8', width: '100%', alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, fontFamily: 'Times-Italic', color: '#1F2937' }}>{invoice.business.signatureName}</Text>
+            <Text style={{ fontSize: 6, color: '#9CA3AF', marginTop: 1, textTransform: 'uppercase' }}>Authorized Signatory</Text>
           </View>
         ) : (
-          <View style={{ height: 40, borderBottomWidth: 1, borderBottomColor: '#999', marginTop: 20, width: '100%' }} />
+          <View style={{ height: 30, borderBottomWidth: 1, borderBottomColor: '#999', marginTop: 12, width: '100%' }} />
         )}
         {invoice.business?.signatureName && !getSignatureUrl(invoice) ? null : (
-          invoice.business?.signatureName && <Text style={{ fontSize: 9, marginTop: 4 }}>{invoice.business.signatureName}</Text>
+          invoice.business?.signatureName && <Text style={{ fontSize: 8, marginTop: 2 }}>{invoice.business.signatureName}</Text>
         )}
-        {invoice.business?.name && <Text style={{ fontSize: 9, color: '#666' }}>For {invoice.business.name}</Text>}
+        {invoice.business?.name && <Text style={{ fontSize: 8, color: '#666' }}>For {invoice.business.name}</Text>}
       </View>
     </View>
   )
@@ -352,32 +352,32 @@ function BankAndSignature({ invoice, color = '#333' }) {
 const modernRedStyles = StyleSheet.create({
   page: { padding: 0, fontSize: 10, fontFamily: 'Helvetica' },
   sidebar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, backgroundColor: '#DC2626' },
-  content: { paddingTop: 40, paddingBottom: 40, paddingLeft: 46, paddingRight: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#DC2626' },
-  invoiceMetaBox: { backgroundColor: '#FEF2F2', padding: 12, borderRadius: 4, minWidth: 160 },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
-  metaLabel: { fontSize: 8, color: '#991B1B', textTransform: 'uppercase', fontWeight: 'bold' },
-  metaValue: { fontSize: 10, color: '#1F2937', fontWeight: 'bold' },
-  divider: { height: 2, backgroundColor: '#DC2626', marginBottom: 20, opacity: 0.3 },
-  addressRow: { flexDirection: 'row', gap: 40, marginBottom: 25 },
+  content: { paddingTop: 30, paddingBottom: 30, paddingLeft: 36, paddingRight: 30 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#DC2626' },
+  invoiceMetaBox: { backgroundColor: '#FEF2F2', padding: 8, borderRadius: 3, minWidth: 140 },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  metaLabel: { fontSize: 7, color: '#991B1B', textTransform: 'uppercase', fontWeight: 'bold' },
+  metaValue: { fontSize: 9, color: '#1F2937', fontWeight: 'bold' },
+  divider: { height: 1, backgroundColor: '#DC2626', marginBottom: 10, opacity: 0.3 },
+  addressRow: { flexDirection: 'row', gap: 20, marginBottom: 12 },
   addressBlock: { flex: 1 },
-  addressLabel: { fontSize: 8, fontWeight: 'bold', color: '#DC2626', textTransform: 'uppercase', marginBottom: 6 },
-  addressName: { fontSize: 11, fontWeight: 'bold', color: '#1F2937', marginBottom: 2 },
-  addressDetail: { fontSize: 9, color: '#6B7280', marginBottom: 1 },
-  table: { marginTop: 5 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#DC2626', padding: 8 },
-  tableHeaderText: { color: '#FFFFFF', fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  tableRowAlt: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#FAFAFA' },
+  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#DC2626', textTransform: 'uppercase', marginBottom: 3 },
+  addressName: { fontSize: 9, fontWeight: 'bold', color: '#1F2937', marginBottom: 1 },
+  addressDetail: { fontSize: 8, color: '#6B7280', marginBottom: 1 },
+  table: { marginTop: 3 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#DC2626', paddingVertical: 5, paddingHorizontal: 6 },
+  tableHeaderText: { color: '#FFFFFF', fontSize: 7.5, fontWeight: 'bold', textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  tableRowAlt: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#FAFAFA' },
   colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsBox: { marginTop: 15, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
-  totalLabel: { fontSize: 9, color: '#6B7280' },
-  totalValue: { fontSize: 9, fontWeight: 'bold', color: '#1F2937' },
-  grandTotalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 2, borderTopColor: '#DC2626', marginTop: 4 },
-  grandTotalLabel: { fontSize: 12, fontWeight: 'bold', color: '#DC2626' },
-  grandTotalValue: { fontSize: 12, fontWeight: 'bold', color: '#DC2626' },
+  totalsBox: { marginTop: 8, alignItems: 'flex-end' },
+  totalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 2 },
+  totalLabel: { fontSize: 8, color: '#6B7280' },
+  totalValue: { fontSize: 8, fontWeight: 'bold', color: '#1F2937' },
+  grandTotalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 4, borderTopWidth: 2, borderTopColor: '#DC2626', marginTop: 3 },
+  grandTotalLabel: { fontSize: 11, fontWeight: 'bold', color: '#DC2626' },
+  grandTotalValue: { fontSize: 11, fontWeight: 'bold', color: '#DC2626' },
 })
 
 export function ModernRedTemplate({ invoice }) {
@@ -392,13 +392,13 @@ export function ModernRedTemplate({ invoice }) {
           <View style={modernRedStyles.headerRow}>
             <View>
               {doc.showLogo && getLogoUrl(invoice) && (
-                <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
+                <Image src={getLogoUrl(invoice)} style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 3 }} />
               )}
               <Text style={modernRedStyles.title}>{doc.heading}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
-                nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}
+                nameStyle={{ fontSize: 10, color: '#374151', marginTop: 3 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280', marginTop: 1 }}
               />
             </View>
             <View style={modernRedStyles.invoiceMetaBox}>
@@ -481,14 +481,14 @@ export function ModernRedTemplate({ invoice }) {
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
-            <View style={{ marginTop: 25 }}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#DC2626', marginBottom: 4 }}>Terms & Conditions</Text>
-              <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#DC2626', marginBottom: 2 }}>Terms & Conditions</Text>
+              <Text style={{ fontSize: 7.5, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
           {doc.showNotes && invoice.notes && (
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#DC2626', marginBottom: 4 }}>Notes</Text>
+            <View style={{ marginTop: 6 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#DC2626', marginBottom: 2 }}>Notes</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.notes}</Text>
             </View>
           )}
@@ -507,24 +507,24 @@ export function ModernRedTemplate({ invoice }) {
 const classicRedStyles = StyleSheet.create({
   page: { padding: 0, fontSize: 10, fontFamily: 'Helvetica' },
   headerBar: { backgroundColor: '#047857', height: 6 },
-  content: { padding: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-  businessName: { fontSize: 16, fontWeight: 'bold', color: '#047857' },
-  invoiceTitle: { fontSize: 20, fontWeight: 'bold', color: '#047857', textAlign: 'right' },
-  metaRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 },
-  metaLabel: { fontSize: 9, color: '#6B7280', marginRight: 10, width: 70, textAlign: 'right' },
-  metaValue: { fontSize: 9, fontWeight: 'bold', color: '#1F2937', width: 80 },
-  addressRow: { flexDirection: 'row', gap: 30, marginBottom: 20, marginTop: 15 },
+  content: { padding: 30 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  businessName: { fontSize: 11, fontWeight: 'bold', color: '#047857' },
+  invoiceTitle: { fontSize: 16, fontWeight: 'bold', color: '#047857', textAlign: 'right' },
+  metaRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 1 },
+  metaLabel: { fontSize: 8, color: '#6B7280', marginRight: 8, width: 60, textAlign: 'right' },
+  metaValue: { fontSize: 9, fontWeight: 'bold', color: '#1F2937', width: 75 },
+  addressRow: { flexDirection: 'row', gap: 20, marginBottom: 12, marginTop: 8 },
   addressBlock: { flex: 1 },
-  addressLabel: { fontSize: 9, fontWeight: 'bold', color: '#047857', marginBottom: 5, textTransform: 'uppercase' },
-  table: { marginTop: 10 },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: '#047857', paddingBottom: 6, paddingHorizontal: 4 },
-  tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#047857', textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsBox: { marginTop: 15, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 3 },
-  grandTotalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 2, borderTopColor: '#047857', marginTop: 4 },
+  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#047857', marginBottom: 3, textTransform: 'uppercase' },
+  table: { marginTop: 3 },
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: '#047857', paddingBottom: 4, paddingHorizontal: 4 },
+  tableHeaderText: { fontSize: 7.5, fontWeight: 'bold', color: '#047857', textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  colSno: { width: 25 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
+  totalsBox: { marginTop: 8, alignItems: 'flex-end' },
+  totalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 2 },
+  grandTotalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 4, borderTopWidth: 2, borderTopColor: '#047857', marginTop: 3 },
 })
 
 export function ClassicRedTemplate({ invoice }) {
@@ -539,12 +539,12 @@ export function ClassicRedTemplate({ invoice }) {
           <View style={classicRedStyles.headerRow}>
             <View style={{ flex: 1 }}>
               {doc.showLogo && getLogoUrl(invoice) && (
-                <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
+                <Image src={getLogoUrl(invoice)} style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 3 }} />
               )}
               <AddressBlock
                 lines={getFromAddress(invoice)}
                 nameStyle={classicRedStyles.businessName}
-                detailStyle={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280', marginTop: 1 }}
               />
             </View>
             <View>
@@ -576,8 +576,8 @@ export function ClassicRedTemplate({ invoice }) {
               <Text style={classicRedStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
-                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280' }}
               />
             </View>
             {doc.showShipTo && getShipTo(invoice).length > 0 && (
@@ -585,8 +585,8 @@ export function ClassicRedTemplate({ invoice }) {
                 <Text style={classicRedStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
                   lines={getShipTo(invoice)}
-                  nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                  nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                  detailStyle={{ fontSize: 8, color: '#6B7280' }}
                 />
               </View>
             )}
@@ -613,24 +613,24 @@ export function ClassicRedTemplate({ invoice }) {
           </View>
           <View style={classicRedStyles.totalsBox}>
             <View style={classicRedStyles.totalRow}>
-              <Text style={{ fontSize: 9, color: '#6B7280' }}>Subtotal</Text>
-              <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
+              <Text style={{ fontSize: 8, color: '#6B7280' }}>Subtotal</Text>
+              <Text style={{ fontSize: 8, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
             </View>
             {invoice.discountTotal > 0 && (
               <View style={classicRedStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>Discount</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
+                <Text style={{ fontSize: 8, color: '#6B7280' }}>Discount</Text>
+                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={classicRedStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={classicRedStyles.totalRow} labelStyle={{ fontSize: 8, color: '#6B7280' }} valueStyle={{ fontSize: 8, fontWeight: 'bold' }} />
             <View style={classicRedStyles.grandTotalRow}>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#047857' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#047857' }}>TOTAL</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#047857' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
-            <View style={{ marginTop: 25 }}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#047857', marginBottom: 4 }}>Terms & Conditions</Text>
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#047857', marginBottom: 2 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
@@ -648,23 +648,23 @@ export function ClassicRedTemplate({ invoice }) {
 
 const wexlerStyles = StyleSheet.create({
   page: { padding: 0, fontSize: 10, fontFamily: 'Helvetica' },
-  accentBar: { height: 80, backgroundColor: '#1E3A5F', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 40 },
-  accentTitle: { fontSize: 26, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 3 },
+  accentBar: { height: 60, backgroundColor: '#1E3A5F', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 30 },
+  accentTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 2 },
   accentMeta: { textAlign: 'right' },
-  accentMetaText: { fontSize: 9, color: '#93C5FD', marginBottom: 2 },
-  accentMetaValue: { fontSize: 11, color: '#FFFFFF', fontWeight: 'bold' },
-  content: { padding: 40 },
-  addressRow: { flexDirection: 'row', gap: 40, marginBottom: 25 },
+  accentMetaText: { fontSize: 8, color: '#93C5FD', marginBottom: 1 },
+  accentMetaValue: { fontSize: 10, color: '#FFFFFF', fontWeight: 'bold' },
+  content: { padding: 30 },
+  addressRow: { flexDirection: 'row', gap: 20, marginBottom: 12 },
   addressBlock: { flex: 1 },
-  addressLabel: { fontSize: 8, fontWeight: 'bold', color: '#1E3A5F', textTransform: 'uppercase', marginBottom: 5, letterSpacing: 1 },
-  table: { marginTop: 5 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#EFF6FF', padding: 8, borderBottomWidth: 2, borderBottomColor: '#1E3A5F' },
-  tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#1E3A5F', textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  colSno: { width: 30 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsBox: { marginTop: 15, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
-  grandTotalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 8, backgroundColor: '#1E3A5F', paddingHorizontal: 10, marginTop: 6 },
+  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#1E3A5F', textTransform: 'uppercase', marginBottom: 3, letterSpacing: 0.5 },
+  table: { marginTop: 3 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#EFF6FF', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 2, borderBottomColor: '#1E3A5F' },
+  tableHeaderText: { fontSize: 7.5, fontWeight: 'bold', color: '#1E3A5F', textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  colSno: { width: 25 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
+  totalsBox: { marginTop: 8, alignItems: 'flex-end' },
+  totalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 2 },
+  grandTotalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 5, backgroundColor: '#1E3A5F', paddingHorizontal: 8, marginTop: 4 },
 })
 
 export function WexlerTemplate({ invoice }) {
@@ -677,7 +677,7 @@ export function WexlerTemplate({ invoice }) {
         <View style={wexlerStyles.accentBar}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             {doc.showLogo && getLogoUrl(invoice) && (
-              <Image src={getLogoUrl(invoice)} style={{ width: 55, height: 55, objectFit: 'contain' }} />
+              <Image src={getLogoUrl(invoice)} style={{ width: 40, height: 40, objectFit: 'contain' }} />
             )}
             <Text style={wexlerStyles.accentTitle}>{doc.heading}</Text>
           </View>
@@ -694,16 +694,16 @@ export function WexlerTemplate({ invoice }) {
               <Text style={wexlerStyles.addressLabel}>{doc.fromLabel}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
-                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280' }}
               />
             </View>
             <View style={wexlerStyles.addressBlock}>
               <Text style={wexlerStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
-                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280' }}
               />
             </View>
             {doc.showShipTo && getShipTo(invoice).length > 0 && (
@@ -711,8 +711,8 @@ export function WexlerTemplate({ invoice }) {
                 <Text style={wexlerStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
                   lines={getShipTo(invoice)}
-                  nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                  nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                  detailStyle={{ fontSize: 8, color: '#6B7280' }}
                 />
               </View>
             )}
@@ -739,24 +739,24 @@ export function WexlerTemplate({ invoice }) {
           </View>
           <View style={wexlerStyles.totalsBox}>
             <View style={wexlerStyles.totalRow}>
-              <Text style={{ fontSize: 9, color: '#6B7280' }}>Subtotal</Text>
-              <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
+              <Text style={{ fontSize: 8, color: '#6B7280' }}>Subtotal</Text>
+              <Text style={{ fontSize: 8, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
             </View>
             {invoice.discountTotal > 0 && (
               <View style={wexlerStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>Discount</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
+                <Text style={{ fontSize: 8, color: '#6B7280' }}>Discount</Text>
+                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={wexlerStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={wexlerStyles.totalRow} labelStyle={{ fontSize: 8, color: '#6B7280' }} valueStyle={{ fontSize: 8, fontWeight: 'bold' }} />
             <View style={wexlerStyles.grandTotalRow}>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
-            <View style={{ marginTop: 25 }}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#1E3A5F', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Terms & Conditions</Text>
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#1E3A5F', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
@@ -775,26 +775,26 @@ export function WexlerTemplate({ invoice }) {
 const plexerStyles = StyleSheet.create({
   page: { padding: 0, fontSize: 10, fontFamily: 'Helvetica' },
   topBar: { height: 4, backgroundColor: '#374151' },
-  content: { padding: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#111827', letterSpacing: 2 },
-  businessDetail: { fontSize: 9, color: '#6B7280', marginTop: 2 },
-  metaBox: { borderLeftWidth: 3, borderLeftColor: '#374151', paddingLeft: 10 },
-  metaRow: { marginBottom: 3 },
-  metaLabel: { fontSize: 7, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 },
-  metaValue: { fontSize: 10, color: '#111827', fontWeight: 'bold' },
-  separator: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 15 },
-  addressRow: { flexDirection: 'row', gap: 40, marginBottom: 20 },
+  content: { padding: 30 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#111827', letterSpacing: 1.5 },
+  businessDetail: { fontSize: 8, color: '#6B7280', marginTop: 1 },
+  metaBox: { borderLeftWidth: 2, borderLeftColor: '#374151', paddingLeft: 8 },
+  metaRow: { marginBottom: 2 },
+  metaLabel: { fontSize: 7, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 },
+  metaValue: { fontSize: 9, color: '#111827', fontWeight: 'bold' },
+  separator: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
+  addressRow: { flexDirection: 'row', gap: 20, marginBottom: 12 },
   addressBlock: { flex: 1 },
-  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 5, letterSpacing: 1 },
-  table: { marginTop: 5 },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#374151', paddingBottom: 6, paddingHorizontal: 4 },
-  tableHeaderText: { fontSize: 7, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: 1 },
-  tableRow: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 3, letterSpacing: 0.5 },
+  table: { marginTop: 3 },
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#374151', paddingBottom: 4, paddingHorizontal: 4 },
+  tableHeaderText: { fontSize: 7, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   colSno: { width: 25 }, colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsBox: { marginTop: 15, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 3 },
-  grandTotalRow: { flexDirection: 'row', width: 200, justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 2, borderTopColor: '#374151', marginTop: 4 },
+  totalsBox: { marginTop: 8, alignItems: 'flex-end' },
+  totalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 2 },
+  grandTotalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 4, borderTopWidth: 2, borderTopColor: '#374151', marginTop: 3 },
 })
 
 export function PlexerTemplate({ invoice }) {
@@ -809,12 +809,12 @@ export function PlexerTemplate({ invoice }) {
           <View style={plexerStyles.headerRow}>
             <View>
               {doc.showLogo && getLogoUrl(invoice) && (
-                <Image src={getLogoUrl(invoice)} style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 6 }} />
+                <Image src={getLogoUrl(invoice)} style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 3 }} />
               )}
               <Text style={plexerStyles.title}>{doc.heading}</Text>
               <AddressBlock
                 lines={getFromAddress(invoice)}
-                nameStyle={{ fontSize: 11, color: '#374151', marginTop: 4 }}
+                nameStyle={{ fontSize: 10, color: '#374151', marginTop: 3 }}
                 detailStyle={plexerStyles.businessDetail}
               />
             </View>
@@ -847,8 +847,8 @@ export function PlexerTemplate({ invoice }) {
               <Text style={plexerStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
-                nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280' }}
               />
             </View>
             {doc.showShipTo && getShipTo(invoice).length > 0 && (
@@ -856,8 +856,8 @@ export function PlexerTemplate({ invoice }) {
                 <Text style={plexerStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
                   lines={getShipTo(invoice)}
-                  nameStyle={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}
-                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                  nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                  detailStyle={{ fontSize: 8, color: '#6B7280' }}
                 />
               </View>
             )}
@@ -884,24 +884,24 @@ export function PlexerTemplate({ invoice }) {
           </View>
           <View style={plexerStyles.totalsBox}>
             <View style={plexerStyles.totalRow}>
-              <Text style={{ fontSize: 9, color: '#6B7280' }}>Subtotal</Text>
-              <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
+              <Text style={{ fontSize: 8, color: '#6B7280' }}>Subtotal</Text>
+              <Text style={{ fontSize: 8, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
             </View>
             {invoice.discountTotal > 0 && (
               <View style={plexerStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>Discount</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
+                <Text style={{ fontSize: 8, color: '#6B7280' }}>Discount</Text>
+                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={plexerStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={plexerStyles.totalRow} labelStyle={{ fontSize: 8, color: '#6B7280' }} valueStyle={{ fontSize: 8, fontWeight: 'bold' }} />
             <View style={plexerStyles.grandTotalRow}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>TOTAL</Text>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111827' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#111827' }}>TOTAL</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#111827' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
-            <View style={{ marginTop: 25 }}>
-              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Terms & Conditions</Text>
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
@@ -919,28 +919,28 @@ export function PlexerTemplate({ invoice }) {
 
 const contemporaryStyles = StyleSheet.create({
   page: { padding: 0, fontSize: 10, fontFamily: 'Helvetica' },
-  headerBg: { backgroundColor: '#E11D48', paddingVertical: 30, paddingHorizontal: 40 },
+  headerBg: { backgroundColor: '#E11D48', paddingVertical: 16, paddingHorizontal: 30 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' },
-  businessInfo: { fontSize: 9, color: '#FECDD3', marginTop: 3 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+  businessInfo: { fontSize: 8, color: '#FECDD3', marginTop: 2 },
   metaRight: { textAlign: 'right' },
   metaLabel: { fontSize: 7, color: '#FECDD3', textTransform: 'uppercase' },
-  metaValue: { fontSize: 11, color: '#FFFFFF', fontWeight: 'bold', marginBottom: 4 },
-  totalBadge: { backgroundColor: '#FFFFFF', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 4, marginTop: 10 },
-  totalBadgeLabel: { fontSize: 7, color: '#E11D48', textTransform: 'uppercase', fontWeight: 'bold' },
-  totalBadgeValue: { fontSize: 18, color: '#E11D48', fontWeight: 'bold' },
-  content: { padding: 40 },
-  addressRow: { flexDirection: 'row', gap: 40, marginBottom: 25 },
+  metaValue: { fontSize: 10, color: '#FFFFFF', fontWeight: 'bold', marginBottom: 2 },
+  totalBadge: { backgroundColor: '#FFFFFF', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 3, marginTop: 6 },
+  totalBadgeLabel: { fontSize: 6, color: '#E11D48', textTransform: 'uppercase', fontWeight: 'bold' },
+  totalBadgeValue: { fontSize: 14, color: '#E11D48', fontWeight: 'bold' },
+  content: { padding: 30 },
+  addressRow: { flexDirection: 'row', gap: 20, marginBottom: 12 },
   addressBlock: { flex: 1 },
-  addressLabel: { fontSize: 8, fontWeight: 'bold', color: '#E11D48', textTransform: 'uppercase', marginBottom: 5 },
-  table: { marginTop: 5 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#FFF1F2', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E11D48' },
-  tableHeaderText: { fontSize: 8, fontWeight: 'bold', color: '#E11D48', textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  addressLabel: { fontSize: 7, fontWeight: 'bold', color: '#E11D48', textTransform: 'uppercase', marginBottom: 3 },
+  table: { marginTop: 3 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#FFF1F2', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#E11D48' },
+  tableHeaderText: { fontSize: 7.5, fontWeight: 'bold', color: '#E11D48', textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   colName: { flex: 3 }, colQty: { flex: 1, textAlign: 'center' }, colRate: { flex: 1, textAlign: 'right' }, colTax: { flex: 1, textAlign: 'center' }, colTotal: { flex: 1, textAlign: 'right' },
-  totalsBox: { marginTop: 15, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 3 },
-  grandTotalRow: { flexDirection: 'row', width: 220, justifyContent: 'space-between', paddingVertical: 8, backgroundColor: '#E11D48', paddingHorizontal: 10, marginTop: 6 },
+  totalsBox: { marginTop: 8, alignItems: 'flex-end' },
+  totalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 2 },
+  grandTotalRow: { flexDirection: 'row', width: 190, justifyContent: 'space-between', paddingVertical: 5, backgroundColor: '#E11D48', paddingHorizontal: 8, marginTop: 4 },
 })
 
 export function ContemporaryTemplate({ invoice }) {
@@ -954,7 +954,7 @@ export function ContemporaryTemplate({ invoice }) {
           <View style={contemporaryStyles.headerRow}>
             <View>
               {doc.showLogo && getLogoUrl(invoice) && (
-                <Image src={getLogoUrl(invoice)} style={{ width: 85, height: 85, objectFit: 'contain', marginBottom: 6 }} />
+                <Image src={getLogoUrl(invoice)} style={{ width: 50, height: 50, objectFit: 'contain', marginBottom: 4 }} />
               )}
               <Text style={contemporaryStyles.title}>{doc.heading}</Text>
               <AddressBlock
@@ -993,8 +993,8 @@ export function ContemporaryTemplate({ invoice }) {
               <Text style={contemporaryStyles.addressLabel}>{doc.toLabel}</Text>
               <AddressBlock
                 lines={getBillTo(invoice)}
-                nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                detailStyle={{ fontSize: 8, color: '#6B7280' }}
               />
             </View>
             {doc.showShipTo && getShipTo(invoice).length > 0 && (
@@ -1002,8 +1002,8 @@ export function ContemporaryTemplate({ invoice }) {
                 <Text style={contemporaryStyles.addressLabel}>Ship To</Text>
                 <AddressBlock
                   lines={getShipTo(invoice)}
-                  nameStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                  detailStyle={{ fontSize: 9, color: '#6B7280' }}
+                  nameStyle={{ fontSize: 9, fontWeight: 'bold', marginBottom: 1 }}
+                  detailStyle={{ fontSize: 8, color: '#6B7280' }}
                 />
               </View>
             )}
@@ -1028,24 +1028,24 @@ export function ContemporaryTemplate({ invoice }) {
           </View>
           <View style={contemporaryStyles.totalsBox}>
             <View style={contemporaryStyles.totalRow}>
-              <Text style={{ fontSize: 9, color: '#6B7280' }}>Subtotal</Text>
-              <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
+              <Text style={{ fontSize: 8, color: '#6B7280' }}>Subtotal</Text>
+              <Text style={{ fontSize: 8, fontWeight: 'bold' }}>{formatCurrency(invoice.subtotal)}</Text>
             </View>
             {invoice.discountTotal > 0 && (
               <View style={contemporaryStyles.totalRow}>
-                <Text style={{ fontSize: 9, color: '#6B7280' }}>Discount</Text>
-                <Text style={{ fontSize: 9, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
+                <Text style={{ fontSize: 8, color: '#6B7280' }}>Discount</Text>
+                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>-{formatCurrency(invoice.discountTotal)}</Text>
               </View>
             )}
-            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={contemporaryStyles.totalRow} labelStyle={{ fontSize: 9, color: '#6B7280' }} valueStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+            <TaxBreakdownRows invoice={invoice} doc={doc} rowStyle={contemporaryStyles.totalRow} labelStyle={{ fontSize: 8, color: '#6B7280' }} valueStyle={{ fontSize: 8, fontWeight: 'bold' }} />
             <View style={contemporaryStyles.grandTotalRow}>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#FFFFFF' }}>TOTAL</Text>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#FFFFFF' }}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>
             </View>
           </View>
           {doc.showTerms && invoice.terms && (
-            <View style={{ marginTop: 25 }}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#E11D48', marginBottom: 4 }}>Terms & Conditions</Text>
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#E11D48', marginBottom: 2 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 8, color: '#6B7280' }}>{invoice.terms}</Text>
             </View>
           )}
