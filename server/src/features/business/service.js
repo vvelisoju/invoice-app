@@ -99,6 +99,9 @@ export async function updateBusinessInfo(businessId, data) {
   if (data.address !== undefined) updateData.address = data.address
   if (data.website !== undefined) updateData.website = data.website
   if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl
+  if (data.gstEnabled !== undefined) updateData.gstEnabled = data.gstEnabled
+  if (data.gstin !== undefined) updateData.gstin = data.gstin
+  if (data.stateCode !== undefined) updateData.stateCode = data.stateCode
   return prisma.business.update({ where: { id: businessId }, data: updateData, select: BUSINESS_SELECT })
 }
 

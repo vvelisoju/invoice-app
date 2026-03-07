@@ -72,6 +72,9 @@ export const updateBusinessInfoSchema = z.object({
   website: z.preprocess(emptyToNull, z.string().max(500).optional().nullable()),
   address: z.preprocess(emptyToNull, z.string().max(500).optional().nullable()),
   logoUrl: z.preprocess(emptyToNull, z.string().max(2000).optional().nullable()),
+  gstEnabled: z.boolean().optional(),
+  gstin: z.preprocess(emptyToNull, z.string().max(15).optional().nullable()),
+  stateCode: z.preprocess(emptyToNull, z.string().max(2).optional().nullable()),
 }).strip()
 
 export const updateGstSettingsSchema = z.object({

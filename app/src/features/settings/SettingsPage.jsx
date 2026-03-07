@@ -1586,7 +1586,7 @@ export default function SettingsPage() {
   // Map fields to their owning tab
   const fieldTabMap = {
     name: 'business', phone: 'business', email: 'business', website: 'business', address: 'business', logoUrl: 'business',
-    gstEnabled: 'gst', gstin: 'gst', stateCode: 'gst', defaultTaxRate: 'gst',
+    gstEnabled: 'business', gstin: 'business', stateCode: 'business', defaultTaxRate: 'gst',
     bankName: 'bank', accountNumber: 'bank', ifscCode: 'bank', upiId: 'bank', signatureUrl: 'bank', signatureName: 'bank',
     enableStatusWorkflow: 'invoice', enablePoNumber: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
     defaultNotes: 'invoice', defaultTerms: 'invoice', enabledInvoiceTypes: 'invoice',
@@ -1601,8 +1601,8 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     if (activeTab === 'business') {
-      const { name, phone, email, website, address, logoUrl } = formData
-      businessInfoMutation.mutate({ name, phone, email, website, address, logoUrl })
+      const { name, phone, email, website, address, logoUrl, gstEnabled, gstin, stateCode } = formData
+      businessInfoMutation.mutate({ name, phone, email, website, address, logoUrl, gstEnabled, gstin, stateCode })
     } else if (activeTab === 'gst') {
       const { gstEnabled, gstin, stateCode, defaultTaxRate } = formData
       gstMutation.mutate({ gstEnabled, gstin, stateCode, defaultTaxRate })

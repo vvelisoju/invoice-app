@@ -78,7 +78,7 @@ model Business {
   name        String
   status      BusinessStatus @default(ACTIVE)
   stateCode   String?  // India state code for GST
-  gstEnabled  Boolean  @default(false)
+  gstEnabled  Boolean  @default(true)
   gstin       String?  // GST Identification Number
   logoUrl     String?
   phone       String?

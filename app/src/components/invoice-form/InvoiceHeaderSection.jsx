@@ -81,12 +81,13 @@ export default function InvoiceHeaderSection({
     enabled: shipSearchTerm.length >= 1 && showShipSuggestions
   })
 
-  // Build address text from customer (name + details)
+  // Build address text from customer (name + details + GSTIN when GST is enabled)
   const buildCustomerText = (customer) => {
     const parts = [customer.name]
     if (customer.address) parts.push(customer.address)
     if (customer.phone) parts.push(customer.phone)
     if (customer.email) parts.push(customer.email)
+    if (businessProfile?.gstEnabled && customer.gstin) parts.push(`GSTIN: ${customer.gstin}`)
     return parts.join('\n')
   }
 
