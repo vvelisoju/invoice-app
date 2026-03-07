@@ -53,7 +53,9 @@ export const updateBusinessSchema = z.object({
     (val) => (val === null || val === undefined) ? undefined : val,
     z.record(z.string(), z.object({
       labels: z.record(z.string(), z.string()).optional(),
-      fields: z.record(z.string(), z.any()).optional()
+      fields: z.record(z.string(), z.any()).optional(),
+      prefix: z.string().max(10).optional(),
+      nextNumber: z.number().int().positive().optional(),
     })).optional()
   ),
   defaultDocType: z.preprocess(

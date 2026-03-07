@@ -475,7 +475,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
       nextNum = businessProfile.nextInvoiceNumber
     } else {
       prefix = typeConfig.prefix ?? docTypeConfig.prefix ?? businessProfile.invoicePrefix ?? ''
-      nextNum = typeConfig.nextNumber || 1
+      nextNum = typeConfig.nextNumber ?? 1
     }
 
     if (nextNum != null) {

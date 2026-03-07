@@ -34,8 +34,8 @@ export const createInvoice = async (prisma, businessId, data) => {
       prefix = business.invoicePrefix
       nextNum = business.nextInvoiceNumber
     } else {
-      prefix = typeConfig.prefix || DOC_TYPE_DEFAULT_PREFIX[docType] || business.invoicePrefix
-      nextNum = typeConfig.nextNumber || 1
+      prefix = typeConfig.prefix ?? DOC_TYPE_DEFAULT_PREFIX[docType] ?? business.invoicePrefix
+      nextNum = typeConfig.nextNumber ?? 1
     }
 
     invoiceNumber = `${prefix}${String(nextNum).padStart(4, '0')}`

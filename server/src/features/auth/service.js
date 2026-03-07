@@ -138,8 +138,9 @@ export const verifyOTP = async (prisma, phone, otp) => {
     throw new UnauthorizedError('Too many failed attempts. Please request a new OTP')
   }
 
-  // Verify OTP (demo bypass only in non-production environments)
-  const isDemoBypass = !isProduction() && (phone === '9494644848' || phone === '9999999999') && otp === '999999'
+  // Verify OTP — admin phones accept default OTP (999999) in all environments alongside real OTP
+  const ADMIN_PHONES = ['9999999999', '9494644848']
+  const isDemoBypass = ADMIN_PHONES.includes(phone) && otp === '999999'
   if (otpRequest.otp !== otp && !isDemoBypass) {
     // Increment attempts
     await prisma.otpRequest.update({

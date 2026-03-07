@@ -60,15 +60,17 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
     const typeOverrides = { ...(current[typeKey] || {}) }
     if (field === 'nextNumber') {
       const num = parseInt(value, 10)
-      if (!value || isNaN(num)) {
-        delete typeOverrides.nextNumber
+      if (!value || isNaN(num) || num < 1) {
+        // Keep 1 as minimum — nextNumber is mandatory for all document types
+        typeOverrides.nextNumber = 1
       } else {
         typeOverrides.nextNumber = num
       }
     } else if (field === 'prefix') {
-      if (!value || value === DOCUMENT_TYPE_DEFAULTS[typeKey]?.prefix) {
+      if (value === undefined || value === null) {
         delete typeOverrides.prefix
       } else {
+        // Store even empty string — user explicitly wants no prefix
         typeOverrides.prefix = value
       }
     } else if (field === 'defaultNotes' || field === 'defaultTerms') {
@@ -108,15 +110,15 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
 
   const getField = (typeKey, field) => {
     const val = documentTypeConfig?.[typeKey]?.[field]
-    return val !== undefined && val !== null ? String(val) : ''
+    return val !== undefined && val !== null ? String(val) : undefined
   }
 
   // For the legacy 'invoice' type, fall back to business-level defaults if no per-type override exists
   const getFieldWithLegacy = (typeKey, field) => {
     const perType = getField(typeKey, field)
-    if (perType) return perType
+    if (perType !== undefined) return perType
     if (typeKey === 'invoice' && legacyDefaults) {
-      if (field === 'prefix' && legacyDefaults.invoicePrefix) return legacyDefaults.invoicePrefix
+      if (field === 'prefix' && legacyDefaults.invoicePrefix != null) return legacyDefaults.invoicePrefix
       if (field === 'nextNumber' && legacyDefaults.nextInvoiceNumber) return String(legacyDefaults.nextInvoiceNumber)
       if (field === 'defaultNotes' && legacyDefaults.defaultNotes) return legacyDefaults.defaultNotes
       if (field === 'defaultTerms' && legacyDefaults.defaultTerms) return legacyDefaults.defaultTerms
@@ -150,7 +152,10 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
           const Icon = type.icon
           const typeConf = documentTypeConfig?.[type.key] || {}
           const hasOverrides = Object.keys(typeConf).length > 0
-          const previewPrefix = getFieldWithLegacy(type.key, 'prefix') || type.defaults.prefix
+          const explicitPrefix = getField(type.key, 'prefix')
+          const previewPrefix = explicitPrefix !== undefined
+            ? explicitPrefix
+            : (getFieldWithLegacy(type.key, 'prefix') || type.defaults.prefix)
           const previewNum = getFieldWithLegacy(type.key, 'nextNumber') || '1'
           const previewInvNum = `${previewPrefix}${String(previewNum).padStart(4, '0')}`
 
@@ -182,7 +187,9 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
                         <label className={labelClass}>Prefix</label>
                         <input
                           type="text"
-                          value={getFieldWithLegacy(type.key, 'prefix')}
+                          value={explicitPrefix !== undefined
+                            ? explicitPrefix
+                            : (getFieldWithLegacy(type.key, 'prefix') || type.defaults.prefix || '')}
                           onChange={(e) => handleFieldChange(type.key, 'prefix', e.target.value)}
                           placeholder={type.defaults.prefix || 'INV-'}
                           maxLength={10}
@@ -190,11 +197,12 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
                         />
                       </div>
                       <div>
-                        <label className={labelClass}>Next Number</label>
+                        <label className={labelClass}>Next Number <span className="text-red-400">*</span></label>
                         <input
                           type="number"
                           min="1"
-                          value={getFieldWithLegacy(type.key, 'nextNumber')}
+                          required
+                          value={getFieldWithLegacy(type.key, 'nextNumber') || '1'}
                           onChange={(e) => handleFieldChange(type.key, 'nextNumber', e.target.value)}
                           placeholder="1"
                           className={inputClass}
