@@ -140,27 +140,26 @@ export default function AppHeader({ onMenuToggle }) {
             )
           })}
 
-          <div className="h-6 w-px bg-border mx-2" />
-
-          {/* Quick Actions */}
-          {headerQuickActions.map((action) => (
-            <button
-              key={action.path}
-              onClick={() => {
-                const docType = businessProfile?.defaultDocType || 'invoice'
-                history.push(`/invoices/new?type=${docType}`)
-              }}
-              className="px-4 py-2 text-sm font-semibold text-primary bg-primary/8 hover:bg-primary/15 border border-primary/20 rounded-md transition-colors flex items-center gap-2"
-            >
-              <action.icon className="w-4 h-4 text-primary" />
-              {action.label}
-            </button>
-          ))}
         </div>
       </div>
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-1 md:gap-3 shrink-0">
+        {/* +New Button — right-aligned */}
+        {headerQuickActions.map((action) => (
+          <button
+            key={action.path}
+            onClick={() => {
+              const docType = businessProfile?.defaultDocType || 'invoice'
+              history.push(`/invoices/new?type=${docType}`)
+            }}
+            className="hidden md:flex px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primaryHover rounded-md transition-colors items-center gap-2 shadow-sm"
+          >
+            <action.icon className="w-4 h-4" />
+            {action.label}
+          </button>
+        ))}
+
         <NotificationBell />
 
         {/* Settings Button */}

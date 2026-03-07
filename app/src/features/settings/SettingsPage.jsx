@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import {
   Building2,
@@ -31,24 +31,50 @@ import {
   Info,
   Package,
   Crown,
-  Hash
+  Hash,
+  Zap,
+  CalendarClock,
+  RefreshCw,
+  XCircle,
+  Eye,
+  Download,
+  Printer,
+  Share2,
+  MessageCircle,
+  ArrowLeft
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { businessApi, taxRateApi, templateApi, authApi } from '../../lib/api'
+import { pdf } from '@react-pdf/renderer'
+import { businessApi, taxRateApi, templateApi, authApi, plansApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { PageToolbar } from '../../components/data-table'
+import { useSetSidebarContent } from '../../components/sidebar'
+import SettingsNavSidebar from '../../components/sidebar/SettingsNavSidebar'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES } from '../../components/layout/navigationConfig'
 import { TEMPLATE_REGISTRY, COLOR_FAMILIES, CATEGORIES, getTemplateList } from '../invoices/utils/templates/registry'
 import { DOCUMENT_TYPE_DEFAULTS } from '../../config/documentTypeDefaults'
 import BusinessInfoForm, { FieldInput, FieldTextarea, FieldToggle } from '../../components/settings/BusinessInfoForm'
+import { downloadPDF, sharePDF, printPDF } from '../invoices/utils/pdfGenerator.jsx'
+import { isNative } from '../../lib/capacitor'
+import { openExternalUrl } from '../../lib/nativeBrowser'
+import SubscriptionInvoicePdf from '../plans/SubscriptionInvoicePdf'
+const PdfViewer = lazy(() => import('../../components/MobilePdfViewer'))
 
 const SETTINGS_TABS = [
-  { key: 'business', label: 'Business Info', mobileLabel: 'Business', icon: Building2 },
-  { key: 'gst', label: 'GST Settings', mobileLabel: 'GST', icon: Receipt },
-  { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard },
-  { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText },
-  { key: 'templates', label: 'Invoice Templates', mobileLabel: 'Templates', icon: Palette },
-  { key: 'subscription', label: 'Manage Subscription', mobileLabel: 'Subscription', icon: Crown },
+  { key: 'business', label: 'Business Info', mobileLabel: 'Business', icon: Building2, group: 'business' },
+  { key: 'gst', label: 'Tax Rates & Groups', mobileLabel: 'Tax', icon: Receipt, group: 'business' },
+  { key: 'bank', label: 'Bank & Payment', mobileLabel: 'Bank', icon: CreditCard, group: 'business' },
+  { key: 'invoice', label: 'Invoice Settings', mobileLabel: 'Invoice', icon: FileText, group: 'invoice' },
+  { key: 'doctypes', label: 'Document Types', mobileLabel: 'Doc Types', icon: Layers, group: 'invoice' },
+  { key: 'templates', label: 'Templates', mobileLabel: 'Templates', icon: Palette, group: 'invoice' },
+  { key: 'plans', label: 'Plans & Pricing', mobileLabel: 'Plans', icon: Crown, group: 'billing' },
+  { key: 'billing', label: 'Billing History', mobileLabel: 'Billing', icon: Receipt, group: 'billing' },
+]
+
+const SETTINGS_GROUPS = [
+  { key: 'business', label: 'Business' },
+  { key: 'invoice', label: 'Invoice' },
+  { key: 'billing', label: 'Billing' },
 ]
 
 function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChange, hasPaidPlan, legacyDefaults }) {
@@ -328,7 +354,7 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
                       <p className="text-xs font-medium text-textPrimary mb-0.5">Custom Labels</p>
                       <p className="text-[11px] text-textSecondary mb-2.5">Customize section & line item labels with a paid plan.</p>
                       <button
-                        onClick={() => history.push('/plans')}
+                        onClick={() => history.push('/settings?section=plans')}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors"
                       >
                         <Crown className="w-3 h-3" />
@@ -856,7 +882,7 @@ function LogoUploadSection({ logoUrl, onUploaded, onRemove }) {
           <p className="text-[11px] md:text-xs text-textSecondary">Your logo will appear on invoices</p>
         </div>
       </div>
-      <div className="p-4 md:p-6">
+      <div className="p-3 md:p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           {/* Logo Preview */}
           <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
@@ -969,7 +995,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
           <p className="text-[11px] md:text-xs text-textSecondary">Your signature will appear on invoices</p>
         </div>
       </div>
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="p-3 md:p-4 space-y-4">
         {/* Signature Image Upload — same layout as Logo */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
@@ -1041,7 +1067,7 @@ function SignatureSettingsSection({ signatureUrl, signatureName, businessName, o
   )
 }
 
-export function AccountSection({ onLogout, onManageSubscription }) {
+export function AccountSection({ onLogout }) {
   const queryClient = useQueryClient()
   const history = useHistory()
   const setAuth = useAuthStore((state) => state.setAuth)
@@ -1203,7 +1229,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             </span>
           )}
         </div>
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
             <FieldInput
               label="Full Name"
@@ -1233,7 +1259,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             <p className="text-[11px] md:text-xs text-textSecondary">Used for login and verification</p>
           </div>
         </div>
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-4">
           {!showPhoneChange ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1338,9 +1364,9 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             <p className="text-[11px] md:text-xs text-textSecondary">Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} · v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'}</p>
           </div>
         </div>
-        <div className="p-4 md:p-6 flex flex-wrap gap-3">
+        <div className="p-3 md:p-4 flex flex-wrap gap-3">
           <button
-            onClick={onManageSubscription}
+            onClick={() => history.push('/settings?section=plans')}
             className="px-5 py-2.5 text-sm font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg border border-blue-100 flex items-center gap-2 transition-colors"
           >
             <Crown className="w-4 h-4" />
@@ -1377,7 +1403,7 @@ export function AccountSection({ onLogout, onManageSubscription }) {
             <p className="text-[11px] md:text-xs text-red-500">Irreversible actions</p>
           </div>
         </div>
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-4">
           {!showDeleteConfirm ? (
             <div className="flex items-start gap-3">
               <div className="flex-1">
@@ -1445,6 +1471,411 @@ export function AccountSection({ onLogout, onManageSubscription }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Plans & Billing (inlined from PlansPage) ────────────────────────────
+
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (document.getElementById('razorpay-script')) { resolve(true); return }
+    const script = document.createElement('script')
+    script.id = 'razorpay-script'
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
+
+const PLAN_CONFIG = {
+  free: { icon: Shield, gradient: 'from-gray-50 to-slate-50', border: 'border-gray-200', iconBg: 'bg-gray-100 text-gray-600', features: ['10 invoices/month', '20 customers', '20 products', '1 template'] },
+  starter: { icon: Zap, gradient: 'from-blue-50 to-indigo-50', border: 'border-blue-200', iconBg: 'bg-blue-100 text-blue-600', features: ['200 invoices/month', '500 customers', '200 products', '3 templates'] },
+  pro: { icon: Crown, gradient: 'from-amber-50 to-orange-50', border: 'border-amber-200', iconBg: 'bg-amber-100 text-amber-600', features: ['Unlimited invoices', 'Unlimited customers', 'Unlimited products', '10 templates'], popular: true },
+}
+
+const BILLING_STATUS_COLORS = {
+  PAID: 'text-green-600 bg-green-50 border-green-200',
+  PENDING: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+  FAILED: 'text-red-600 bg-red-50 border-red-200',
+  REFUNDED: 'text-gray-600 bg-gray-50 border-gray-200',
+  CANCELLED: 'text-gray-500 bg-gray-50 border-gray-200',
+}
+
+const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '₹0.00'
+  return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function BillingInvoiceDetail({ invoice, onBack }) {
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [pdfBlob, setPdfBlob] = useState(null)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const generate = async () => {
+      if (!invoice) return
+      setIsGeneratingPdf(true)
+      try {
+        const blob = await pdf(<SubscriptionInvoicePdf invoice={invoice} />).toBlob()
+        if (cancelled) return
+        setPdfBlob(blob)
+        setPdfUrl(URL.createObjectURL(blob))
+      } catch (err) { console.error('Subscription invoice PDF generation failed:', err) }
+      finally { if (!cancelled) setIsGeneratingPdf(false) }
+    }
+    generate()
+    return () => { cancelled = true; if (pdfUrl) URL.revokeObjectURL(pdfUrl) }
+  }, [invoice])
+
+  const handleDownload = useCallback(async () => { if (pdfBlob && invoice) try { await downloadPDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`) } catch {} }, [pdfBlob, invoice])
+  const handlePrint = useCallback(async () => { if (pdfBlob && invoice) try { await printPDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`) } catch {} }, [pdfBlob, invoice])
+  const handleShare = useCallback(async () => { if (pdfBlob && invoice) try { await sharePDF(pdfBlob, `Subscription-Invoice-${invoice.invoiceNumber}.pdf`, { title: `Invoice ${invoice.invoiceNumber}`, text: `Subscription Invoice ${invoice.invoiceNumber}\nAmount: ₹${Number(invoice.total).toLocaleString('en-IN')}` }) } catch {} }, [pdfBlob, invoice])
+
+  return (
+    <div className="h-full flex flex-col -mx-3 md:-mx-4 -my-2 md:-my-2.5">
+      <div className="px-3 md:px-4 py-1.5 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg active:bg-bgPrimary md:hover:bg-bgPrimary text-textSecondary shrink-0">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xs font-bold text-textPrimary truncate">{invoice.invoiceNumber}</h1>
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full shrink-0 ${BILLING_STATUS_COLORS[invoice.status] || BILLING_STATUS_COLORS.PENDING}`}>
+                  {invoice.status}
+                </span>
+              </div>
+              <span className="text-[10px] text-textSecondary">{formatDate(invoice.createdAt)}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={handleDownload} disabled={!pdfBlob} className="px-2 py-1 text-[10px] font-medium text-textSecondary hover:bg-bgPrimary rounded-md border border-border flex items-center gap-1 disabled:opacity-40"><Download className="w-3 h-3" />Download</button>
+            <button onClick={handlePrint} disabled={!pdfBlob} className="px-2 py-1 text-[10px] font-medium text-textSecondary hover:bg-bgPrimary rounded-md border border-border flex items-center gap-1 disabled:opacity-40 hidden md:flex"><Printer className="w-3 h-3" />Print</button>
+            <button onClick={handleShare} disabled={!pdfBlob} className="px-2 py-1 text-[10px] font-medium text-textSecondary hover:bg-bgPrimary rounded-md border border-border flex items-center gap-1 disabled:opacity-40"><Share2 className="w-3 h-3" />Share</button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 bg-gray-100">
+        {isGeneratingPdf ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3"><Loader2 className="w-6 h-6 text-primary animate-spin" /><p className="text-xs text-textSecondary">Generating PDF...</p></div>
+        ) : pdfBlob ? (
+          <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}>
+            <PdfViewer blob={pdfBlob} className="w-full h-full" />
+          </Suspense>
+        ) : (
+          <div className="flex items-center justify-center h-full"><p className="text-xs text-textSecondary">PDF preview unavailable</p></div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function BillingHistoryTab() {
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: ['plans', 'billing-history'],
+    queryFn: async () => { const res = await plansApi.getBillingHistory(); return res.data.data || res.data || [] }
+  })
+
+  if (selectedInvoice) return <BillingInvoiceDetail invoice={selectedInvoice} onBack={() => setSelectedInvoice(null)} />
+
+  return (
+    <div className="space-y-2">
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
+      ) : invoices.length === 0 ? (
+        <div className="bg-white rounded-lg border border-border p-6 text-center">
+          <Receipt className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+          <p className="text-xs font-medium text-textPrimary">No billing history</p>
+          <p className="text-[10px] text-textSecondary mt-0.5">Invoices appear here after subscribing.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-border overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-border flex items-center gap-2">
+            <Receipt className="w-3.5 h-3.5 text-textSecondary" />
+            <span className="text-[11px] font-semibold text-textPrimary">{invoices.length} Invoice{invoices.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="divide-y divide-border">
+            {invoices.map(inv => (
+              <button key={inv.id} onClick={() => setSelectedInvoice(inv)} className="w-full flex items-center justify-between px-3 py-2 active:bg-gray-50 md:hover:bg-gray-50 transition-colors text-left">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs font-mono font-semibold text-textPrimary">{inv.invoiceNumber}</span>
+                    <span className={`text-[9px] font-semibold px-1 py-0.5 rounded-full border ${BILLING_STATUS_COLORS[inv.status] || BILLING_STATUS_COLORS.PENDING}`}>{inv.status}</span>
+                  </div>
+                  <p className="text-[10px] text-textSecondary">{formatDate(inv.createdAt)} · <span className="capitalize">{inv.billingPeriod || '—'}</span></p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-bold text-textPrimary">{formatCurrency(inv.total)}</span>
+                  <Eye className="w-3.5 h-3.5 text-gray-300" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PlansTab() {
+  const queryClient = useQueryClient()
+  const [processingPlan, setProcessingPlan] = useState(null)
+  const [billingPeriod, setBillingPeriod] = useState('yearly')
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+
+  const { data: planUsage, isLoading: usageLoading } = useQuery({
+    queryKey: ['plans', 'usage'],
+    queryFn: async () => { const r = await plansApi.getUsage(); return r.data.data || r.data }
+  })
+  const { data: availablePlans = [], isLoading: plansLoading } = useQuery({
+    queryKey: ['plans', 'list'],
+    queryFn: async () => { const r = await plansApi.list(); return r.data.data || r.data || [] }
+  })
+
+  const subscribeMutation = useMutation({
+    mutationFn: async ({ planId, period }) => {
+      const orderRes = await plansApi.createOrder({ planId, billingPeriod: period })
+      return { order: orderRes.data.data || orderRes.data, planId }
+    },
+    onSuccess: async ({ order, planId }) => {
+      const loaded = await loadRazorpayScript()
+      if (!loaded) { alert('Failed to load payment gateway.'); setProcessingPlan(null); return }
+      const selectedPlan = availablePlans.find(p => p.id === planId)
+      const options = {
+        key: order.razorpayKeyId, amount: order.amount, currency: order.currency,
+        name: 'Invoice Baba', description: `${selectedPlan?.displayName || 'Plan'} - ${order.billingPeriod === 'yearly' ? 'Yearly' : 'Monthly'}`,
+        order_id: order.razorpayOrderId,
+        handler: async (response) => {
+          try {
+            await plansApi.verifyPayment({ razorpayOrderId: response.razorpay_order_id, razorpayPaymentId: response.razorpay_payment_id, razorpaySignature: response.razorpay_signature, planId })
+            queryClient.invalidateQueries(['plans']); setProcessingPlan(null)
+          } catch { alert('Payment verification failed.'); setProcessingPlan(null) }
+        },
+        modal: { ondismiss: () => setProcessingPlan(null) },
+        theme: { color: '#3B82F6' }
+      }
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', () => { alert('Payment failed.'); setProcessingPlan(null) })
+      rzp.open()
+    },
+    onError: (err) => { alert(err?.response?.data?.error?.message || 'Failed to create order.'); setProcessingPlan(null) }
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => { const res = await plansApi.cancelSubscription({ reason: 'user_requested' }); return res.data.data || res.data },
+    onSuccess: () => { queryClient.invalidateQueries(['plans']); setShowCancelConfirm(false) },
+    onError: (err) => { alert(err?.response?.data?.error?.message || 'Failed to cancel.') }
+  })
+
+  const webBaseUrl = import.meta.env.VITE_WEB_URL || 'https://invoicebaba.com'
+  const handleSubscribe = (planId) => {
+    if (isNative()) { openExternalUrl(`${webBaseUrl}/plans`); return }
+    setProcessingPlan(planId); subscribeMutation.mutate({ planId, period: billingPeriod })
+  }
+
+  const currentPlanId = planUsage?.plan?.id
+  const currentPlanName = planUsage?.plan?.name || 'Free'
+  const subscription = planUsage?.subscription
+  const usage = planUsage?.usage
+  const limit = planUsage?.plan?.monthlyInvoiceLimit || 10
+  const used = usage?.invoicesIssued || 0
+  const isUnlimited = limit >= 999999
+  const displayLimit = isUnlimited ? '∞' : limit
+  const percentage = isUnlimited ? 0 : (limit > 0 ? used / limit : 0)
+  const isNearLimit = !isUnlimited && percentage >= 0.8
+  const isAtLimit = !isUnlimited && percentage >= 1
+  const barColor = isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-primary'
+  const isLoading = usageLoading || plansLoading
+  const sortedPlans = [...availablePlans].sort((a, b) => { const o = { free: 0, starter: 1, pro: 2 }; return (o[a.name] ?? 99) - (o[b.name] ?? 99) })
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
+
+  return (
+    <div className="space-y-2">
+      {/* Current Usage */}
+      <div className="bg-white rounded-lg border border-border p-3">
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <div className="min-w-0">
+            <h2 className="text-xs font-semibold text-textPrimary">Current: {currentPlanName}</h2>
+            {subscription?.status === 'ACTIVE' && !subscription?.cancelledAt && (
+              <p className="text-[10px] text-green-600 mt-0.5 flex items-center gap-1 flex-wrap">
+                <CheckCircle2 className="w-3 h-3 shrink-0" /> Active
+                {subscription?.billingPeriod && <span className="text-textSecondary capitalize">· {subscription.billingPeriod}</span>}
+                {subscription?.renewAt && <span className="text-textSecondary">· Renews {formatDate(subscription.renewAt)}</span>}
+              </p>
+            )}
+            {subscription?.status === 'ACTIVE' && subscription?.cancelledAt && (
+              <p className="text-[10px] text-amber-600 mt-0.5 flex items-center gap-1"><CalendarClock className="w-3 h-3 shrink-0" /> Cancelling{subscription?.renewAt && <span className="text-textSecondary">· until {formatDate(subscription.renewAt)}</span>}</p>
+            )}
+          </div>
+          {isAtLimit && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded shrink-0">
+              <AlertTriangle className="w-3 h-3 text-red-500" />
+              <span className="text-[10px] font-medium text-red-600">Limit reached</span>
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-50 rounded-md p-2">
+            <p className="text-[10px] text-textSecondary mb-0.5">Used</p>
+            <p className="text-sm font-bold text-textPrimary">{used} <span className="text-[10px] font-normal text-textSecondary">/ {displayLimit}</span></p>
+            {!isUnlimited && <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-1"><div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} /></div>}
+          </div>
+          <div className="bg-gray-50 rounded-md p-2">
+            <p className="text-[10px] text-textSecondary mb-0.5">Remaining</p>
+            <p className="text-sm font-bold text-textPrimary">{isUnlimited ? '∞' : Math.max(0, limit - used)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-md p-2">
+            <p className="text-[10px] text-textSecondary mb-0.5">Period</p>
+            <p className="text-[10px] font-medium text-textPrimary">
+              {usage?.periodStart ? new Date(usage.periodStart).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '—'}
+              {' — '}
+              {usage?.periodEnd ? new Date(usage.periodEnd).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Management */}
+      {subscription?.status === 'ACTIVE' && subscription?.amount > 0 && (
+        <div className="bg-white rounded-lg border border-border p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <CreditCard className="w-3.5 h-3.5 text-textSecondary" />
+            <h3 className="text-[11px] font-semibold text-textPrimary">Subscription</h3>
+          </div>
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            <div className="bg-gray-50 rounded-md p-2"><p className="text-[9px] text-textSecondary">Billing</p><p className="text-[10px] font-semibold text-textPrimary capitalize">{subscription.billingPeriod || '—'}</p></div>
+            <div className="bg-gray-50 rounded-md p-2"><p className="text-[9px] text-textSecondary">Amount</p><p className="text-[10px] font-semibold text-textPrimary">₹{Number(subscription.amount || 0).toLocaleString('en-IN')}</p></div>
+            <div className="bg-gray-50 rounded-md p-2"><p className="text-[9px] text-textSecondary">Started</p><p className="text-[10px] font-semibold text-textPrimary">{subscription.startDate ? formatDate(subscription.startDate) : '—'}</p></div>
+            <div className="bg-gray-50 rounded-md p-2"><p className="text-[9px] text-textSecondary">{subscription.cancelledAt ? 'Expires' : 'Renews'}</p><p className="text-[10px] font-semibold text-textPrimary">{subscription.renewAt ? formatDate(subscription.renewAt) : '—'}</p></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {!subscription.cancelledAt ? (
+              isNative() ? (
+                <button onClick={() => openExternalUrl(`${webBaseUrl}/plans`)} className="px-2 py-1 text-[10px] font-medium text-primary active:bg-blue-50 rounded border border-blue-200 flex items-center gap-1"><CreditCard className="w-3 h-3" />Manage on Web</button>
+              ) : (
+                <>
+                  <button onClick={() => handleSubscribe(currentPlanId)} disabled={!!processingPlan} className="px-2 py-1 text-[10px] font-medium text-primary active:bg-blue-50 rounded border border-blue-200 flex items-center gap-1 disabled:opacity-50"><RefreshCw className="w-3 h-3" />Renew</button>
+                  <button onClick={() => setShowCancelConfirm(true)} className="px-2 py-1 text-[10px] font-medium text-red-600 active:bg-red-50 rounded border border-red-200 flex items-center gap-1"><XCircle className="w-3 h-3" />Cancel</button>
+                </>
+              )
+            ) : (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-200 rounded">
+                <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+                <p className="text-[10px] text-amber-700">Active until <span className="font-semibold">{subscription.renewAt ? formatDate(subscription.renewAt) : 'end of period'}</span></p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Plan Cards */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[10px] font-semibold text-textSecondary uppercase tracking-wider">Choose Plan</h3>
+          <div className="flex items-center bg-gray-100 rounded-md p-0.5">
+            <button onClick={() => setBillingPeriod('monthly')} className={`px-2 py-1 text-[10px] font-semibold rounded transition-all ${billingPeriod === 'monthly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary'}`}>Monthly</button>
+            <button onClick={() => setBillingPeriod('yearly')} className={`px-2 py-1 text-[10px] font-semibold rounded transition-all ${billingPeriod === 'yearly' ? 'bg-white text-textPrimary shadow-sm' : 'text-textSecondary'}`}>Yearly <span className="text-green-600 ml-0.5">-33%</span></button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {sortedPlans.filter(p => p.active !== false).map((plan) => {
+            const planKey = plan.name?.toLowerCase() || 'free'
+            const cfg = PLAN_CONFIG[planKey] || PLAN_CONFIG.free
+            const isCurrent = plan.id === currentPlanId || (!currentPlanId && planKey === 'free')
+            const isProcessing = processingPlan === plan.id
+            const monthlyPrice = Number(plan.priceMonthly) || 0
+            const yearlyPrice = Number(plan.priceYearly) || 0
+            const yearlyMonthly = yearlyPrice > 0 ? Math.round(yearlyPrice / 12) : 0
+            const isPaid = monthlyPrice > 0
+            const IconComp = cfg.icon
+            return (
+              <div key={plan.id} className={`relative bg-gradient-to-br ${cfg.gradient} rounded-lg border-2 ${isCurrent ? 'border-primary ring-1 ring-primary/20' : cfg.border} overflow-hidden flex flex-col`}>
+                {cfg.popular && !isCurrent && <div className="absolute top-0 right-0"><span className="px-2 py-0.5 text-[9px] font-bold text-white bg-amber-500 rounded-bl-md uppercase">Best</span></div>}
+                {isCurrent && <div className="absolute top-0 right-0"><span className="px-2 py-0.5 text-[9px] font-bold text-white bg-primary rounded-bl-md uppercase">Current</span></div>}
+                <div className="p-3 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center ${cfg.iconBg} shrink-0`}><IconComp className="w-3.5 h-3.5" /></div>
+                      <div>
+                        <h4 className="text-xs font-bold text-textPrimary">{plan.displayName || plan.name}</h4>
+                        <p className="text-[9px] text-textSecondary leading-tight">{plan.description || ''}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {isPaid ? (
+                        billingPeriod === 'yearly' ? (
+                          <><p className="text-sm font-bold text-textPrimary">₹{yearlyMonthly}<span className="text-[9px] font-normal text-textSecondary">/mo</span></p><p className="text-[9px] text-green-600">₹{yearlyPrice}/yr</p></>
+                        ) : <p className="text-sm font-bold text-textPrimary">₹{monthlyPrice}<span className="text-[9px] font-normal text-textSecondary">/mo</span></p>
+                      ) : <p className="text-sm font-bold text-textPrimary">Free</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-2.5 gap-y-1 mb-2 flex-1">
+                    {cfg.features.map((feat, i) => (
+                      <div key={i} className="flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5 text-green-500 shrink-0" /><span className="text-[10px] text-textPrimary">{feat}</span></div>
+                    ))}
+                  </div>
+                  {isCurrent ? (
+                    <button disabled className="w-full py-1.5 rounded-md font-semibold text-[10px] bg-gray-100 text-gray-400 cursor-default">Current Plan</button>
+                  ) : isPaid ? (
+                    <button onClick={() => handleSubscribe(plan.id)} disabled={isProcessing} className="w-full py-1.5 rounded-md font-semibold text-[10px] bg-primary active:bg-primaryHover md:hover:bg-primaryHover text-white flex items-center justify-center gap-1 disabled:opacity-60">
+                      {isProcessing ? <><Loader2 className="w-3 h-3 animate-spin" />Processing...</> : <><Zap className="w-3 h-3" />{billingPeriod === 'yearly' ? `Subscribe — ₹${yearlyPrice}/yr` : `Subscribe — ₹${monthlyPrice}/mo`}</>}
+                    </button>
+                  ) : (
+                    <button disabled className="w-full py-1.5 rounded-md font-semibold text-[10px] bg-gray-100 text-gray-400 cursor-default">Free Forever</button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div className="bg-white rounded-lg border border-border p-3">
+        <h3 className="text-[10px] font-semibold text-textPrimary mb-1.5">FAQ</h3>
+        <div className="space-y-1.5">
+          {[
+            ['How does billing work?', 'Pay via Razorpay. Plan stays active for the billing period.'],
+            ['What at limit?', "You can't issue new invoices until next month or upgrade."],
+            ['Can I upgrade anytime?', 'Yes! New plan takes effect immediately.'],
+            ['How to cancel?', 'Cancel above. Plan stays active until end of period.'],
+          ].map(([q, a], i) => (
+            <div key={i}><p className="text-[10px] font-medium text-textPrimary">{q}</p><p className="text-[9px] text-textSecondary">{a}</p></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cancel Confirmation */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCancelConfirm(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-4 h-4 text-red-600" /></div>
+              <div><h3 className="text-xs font-bold text-textPrimary">Cancel Subscription?</h3><p className="text-[10px] text-textSecondary">Cannot be undone</p></div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-2 mb-3">
+              <p className="text-[10px] text-amber-800">{currentPlanName} plan active until <span className="font-semibold">{subscription?.renewAt ? formatDate(subscription.renewAt) : 'end of period'}</span>.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowCancelConfirm(false)} className="flex-1 py-2 text-[10px] font-semibold text-textPrimary bg-gray-100 active:bg-gray-200 rounded-md">Keep</button>
+              <button onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending} className="flex-1 py-2 text-[10px] font-semibold text-white bg-red-600 active:bg-red-700 rounded-md flex items-center justify-center gap-1 disabled:opacity-60">
+                {cancelMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1593,6 +2024,7 @@ export default function SettingsPage() {
     : activeTab === 'gst' ? gstMutation.isPending
     : activeTab === 'bank' ? bankMutation.isPending
     : activeTab === 'invoice' ? invoiceMutation.isPending
+    : activeTab === 'doctypes' ? invoiceMutation.isPending
     : false
 
   // Tax Rates
@@ -1712,9 +2144,9 @@ export default function SettingsPage() {
     name: 'business', phone: 'business', email: 'business', website: 'business', address: 'business', logoUrl: 'business',
     gstEnabled: 'business', gstin: 'business', stateCode: 'business', defaultTaxRate: 'gst',
     bankName: 'bank', accountNumber: 'bank', ifscCode: 'bank', upiId: 'bank', signatureUrl: 'bank', signatureName: 'bank',
-    enableStatusWorkflow: 'invoice', enablePoNumber: 'invoice', invoicePrefix: 'invoice', nextInvoiceNumber: 'invoice',
-    defaultNotes: 'invoice', defaultTerms: 'invoice', enabledInvoiceTypes: 'invoice',
-    documentTypeConfig: 'invoice', defaultDocType: 'invoice',
+    enableStatusWorkflow: 'invoice', enablePoNumber: 'invoice', invoicePrefix: 'doctypes', nextInvoiceNumber: 'doctypes',
+    defaultNotes: 'doctypes', defaultTerms: 'doctypes', enabledInvoiceTypes: 'doctypes',
+    documentTypeConfig: 'doctypes', defaultDocType: 'doctypes',
   }
 
   const handleChange = (field, value) => {
@@ -1734,8 +2166,11 @@ export default function SettingsPage() {
       const { bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName } = formData
       bankMutation.mutate({ bankName, accountNumber, ifscCode, upiId, signatureUrl, signatureName })
     } else if (activeTab === 'invoice') {
-      const { enableStatusWorkflow, enablePoNumber, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
-      invoiceMutation.mutate({ enableStatusWorkflow, enablePoNumber, invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
+      const { enableStatusWorkflow, enablePoNumber } = formData
+      invoiceMutation.mutate({ enableStatusWorkflow, enablePoNumber })
+    } else if (activeTab === 'doctypes') {
+      const { invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType } = formData
+      invoiceMutation.mutate({ invoicePrefix, nextInvoiceNumber, defaultNotes, defaultTerms, enabledInvoiceTypes, documentTypeConfig, defaultDocType })
     }
   }
 
@@ -1744,6 +2179,21 @@ export default function SettingsPage() {
     logout()
     history.replace('/auth/phone')
   }
+
+  // Inject sidebar content for desktop
+  const sidebarContent = useMemo(() => (
+    <SettingsNavSidebar
+      tabs={SETTINGS_TABS}
+      groups={SETTINGS_GROUPS}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      isDirty={isActiveTabDirty}
+      onSave={handleSave}
+      isSaving={isSaving}
+    />
+  ), [activeTab, isActiveTabDirty, isSaving])
+
+  useSetSidebarContent(sidebarContent)
 
   if (isLoading) {
     return (
@@ -1758,11 +2208,11 @@ export default function SettingsPage() {
       {/* Toast Notification */}
       <Toast toast={toast} onDismiss={dismissToast} />
 
-      {/* Mobile Header + Tabs — combined */}
-      <div className="md:hidden px-3 pt-1 pb-0.5 border-b border-border bg-white shrink-0">
-        <div className="flex items-center justify-between mb-1">
+      {/* Mobile Header */}
+      <div className="md:hidden px-3 pt-1.5 pb-1 border-b border-border bg-white shrink-0">
+        <div className="flex items-center justify-between">
           <h1 className="text-xs font-bold text-textPrimary">Settings</h1>
-          {isActiveTabDirty ? (
+          {isActiveTabDirty && (
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -1771,20 +2221,21 @@ export default function SettingsPage() {
               {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
               Save
             </button>
-          ) : null}
+          )}
         </div>
       </div>
+      {/* Mobile Tabs — grouped style */}
       <div className="md:hidden flex items-center gap-1 px-3 py-1 border-b border-border bg-white overflow-x-auto no-scrollbar shrink-0">
         {SETTINGS_TABS.map((tab) => {
           const active = activeTab === tab.key
           return (
             <button
               key={tab.key}
-              onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
-              className={`px-2 py-1 text-[10px] font-medium rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors border ${
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-2.5 py-1 text-[10px] font-medium rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                 active
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'text-textSecondary border-border active:text-textPrimary active:bg-gray-50'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-textSecondary bg-gray-50 active:text-textPrimary active:bg-gray-100'
               }`}
             >
               <tab.icon className={`w-3 h-3 ${active ? 'text-white' : 'text-gray-400'}`} />
@@ -1794,7 +2245,7 @@ export default function SettingsPage() {
         })}
       </div>
 
-      {/* Desktop Header — full PageToolbar */}
+      {/* Desktop Header — simplified, tabs moved to sidebar */}
       <div className="hidden md:block">
         <PageToolbar
           title="Settings"
@@ -1812,53 +2263,26 @@ export default function SettingsPage() {
               )}
             </>
           }
-        >
-          {/* Tab Navigation — Desktop */}
-          <div className="relative">
-            <div
-              ref={tabsRef}
-              onScroll={handleTabScroll}
-              className="flex items-center gap-0.5 overflow-x-auto -mx-1 px-1 no-scrollbar"
-            >
-              {SETTINGS_TABS.map((tab) => {
-                const active = activeTab === tab.key
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => tab.key === 'subscription' ? history.push('/plans') : setActiveTab(tab.key)}
-                    className={`px-2 md:px-2.5 py-1 text-[10px] md:text-[11px] font-medium rounded-md transition-colors flex items-center gap-1 whitespace-nowrap shrink-0 border ${
-                      active
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'text-textSecondary border-border hover:text-textPrimary hover:bg-gray-50'
-                    }`}
-                  >
-                    <tab.icon className={`w-3 h-3 ${active ? 'text-white' : 'text-gray-400'}`} />
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </PageToolbar>
+        />
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 px-3 md:px-6 py-2.5 md:py-3 pb-mobile-nav overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-2.5 md:space-y-4">
+      <div className="flex-1 px-3 md:px-4 py-1.5 md:py-2 pb-mobile-nav overflow-y-auto">
+        <div className="max-w-4xl mx-auto space-y-1.5 md:space-y-2">
 
           {/* Business Information Tab */}
           {activeTab === 'business' && (
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                  <Building2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+            <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
+              <div className="px-3 py-1.5 md:px-4 md:py-2 border-b border-border flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                  <Building2 className="w-3 h-3 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Business Information</h3>
-                  <p className="text-[11px] md:text-xs text-textSecondary">Your company details shown on invoices</p>
+                  <h3 className="text-[11px] md:text-xs font-semibold text-textPrimary">Business Information</h3>
+                  <p className="text-[10px] text-textSecondary">Company details on invoices</p>
                 </div>
               </div>
-              <div className="p-4 md:p-6">
+              <div className="p-2.5 md:p-3">
                 <BusinessInfoForm
                   formData={formData}
                   onChange={(newData) => {
@@ -1877,28 +2301,28 @@ export default function SettingsPage() {
                 
 
               {/* Tax Rates & Groups Card */}
-              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 md:gap-3">
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                      <Percent className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
+              <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
+                <div className="px-3 py-1.5 md:px-4 md:py-2 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-orange-50 flex items-center justify-center shrink-0">
+                      <Percent className="w-3 h-3 text-orange-600" />
                     </div>
                     <div>
-                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Tax Rates & Groups</h3>
-                      <p className="text-[11px] md:text-xs text-textSecondary hidden sm:block">Create taxes to apply on your products and invoices</p>
+                      <h3 className="text-[11px] md:text-xs font-semibold text-textPrimary">Tax Rates & Groups</h3>
+                      <p className="text-[10px] text-textSecondary hidden sm:block">Taxes for products and invoices</p>
                     </div>
                   </div>
                   {!showTaxForm && (
                     <button
                       onClick={openAddForm}
-                      className="px-2.5 py-1.5 md:px-3.5 md:py-2 text-[11px] md:text-xs font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 md:gap-1.5 border border-blue-100"
+                      className="px-2 py-1 text-[10px] font-semibold text-primary bg-blue-50 active:bg-blue-100 md:hover:bg-blue-100 rounded-md transition-colors flex items-center gap-1 border border-blue-100"
                     >
-                      <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                      <Plus className="w-3 h-3" />
                       Add
                     </button>
                   )}
                 </div>
-                <div className="p-4 md:p-6 space-y-3 md:space-y-4">
+                <div className="p-2.5 md:p-3 space-y-2">
 
                   {/* Add / Edit tax rate form */}
                   {showTaxForm && (
@@ -2261,18 +2685,18 @@ export default function SettingsPage() {
 
           {/* Bank & Payment Tab */}
           {activeTab === 'bank' && (
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                  <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
+            <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
+              <div className="px-3 py-1.5 md:px-4 md:py-2 border-b border-border flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-orange-50 flex items-center justify-center shrink-0">
+                  <CreditCard className="w-3 h-3 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Bank & Payment Details</h3>
-                  <p className="text-[11px] md:text-xs text-textSecondary">Payment information displayed on invoices</p>
+                  <h3 className="text-[11px] md:text-xs font-semibold text-textPrimary">Bank & Payment Details</h3>
+                  <p className="text-[10px] text-textSecondary">Payment info on invoices</p>
                 </div>
               </div>
-              <div className="p-4 md:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
+              <div className="p-2.5 md:p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-3">
                   <FieldInput label="Bank Name" value={formData.bankName} onChange={(v) => handleChange('bankName', v)} placeholder="Bank name" />
                   <FieldInput label="Account Number" value={formData.accountNumber} onChange={(v) => handleChange('accountNumber', v)} placeholder="Account number" />
                   <FieldInput label="IFSC Code" value={formData.ifscCode} onChange={(v) => handleChange('ifscCode', v?.toUpperCase())} placeholder="IFSC code" maxLength={11} />
@@ -2282,17 +2706,14 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Invoice Settings Tab — combines Logo, Defaults, Types, Template */}
+          {/* Invoice Settings Tab — Logo, Signature, Workflow toggles */}
           {activeTab === 'invoice' && (
             <>
-              {/* Business Logo */}
               <LogoUploadSection
                 logoUrl={formData.logoUrl}
                 onUploaded={(url) => handleChange('logoUrl', url)}
                 onRemove={() => handleChange('logoUrl', null)}
               />
-
-              {/* Signature Settings — 2 options: Upload Image or Text */}
               <SignatureSettingsSection
                 signatureUrl={formData.signatureUrl}
                 signatureName={formData.signatureName}
@@ -2301,59 +2722,35 @@ export default function SettingsPage() {
                 onSignatureNameChange={(name) => handleChange('signatureName', name)}
               />
 
-              {/* Invoice Status Workflow */}
-              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Invoice Status Workflow</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary">Control how invoice statuses are managed</p>
-                  </div>
-                </div>
-                <div className="p-4 md:p-6">
+              {/* Invoice Status Workflow — condensed */}
+              <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
+                <div className="p-3">
                   <FieldToggle
-                    label="Enable Issue & Payment Tracking"
-                    description="When enabled, invoices go through Draft → Issued → Paid. When disabled (default), invoices are saved as Paid directly."
+                    label="Status Workflow"
+                    description="Draft → Issued → Paid flow. Off = saved as Paid directly."
                     checked={formData.enableStatusWorkflow || false}
                     onChange={(v) => handleChange('enableStatusWorkflow', v)}
                   />
-                  <p className="text-[11px] text-textSecondary mt-3 ml-1">
-                    {formData.enableStatusWorkflow
-                      ? '✓ Invoices will be saved as Draft first. You can then Issue and Mark as Paid separately.'
-                      : '✓ Invoices are saved as Paid immediately — ideal for businesses that don\'t need payment tracking.'}
-                  </p>
                 </div>
               </div>
 
-              {/* PO Number on Customers */}
-              <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
-                    <Hash className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-semibold text-textPrimary">Purchase Order (PO) Number</h3>
-                    <p className="text-[11px] md:text-xs text-textSecondary">Attach PO numbers to customers for auto-fill</p>
-                  </div>
-                </div>
-                <div className="p-4 md:p-6">
+              {/* PO Number — condensed */}
+              <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
+                <div className="p-3">
                   <FieldToggle
-                    label="Enable PO Number on Customers"
-                    description="When enabled, you can add a PO number to each customer. It will auto-populate when selecting a customer on a new invoice."
+                    label="PO Number on Customers"
+                    description="Add PO numbers to customers, auto-fills on new invoices."
                     checked={formData.enablePoNumber || false}
                     onChange={(v) => handleChange('enablePoNumber', v)}
                   />
-                  <p className="text-[11px] text-textSecondary mt-3 ml-1">
-                    {formData.enablePoNumber
-                      ? '✓ PO Number field is visible on customer forms and auto-fills on invoices.'
-                      : '✓ PO Number is hidden — enable to track purchase orders per customer.'}
-                  </p>
                 </div>
               </div>
+            </>
+          )}
 
-              {/* Document Type Settings — unified section for all users */}
+          {/* Document Types Tab — separate from Invoice Settings */}
+          {activeTab === 'doctypes' && (
+            <>
               <DocumentTypeSettingsSection
                 enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
                 documentTypeConfig={formData.documentTypeConfig || null}
@@ -2366,55 +2763,32 @@ export default function SettingsPage() {
                   defaultTerms: formData.defaultTerms,
                 }}
               />
-
-              {/* Advanced: Document Types selector — paid plan only */}
               {formData.planId ? (
-                <div className="space-y-3 md:space-y-6">
-                  <div className="flex items-center gap-2 pt-2">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-[11px] font-bold text-textSecondary uppercase tracking-widest">Advanced Settings</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <InvoiceTypesSection
-                    enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
-                    onChange={(types) => handleChange('enabledInvoiceTypes', types)}
-                    defaultDocType={formData.defaultDocType || 'invoice'}
-                    onDefaultChange={(docType) => handleChange('defaultDocType', docType)}
-                  />
-                </div>
+                <InvoiceTypesSection
+                  enabledTypes={formData.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES}
+                  onChange={(types) => handleChange('enabledInvoiceTypes', types)}
+                  defaultDocType={formData.defaultDocType || 'invoice'}
+                  onDefaultChange={(docType) => handleChange('defaultDocType', docType)}
+                />
               ) : (
-                <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-                  <div className="px-3 py-2 md:px-5 md:py-2.5 border-b border-border flex items-center gap-2.5 md:gap-3">
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                      <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs md:text-sm font-semibold text-textPrimary">More Document Types</h3>
-                      <p className="text-[11px] md:text-xs text-textSecondary">Unlock 12 document types with a paid plan</p>
-                    </div>
-                  </div>
-                  <div className="p-4 md:p-6 text-center">
-                    <Lock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-textPrimary mb-1">Upgrade to unlock</p>
-                    <p className="text-xs text-textSecondary mb-4 max-w-sm mx-auto">
-                      Access all 12 document types including Proforma Invoice, Estimate, Credit Note, Purchase Order and more.
-                    </p>
-                    <a
-                      href="/plans"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-lg transition-colors"
-                    >
-                      View Plans
-                    </a>
-                  </div>
+                <div className="bg-white rounded-lg border border-border shadow-sm p-3 text-center">
+                  <Lock className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                  <p className="text-xs font-medium text-textPrimary mb-0.5">More Document Types</p>
+                  <p className="text-[10px] text-textSecondary mb-2">Unlock 12 types with a paid plan.</p>
+                  <button onClick={() => setActiveTab('plans')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold text-white bg-primary active:bg-primaryHover md:hover:bg-primaryHover rounded-md">View Plans</button>
                 </div>
               )}
             </>
           )}
 
-          {/* Invoice Templates Tab — separate from Invoice Settings */}
-          {activeTab === 'templates' && (
-            <TemplateSection />
-          )}
+          {/* Templates Tab */}
+          {activeTab === 'templates' && <TemplateSection />}
+
+          {/* Plans & Pricing Tab */}
+          {activeTab === 'plans' && <PlansTab />}
+
+          {/* Billing History Tab */}
+          {activeTab === 'billing' && <BillingHistoryTab />}
 
           
         </div>

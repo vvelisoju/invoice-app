@@ -5,16 +5,16 @@
 export function FieldInput({ label, type = 'text', value, onChange, placeholder, maxLength, description }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
+      <label className="block text-[11px] font-medium text-textSecondary mb-0.5 ml-0.5">{label}</label>
       <input
         type={type}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+        className="w-full px-2.5 py-1.5 md:px-3 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
       />
-      {description && <p className="text-[11px] text-textSecondary mt-1 ml-0.5">{description}</p>}
+      {description && <p className="text-[10px] text-textSecondary mt-0.5 ml-0.5">{description}</p>}
     </div>
   )
 }
@@ -22,13 +22,13 @@ export function FieldInput({ label, type = 'text', value, onChange, placeholder,
 export function FieldTextarea({ label, value, onChange, placeholder, rows = 3 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-textSecondary mb-1 md:mb-1.5 ml-0.5">{label}</label>
+      <label className="block text-[11px] font-medium text-textSecondary mb-0.5 ml-0.5">{label}</label>
       <textarea
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3 py-2 md:px-3.5 md:py-2.5 bg-white border border-border rounded-lg text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+        className="w-full px-2.5 py-1.5 md:px-3 md:py-2 bg-white border border-border rounded-md text-sm text-textPrimary placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
       />
     </div>
   )
@@ -36,10 +36,10 @@ export function FieldTextarea({ label, value, onChange, placeholder, rows = 3 })
 
 export function FieldToggle({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 md:py-3 md:px-4 bg-gray-50 rounded-lg border border-border">
+    <div className="flex items-center justify-between py-2 px-2.5 md:py-2 md:px-3 bg-gray-50 rounded-md border border-border">
       <div className="min-w-0 mr-3">
-        <span className="text-sm font-medium text-textPrimary">{label}</span>
-        {description && <p className="text-xs text-textSecondary mt-0.5">{description}</p>}
+        <span className="text-xs font-medium text-textPrimary">{label}</span>
+        {description && <p className="text-[10px] text-textSecondary mt-0.5 leading-snug">{description}</p>}
       </div>
       <button
         type="button"
@@ -47,7 +47,7 @@ export function FieldToggle({ label, description, checked, onChange }) {
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`
-          relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full
+          relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full
           border-2 border-transparent transition-colors duration-200 ease-in-out
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2
           ${checked ? 'bg-primary' : 'bg-gray-200'}
@@ -55,9 +55,9 @@ export function FieldToggle({ label, description, checked, onChange }) {
       >
         <span
           className={`
-            pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0
+            pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-md ring-0
             transition-transform duration-200 ease-in-out
-            ${checked ? 'translate-x-[22px]' : 'translate-x-[2px]'}
+            ${checked ? 'translate-x-[18px]' : 'translate-x-[2px]'}
           `}
         />
       </button>
@@ -71,7 +71,7 @@ export default function BusinessInfoForm({ formData, onChange, compact = false }
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-3">
       <div className="md:col-span-2">
         <FieldInput label="Business Name" value={formData.name} onChange={(v) => handleChange('name', v)} placeholder="Your business name" />
       </div>

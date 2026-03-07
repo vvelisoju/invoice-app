@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -23,6 +23,8 @@ import {
 import { pdf } from '@react-pdf/renderer'
 import { plansApi } from '../../lib/api'
 import { PageToolbar } from '../../components/data-table'
+import { useSetSidebarContent } from '../../components/sidebar'
+import PlansNavSidebar from '../../components/sidebar/PlansNavSidebar'
 import { downloadPDF, sharePDF, printPDF } from '../invoices/utils/pdfGenerator.jsx'
 import { isNative } from '../../lib/capacitor'
 import { openExternalUrl } from '../../lib/nativeBrowser'
@@ -379,6 +381,16 @@ export default function PlansPage() {
   })
   const tabsRef = useRef(null)
 
+  // Inject sidebar content for desktop
+  const sidebarContent = useMemo(() => (
+    <PlansNavSidebar
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    />
+  ), [activeTab])
+
+  useSetSidebarContent(sidebarContent)
+
   const { data: planUsage, isLoading: usageLoading } = useQuery({
     queryKey: ['plans', 'usage'],
     queryFn: async () => {
@@ -562,43 +574,16 @@ export default function PlansPage() {
       <div className="hidden md:block">
         <PageToolbar
           title="Plans & Billing"
-          subtitle="Simple pricing for your business"
           actions={
             <button
               onClick={() => history.push('/settings')}
-              className="px-3 py-2 text-sm font-medium text-textSecondary md:hover:text-textPrimary md:hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 text-xs font-medium text-textSecondary md:hover:text-textPrimary md:hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               Back to Settings
             </button>
           }
-        >
-          {/* Tab Navigation — Desktop */}
-          <div className="relative mt-2">
-            <div
-              ref={tabsRef}
-              className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
-            >
-              {PLANS_TABS.map((tab) => {
-                const active = activeTab === tab.key
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                      active
-                        ? 'text-primary bg-blue-50 border border-blue-100 shadow-sm'
-                        : 'text-textSecondary hover:text-textPrimary hover:bg-gray-50 border border-transparent'
-                    }`}
-                  >
-                    <tab.icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-gray-400'}`} />
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </PageToolbar>
+        />
       </div>
 
       {/* Content Area */}

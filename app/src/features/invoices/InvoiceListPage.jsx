@@ -10,6 +10,8 @@ import {
   StatusFilterPills,
   TableSummary
 } from '../../components/data-table'
+import { useSetSidebarContent } from '../../components/sidebar'
+import DocumentFiltersSidebar from '../../components/sidebar/DocumentFiltersSidebar'
 
 const DOC_TYPE_BADGE = {
   invoice: { label: 'Invoice', className: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -229,7 +231,15 @@ export default function InvoiceListPage() {
     setDocTypeInitialized(true)
   }, [businessProfile, docTypeInitialized])
   const searchTimeout = useRef(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search input
+  const handleSearchChange = useCallback((value) => {
+    setSearchQuery(value)
+    clearTimeout(searchTimeout.current)
+    searchTimeout.current = setTimeout(() => setDebouncedSearch(value), 300)
+  }, [])
 
   // Customer filter state — single-select
   const [selectedCustomerId, setSelectedCustomerId] = useState(null)
@@ -463,6 +473,30 @@ export default function InvoiceListPage() {
     }
   }
 
+  // Sidebar checkbox toggle handler (different from pill click — simple toggle)
+  const handleSidebarDocTypeChange = (key, checked) => {
+    setDocTypeFilters(prev => ({ ...prev, [key]: checked }))
+  }
+
+  // Inject sidebar content for desktop
+  const sidebarContent = useMemo(() => (
+    <DocumentFiltersSidebar
+      searchQuery={searchQuery}
+      onSearchChange={handleSearchChange}
+      statusFilter={statusFilter}
+      onStatusChange={setStatusFilter}
+      statusOptions={STATUS_FILTERS}
+      docTypeOptions={filteredDocTypeOptions}
+      docTypeFilters={docTypeFilters}
+      onDocTypeChange={handleSidebarDocTypeChange}
+      customers={allCustomers}
+      selectedCustomerId={selectedCustomerId}
+      onCustomerChange={handleCustomerChange}
+    />
+  ), [searchQuery, statusFilter, filteredDocTypeOptions, docTypeFilters, allCustomers, selectedCustomerId])
+
+  useSetSidebarContent(sidebarContent)
+
   return (
     <div className="h-full flex flex-col">
       {/* Header — single compact bar */}
@@ -545,42 +579,7 @@ export default function InvoiceListPage() {
             </div>
           )}
 
-          {/* Desktop: Row 1 — status pills + customer filter */}
-          <div className="hidden md:flex items-center gap-2 mb-1">
-            <StatusFilterPills
-              filters={STATUS_FILTERS}
-              activeKey={statusFilter}
-              onChange={setStatusFilter}
-            />
-            <div className="h-4 w-px bg-border shrink-0" />
-            <div className="shrink-0 w-48">
-              <CustomerSelectFilter
-                customers={allCustomers}
-                selectedId={selectedCustomerId}
-                onChange={handleCustomerChange}
-                compact
-              />
-            </div>
-          </div>
-          {/* Desktop: Row 2 — document type pills */}
-          <div className="hidden md:flex items-center gap-0.5 overflow-x-auto no-scrollbar">
-            {filteredDocTypeOptions.map((opt) => {
-              const active = !allDocTypesSelected && (docTypeFilters[opt.key] !== false)
-              return (
-                <button
-                  key={opt.key}
-                  onClick={() => handleDocTypePillClick(opt.key)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap shrink-0 border transition-colors ${
-                    active
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'text-textSecondary border-border hover:bg-gray-50 hover:text-textPrimary'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
+          {/* Desktop filters moved to sidebar — see DocumentFiltersSidebar */}
         </div>
       </div>
 

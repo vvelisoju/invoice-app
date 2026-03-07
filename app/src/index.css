@@ -52,8 +52,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Touch-friendly minimum tap targets */
-button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
+/* Touch-friendly minimum tap targets — buttons, links, and interactive roles.
+   Checkboxes/radios are intentionally excluded: they should be visually small
+   while their wrapping <label> provides the tap-target area. */
+button, a, [role="button"] {
   min-height: 40px;
   min-width: 44px;
 }

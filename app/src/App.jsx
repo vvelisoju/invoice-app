@@ -28,7 +28,7 @@ import TemplateSelectPage from './features/templates/TemplateSelectPage'
 import TemplateEditorPage from './features/templates/TemplateEditorPage'
 import CustomerListPage from './features/customers/CustomerListPage'
 import ProductListPage from './features/products/ProductListPage'
-import PlansPage from './features/plans/PlansPage'
+// PlansPage is now integrated into SettingsPage
 import WelcomeModal from './components/WelcomeModal'
 
 // Admin pages
@@ -131,7 +131,7 @@ function AuthenticatedApp() {
         <Route exact path="/products" component={ProductListPage} />
         <Route exact path="/settings" component={SettingsPage} />
         <Route exact path="/account" component={AccountProfilePage} />
-        <Route exact path="/plans" component={PlansPage} />
+        <Route exact path="/plans" render={() => <Redirect to="/settings?section=plans" />} />
         <Route exact path="/reports" component={ReportsPage} />
         <Route exact path="/templates" component={TemplateSelectPage} />
         <Route exact path="/templates/editor" component={TemplateEditorPage} />

@@ -11,6 +11,8 @@ import GSTReturnsTab from './GSTReturnsTab'
 import DocumentsTab from './DocumentsTab'
 import CustomersTab from './CustomersTab'
 import AnnualTab from './AnnualTab'
+import { useSetSidebarContent } from '../../components/sidebar'
+import ReportFiltersSidebar from '../../components/sidebar/ReportFiltersSidebar'
 
 const TABS = [
   { key: 'sales', label: 'Sales Register', icon: Receipt },
@@ -163,6 +165,26 @@ export default function ReportsPage() {
   // Filter document types to show only enabled ones
   const availableDocTypes = ALL_INVOICE_TYPES.filter(type => enabledTypes.includes(type.key))
 
+  // Map doc types for sidebar select (needs {id, name} shape)
+  const docTypeOptions = useMemo(() =>
+    availableDocTypes.map(t => ({ id: t.key, name: t.label + (t.key === defaultDocType ? ' (Default)' : '') })),
+    [availableDocTypes, defaultDocType]
+  )
+
+  // Sidebar content for desktop
+  const sidebarContent = useMemo(() => (
+    <ReportFiltersSidebar
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      tabs={TABS}
+      docTypes={docTypeOptions}
+      selectedDocType={selectedDocType}
+      onDocTypeChange={(id) => setSelectedDocType(id || defaultDocType)}
+    />
+  ), [activeTab, docTypeOptions, selectedDocType, defaultDocType])
+
+  useSetSidebarContent(sidebarContent)
+
   const monthOptions = useMemo(() => {
     const opts = []
     const now = new Date()
@@ -199,13 +221,13 @@ export default function ReportsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5">
           <h1 className="text-sm font-semibold text-textPrimary">Reports</h1>
           <div className="flex items-center gap-1.5">
-            {/* Document Type Selector */}
-            <div className="flex-1 md:flex-initial">
+            {/* Mobile: Document Type Selector (desktop uses sidebar) */}
+            <div className="flex-1 md:hidden">
               <div className="relative">
                 <select
                   value={selectedDocType}
                   onChange={(e) => setSelectedDocType(e.target.value)}
-                  className="w-full md:w-40 pl-2.5 pr-7 py-1 text-xs border border-border rounded-md appearance-none cursor-pointer bg-white focus:ring-primary focus:border-primary"
+                  className="w-full pl-2.5 pr-7 py-1 text-xs border border-border rounded-md appearance-none cursor-pointer bg-white focus:ring-primary focus:border-primary"
                 >
                   {availableDocTypes.map(type => (
                     <option key={type.key} value={type.key}>
@@ -261,8 +283,8 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
+        {/* Mobile: Tab Navigation (desktop uses sidebar) */}
+        <div className="flex md:hidden items-center gap-0.5 overflow-x-auto no-scrollbar">
           {TABS.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.key
@@ -270,13 +292,12 @@ export default function ReportsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1 shrink-0 px-2 md:px-2.5 py-1 rounded-md text-[10px] md:text-[11px] font-medium whitespace-nowrap transition-colors border ${
+                className={`flex items-center gap-1 shrink-0 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap transition-colors border ${
                   isActive
                     ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'text-textSecondary border-border active:bg-gray-50 md:hover:bg-gray-50 active:text-textPrimary md:hover:text-textPrimary'
+                    : 'text-textSecondary border-border active:bg-gray-50 active:text-textPrimary'
                 }`}
               >
-                <Icon className="w-3 h-3 hidden md:block" />
                 {tab.label}
               </button>
             )

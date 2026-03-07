@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import { useHistory, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, AlertTriangle, Plus, Settings, X, Home, Users, Package, PieChart, Palette, LogOut, ChevronDown, Crown, Infinity, Star } from 'lucide-react'
@@ -6,27 +6,93 @@ import { plansApi, businessApi } from '../../lib/api'
 import { ALL_INVOICE_TYPES, DEFAULT_ENABLED_TYPES, headerTabs, getActiveTabKey } from './navigationConfig'
 import { useAuthStore } from '../../store/authStore'
 
-export default function AppSidebar({ mobile = false, onClose }) {
-  const history = useHistory()
+// ── Sidebar Context ────────────────────────────────────────────
+// Pages can inject custom sidebar content via this context.
+// AppLayout provides the setter; pages call useSidebarContent() to inject.
+const SidebarContentContext = createContext({ content: null, setContent: () => {} })
+export const SidebarContentProvider = SidebarContentContext.Provider
+export function useSidebarContent() {
+  return useContext(SidebarContentContext)
+}
+
+// ── Route detection helpers ────────────────────────────────────
+const INVOICE_FORM_PATTERNS = [
+  /^\/invoices\/new(\?.*)?$/,
+  /^\/invoices\/[^/]+\/edit(\?.*)?$/,
+]
+function isInvoiceFormRoute(pathname) {
+  return INVOICE_FORM_PATTERNS.some(p => p.test(pathname))
+}
+
+// ── Shared Plan Card ───────────────────────────────────────────
+export function PlanCard({ navigate, compact = false }) {
+  const { data: planUsage } = useQuery({
+    queryKey: ['plans', 'usage'],
+    queryFn: async () => {
+      const response = await plansApi.getUsage()
+      return response.data.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
+
+  const plan = planUsage?.plan
+  const usage = planUsage?.usage
+  const limit = plan?.monthlyInvoiceLimit || 10
+  const used = usage?.invoicesIssued || 0
+  const isUnlimited = limit >= 999999
+  const percentage = isUnlimited ? 0 : (limit > 0 ? used / limit : 0)
+  const isNearLimit = !isUnlimited && percentage >= 0.8
+  const isAtLimit = !isUnlimited && percentage >= 1
+  const barColor = isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-primary'
+
+  return (
+    <div className={`p-3 rounded-xl border transition-all ${
+      isAtLimit ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200' :
+      isNearLimit ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
+      'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
+    }`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Crown className={`w-3.5 h-3.5 ${
+            isAtLimit ? 'text-red-500' : isNearLimit ? 'text-yellow-600' : 'text-primary'
+          }`} />
+          <p className={`text-xs font-bold ${
+            isAtLimit ? 'text-red-700' : isNearLimit ? 'text-yellow-700' : 'text-primary'
+          }`}>{plan?.name || 'Free'} Plan</p>
+        </div>
+        {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`} />}
+      </div>
+      <div className="flex items-baseline gap-1 mb-1.5">
+        <span className="text-lg font-bold text-textPrimary">{used}</span>
+        {isUnlimited ? (
+          <span className="text-[10px] text-textSecondary flex items-center gap-0.5">/ <Infinity className="w-3 h-3" /></span>
+        ) : (
+          <span className="text-[10px] text-textSecondary">/ {limit} invoices</span>
+        )}
+      </div>
+      {!isUnlimited && (
+        <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden mb-2.5">
+          <div className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
+        </div>
+      )}
+      <button
+        onClick={() => navigate('/settings?section=plans')}
+        className={`w-full text-[10px] font-bold py-1.5 rounded-md transition-colors ${
+          isAtLimit ? 'bg-red-500 text-white hover:bg-red-600' :
+          'text-primary hover:bg-primary/10'
+        }`}
+      >
+        {isAtLimit ? 'Upgrade Now' : 'Manage Subscription'}
+      </button>
+    </div>
+  )
+}
+
+// ── Doc-Type Picker (used on invoice create/edit) ──────────────
+function DocTypePicker({ navigate }) {
   const location = useLocation()
   const queryClient = useQueryClient()
-  const logout = useAuthStore((state) => state.logout)
-  const business = useAuthStore((state) => state.business)
-  const activeTabKey = getActiveTabKey(location.pathname)
 
-  // Collapsible section state — Navigation & Create New open by default, Settings collapsed
-  const [openSections, setOpenSections] = useState({ navigation: true, createNew: true, settings: false })
-
-  const toggleSection = (key) => {
-    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const navigate = (path) => {
-    history.push(path)
-    if (mobile && onClose) onClose()
-  }
-
-  // Fetch business profile to get enabledInvoiceTypes
   const { data: businessProfile } = useQuery({
     queryKey: ['business'],
     queryFn: async () => {
@@ -47,7 +113,115 @@ export default function AppSidebar({ mobile = false, onClose }) {
     }
   })
 
-  // Plan usage
+  return (
+    <>
+      <div className="px-4 pt-5 pb-2">
+        <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Create New</h3>
+      </div>
+      <nav className="px-2 space-y-0.5">
+        {enabledTypes.map((type) => {
+          const Icon = type.icon
+          const isOnNewPage = location.pathname === '/invoices/new'
+          const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
+          const isActive = isOnNewPage && urlType === type.key
+          const isDefault = defaultDocType === type.key
+          return (
+            <div key={type.key} className="relative group/item flex items-center">
+              <button
+                onClick={() => navigate(`/invoices/new?type=${type.key}`)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                  isActive
+                    ? 'text-primary bg-primary/8 font-semibold'
+                    : isDefault
+                    ? 'text-textSecondary hover:text-primary bg-amber-50/50 hover:bg-primary/5'
+                    : 'text-textSecondary hover:text-primary hover:bg-primary/5'
+                }`}
+              >
+                <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
+                <span className="flex-1 text-left">{type.label}</span>
+                {isDefault && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded shrink-0">DEFAULT</span>
+                )}
+              </button>
+              {!isDefault && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(type.key) }}
+                  className="absolute right-2 opacity-0 group-hover/item:opacity-100 w-6 h-6 flex items-center justify-center rounded hover:bg-amber-50 text-gray-300 hover:text-amber-500 transition-all"
+                  title="Set as default"
+                >
+                  <Star className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </nav>
+      <div className="px-2 mt-3 mb-4">
+        <button
+          onClick={() => navigate('/settings?section=invoice&tab=types')}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-textSecondary/70 hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add More Types
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ── Main AppSidebar ────────────────────────────────────────────
+
+export default function AppSidebar({ mobile = false, onClose }) {
+  const history = useHistory()
+  const location = useLocation()
+  const queryClient = useQueryClient()
+  const logout = useAuthStore((state) => state.logout)
+  const activeTabKey = getActiveTabKey(location.pathname)
+  const { content: sidebarContent } = useSidebarContent()
+
+  // Collapsible section state — persisted in localStorage
+  const SIDEBAR_COLLAPSE_KEY = 'sidebar-sections-collapsed'
+  const [openSections, setOpenSections] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SIDEBAR_COLLAPSE_KEY)
+      return raw ? JSON.parse(raw) : { navigation: true, createNew: true, settings: false }
+    } catch { return { navigation: true, createNew: true, settings: false } }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_COLLAPSE_KEY, JSON.stringify(openSections)) } catch {}
+  }, [openSections])
+
+  const toggleSection = (key) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const navigate = (path) => {
+    history.push(path)
+    if (mobile && onClose) onClose()
+  }
+
+  // ── Shared data for mobile drawer ──────────────────────────
+  const { data: businessProfile } = useQuery({
+    queryKey: ['business'],
+    queryFn: async () => {
+      const response = await businessApi.getProfile()
+      return response.data?.data || response.data
+    },
+    staleTime: 1000 * 60 * 5
+  })
+
+  const enabledKeys = businessProfile?.enabledInvoiceTypes || DEFAULT_ENABLED_TYPES
+  const enabledTypes = ALL_INVOICE_TYPES.filter(t => enabledKeys.includes(t.key))
+  const defaultDocType = businessProfile?.defaultDocType || 'invoice'
+
+  const setDefaultMutation = useMutation({
+    mutationFn: (docType) => businessApi.updateProfile({ defaultDocType: docType }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['business'] })
+    }
+  })
+
   const { data: planUsage } = useQuery({
     queryKey: ['plans', 'usage'],
     queryFn: async () => {
@@ -67,109 +241,38 @@ export default function AppSidebar({ mobile = false, onClose }) {
   const isAtLimit = !isUnlimited && percentage >= 1
   const barColor = isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-primary'
 
+  // Determine what desktop sidebar content to show based on route
+  const isOnInvoiceForm = isInvoiceFormRoute(location.pathname)
+
+  // Routes where the sidebar should be hidden entirely (no filters/content)
+  const NO_SIDEBAR_ROUTES = ['/home', '/']
+  const shouldHideSidebar = NO_SIDEBAR_ROUTES.includes(location.pathname) && !sidebarContent
+
   // Desktop sidebar: hidden on mobile
   if (!mobile) {
+    // Hide sidebar entirely for pages that have no sidebar content
+    if (shouldHideSidebar && !isOnInvoiceForm) {
+      return null
+    }
+
     return (
       <aside className="w-56 bg-bgSecondary border-r border-border flex-col shrink-0 hidden md:flex">
         <div className="flex-1 overflow-y-auto">
-          {/* Section header */}
-          <div className="px-4 pt-5 pb-2">
-            <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Create New</h3>
-          </div>
-
-          {/* Invoice type list */}
-          <nav className="px-2 space-y-0.5">
-            {enabledTypes.map((type) => {
-              const Icon = type.icon
-              const isOnNewPage = location.pathname === '/invoices/new'
-              const urlType = new URLSearchParams(location.search).get('type') || 'invoice'
-              const isActive = isOnNewPage && urlType === type.key
-              const isDefault = defaultDocType === type.key
-              return (
-                <div key={type.key} className="relative group/item flex items-center">
-                  <button
-                    onClick={() => navigate(`/invoices/new?type=${type.key}`)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
-                      isActive
-                        ? 'text-primary bg-primary/8 font-semibold'
-                        : isDefault
-                        ? 'text-textSecondary hover:text-primary bg-amber-50/50 hover:bg-primary/5'
-                        : 'text-textSecondary hover:text-primary hover:bg-primary/5'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-primary' : 'text-gray-400 group-hover:text-primary'}`} />
-                    <span className="flex-1 text-left">{type.label}</span>
-                    {isDefault && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded shrink-0">DEFAULT</span>
-                    )}
-                  </button>
-                  {!isDefault && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(type.key) }}
-                      className="absolute right-2 opacity-0 group-hover/item:opacity-100 w-6 h-6 flex items-center justify-center rounded hover:bg-amber-50 text-gray-300 hover:text-amber-500 transition-all"
-                      title="Set as default"
-                    >
-                      <Star className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </nav>
-
-          {/* Add More Types link */}
-          <div className="px-2 mt-3 mb-4">
-            <button
-              onClick={() => navigate('/settings?section=invoice&tab=types')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-textSecondary/70 hover:text-textPrimary hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add More Types
-            </button>
-          </div>
+          {isOnInvoiceForm ? (
+            <DocTypePicker navigate={navigate} />
+          ) : sidebarContent ? (
+            sidebarContent
+          ) : (
+            <div className="px-4 pt-5 pb-2">
+              <h3 className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Filters</h3>
+              <p className="text-xs text-textSecondary mt-2">No filters available for this page.</p>
+            </div>
+          )}
         </div>
 
         {/* Bottom Plan Card */}
         <div className="mt-auto p-3 border-t border-border">
-          <div className={`p-3 rounded-xl border transition-all ${
-            isAtLimit ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200' :
-            isNearLimit ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
-            'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Crown className={`w-3.5 h-3.5 ${
-                  isAtLimit ? 'text-red-500' : isNearLimit ? 'text-yellow-600' : 'text-primary'
-                }`} />
-                <p className={`text-xs font-bold ${
-                  isAtLimit ? 'text-red-700' : isNearLimit ? 'text-yellow-700' : 'text-primary'
-                }`}>{plan?.name || 'Free'} Plan</p>
-              </div>
-              {isNearLimit && <AlertTriangle className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`} />}
-            </div>
-            <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="text-lg font-bold text-textPrimary">{used}</span>
-              {isUnlimited ? (
-                <span className="text-[10px] text-textSecondary flex items-center gap-0.5">/ <Infinity className="w-3 h-3" /></span>
-              ) : (
-                <span className="text-[10px] text-textSecondary">/ {limit} invoices</span>
-              )}
-            </div>
-            {!isUnlimited && (
-              <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden mb-2.5">
-                <div className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`} style={{ width: `${Math.min(percentage * 100, 100)}%` }} />
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/plans')}
-              className={`w-full text-[10px] font-bold py-1.5 rounded-md transition-colors ${
-                isAtLimit ? 'bg-red-500 text-white hover:bg-red-600' :
-                'text-primary hover:bg-primary/10'
-              }`}
-            >
-              {isAtLimit ? 'Upgrade Now' : 'Manage Subscription'}
-            </button>
-          </div>
+          <PlanCard navigate={navigate} />
         </div>
       </aside>
     )
@@ -333,7 +436,7 @@ export default function AppSidebar({ mobile = false, onClose }) {
                 <span>Business Settings</span>
               </button>
               <button
-                onClick={() => navigate('/plans')}
+                onClick={() => navigate('/settings?section=plans')}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-textSecondary active:bg-primary/5 transition-all"
               >
                 <Crown className="w-5 h-5 shrink-0" />
@@ -383,7 +486,7 @@ export default function AppSidebar({ mobile = false, onClose }) {
             </div>
           )}
           <button
-            onClick={() => navigate('/plans')}
+            onClick={() => navigate('/settings?section=plans')}
             className={`w-full text-[10px] font-bold py-1.5 rounded-md transition-colors ${
               isAtLimit ? 'bg-red-500 text-white active:bg-red-600' :
               'text-primary active:bg-primary/10'

@@ -12,6 +12,8 @@ import ProductAddEditModal from './ProductAddEditModal'
 import PlanLimitModal from '../../components/PlanLimitModal'
 import usePlanLimitCheck from '../../hooks/usePlanLimitCheck'
 import Portal from '../../components/Portal'
+import { useSetSidebarContent } from '../../components/sidebar'
+import ProductFiltersSidebar from '../../components/sidebar/ProductFiltersSidebar'
 
 const AVATAR_COLORS = [
   { bg: 'bg-blue-100', text: 'text-blue-600' },
@@ -120,7 +122,7 @@ export default function ProductListPage() {
   useEffect(() => () => clearTimeout(searchTimeout.current), [])
 
   const handleSearchChange = (e) => {
-    const val = e.target.value
+    const val = typeof e === 'string' ? e : e.target.value
     setSearchQuery(val)
     clearTimeout(searchTimeout.current)
     searchTimeout.current = setTimeout(() => {
@@ -302,6 +304,19 @@ export default function ProductListPage() {
 
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
+  // Inject sidebar content for desktop
+  const sidebarContent = useMemo(() => (
+    <ProductFiltersSidebar
+      searchQuery={searchQuery}
+      onSearchChange={handleSearchChange}
+      statusFilter={statusFilter}
+      onStatusChange={handleFilterChange}
+      statusOptions={STATUS_FILTERS}
+    />
+  ), [searchQuery, statusFilter])
+
+  useSetSidebarContent(sidebarContent)
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
@@ -327,25 +342,13 @@ export default function ProductListPage() {
           </>
         }
         actions={
-          <>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search products..."
-                className="pl-7 pr-2 py-1 text-xs border border-border rounded-md w-full sm:w-48 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-              />
-              <Search className="w-3 h-3 absolute left-2 top-1.5 text-gray-400" />
-            </div>
-            <button
-              onClick={handleAddProduct}
-              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-primary hover:bg-primaryHover rounded-md transition-colors flex items-center gap-1 shadow-sm"
-            >
-              <Plus className="w-3 h-3" />
-              Add Product
-            </button>
-          </>
+          <button
+            onClick={handleAddProduct}
+            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-primary hover:bg-primaryHover rounded-md transition-colors flex items-center gap-1 shadow-sm"
+          >
+            <Plus className="w-3 h-3" />
+            Add Product
+          </button>
         }
       >
         {/* Mobile: collapsible filters */}
@@ -368,14 +371,7 @@ export default function ProductListPage() {
             />
           </div>
         )}
-        {/* Desktop: always visible */}
-        <div className="hidden md:block">
-          <StatusFilterPills
-            filters={STATUS_FILTERS}
-            activeKey={statusFilter}
-            onChange={handleFilterChange}
-          />
-        </div>
+        {/* Desktop filters moved to sidebar — see ProductFiltersSidebar */}
       </PageToolbar>
 
       {/* Table */}
