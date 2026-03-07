@@ -24,7 +24,8 @@ export const createInvoiceSchema = z.object({
   billTo: z.string().optional().nullable(),
   shipTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  terms: z.string().optional().nullable()
+  terms: z.string().optional().nullable(),
+  customFields: z.record(z.string(), z.string()).optional().nullable()
 })
 
 export const updateInvoiceSchema = z.object({
@@ -41,7 +42,8 @@ export const updateInvoiceSchema = z.object({
   billTo: z.string().optional().nullable(),
   shipTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  terms: z.string().optional().nullable()
+  terms: z.string().optional().nullable(),
+  customFields: z.record(z.string(), z.string()).optional().nullable()
 })
 
 export const issueInvoiceSchema = z.object({

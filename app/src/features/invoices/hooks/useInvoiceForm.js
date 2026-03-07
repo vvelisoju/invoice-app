@@ -38,6 +38,7 @@ const createEmptyInvoice = (businessId) => ({
   total: 0,
   notes: '',
   terms: '',
+  customFields: {},
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
 })
@@ -332,6 +333,16 @@ export function useInvoiceForm(invoiceId = null) {
     }
   }, [isDirty, saveToLocal])
 
+  // Update a single custom field value
+  const updateCustomField = useCallback((fieldId, value) => {
+    setInvoice(prev => ({
+      ...prev,
+      customFields: { ...(prev.customFields || {}), [fieldId]: value },
+      updatedAt: new Date().toISOString()
+    }))
+    setIsDirty(true)
+  }, [])
+
   // Set full invoice data (for edit mode / clone)
   const setInvoiceData = useCallback((data) => {
     setInvoice(prev => {
@@ -380,6 +391,7 @@ export function useInvoiceForm(invoiceId = null) {
     setCustomer,
     setProductForLineItem,
     updateProductInLineItems,
+    updateCustomField,
     saveToLocal,
     resetForm,
     setInvoiceData

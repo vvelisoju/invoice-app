@@ -159,6 +159,7 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
     setCustomer,
     setProductForLineItem,
     updateProductInLineItems,
+    updateCustomField,
     saveToLocal,
     resetForm,
     setInvoiceData
@@ -205,7 +206,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
       discountTotal: inv.discountTotal || 0,
       taxRate: inv.taxRate || null,
       notes: inv.notes || '',
-      terms: inv.terms || ''
+      terms: inv.terms || '',
+      customFields: inv.customFields || {}
     })
     if (inv.customer) {
       setSelectedCustomer(inv.customer)
@@ -254,7 +256,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
           discountTotal: inv.discountTotal || 0,
           taxRate: inv.taxRate || null,
           notes: inv.notes || '',
-          terms: inv.terms || ''
+          terms: inv.terms || '',
+          customFields: inv.customFields || {}
         })
         if (demoData.formMode) handleFormModeChange(demoData.formMode)
         defaultsAppliedRef.current = true
@@ -289,7 +292,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
       discountTotal: cloneData.discountTotal || 0,
       taxRate: cloneData.taxRate || null,
       notes: cloneData.notes || '',
-      terms: cloneData.terms || ''
+      terms: cloneData.terms || '',
+      customFields: cloneData.customFields || {}
     })
     defaultsAppliedRef.current = true
   }, [cloneData, isEditMode])
@@ -328,7 +332,9 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
         billTo: invoice.billTo || null,
         shipTo: invoice.shipTo || null,
         notes: invoice.notes || null,
-        terms: invoice.terms || null
+        terms: invoice.terms || null,
+        customFields: invoice.customFields && Object.keys(invoice.customFields).length > 0
+          ? invoice.customFields : null
       }
 
       if (isEditMode) {
@@ -433,7 +439,8 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             discountTotal: invoice.discountTotal,
             taxRate: invoice.taxRate,
             notes: invoice.notes,
-            terms: invoice.terms
+            terms: invoice.terms,
+            customFields: invoice.customFields
           },
           customers: getDemoCustomers(),
           products: getDemoProducts(),
@@ -593,7 +600,37 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             demoLogoUrl={isDemo ? demoLogo : undefined}
             docTypeConfig={docTypeConfig}
             defaultFromExpanded={isDemo}
+            customFields={invoice.customFields || {}}
+            onCustomFieldChange={updateCustomField}
           />
+
+          {/* Custom Fields: before-line-items zone */}
+          {(docTypeConfig?.customFields || []).filter(f => f.zone === 'before-line-items').length > 0 && (
+            <div className="bg-white rounded-xl border border-border shadow-sm p-3 md:p-4 space-y-2.5">
+              {(docTypeConfig.customFields || []).filter(f => f.zone === 'before-line-items').map((cf) => (
+                <div key={cf.id}>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{cf.label}</label>
+                  {cf.type === 'textarea' ? (
+                    <textarea
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                    />
+                  ) : (
+                    <input
+                      type={cf.type === 'date' ? 'date' : 'text'}
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Line Items Section */}
           <InvoiceLineItems
@@ -621,6 +658,34 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             docTypeConfig={docTypeConfig}
             demoMode={isDemo}
           />
+
+          {/* Custom Fields: after-line-items zone */}
+          {(docTypeConfig?.customFields || []).filter(f => f.zone === 'after-line-items').length > 0 && (
+            <div className="bg-white rounded-xl border border-border shadow-sm p-3 md:p-4 space-y-2.5">
+              {(docTypeConfig.customFields || []).filter(f => f.zone === 'after-line-items').map((cf) => (
+                <div key={cf.id}>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{cf.label}</label>
+                  {cf.type === 'textarea' ? (
+                    <textarea
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                    />
+                  ) : (
+                    <input
+                      type={cf.type === 'date' ? 'date' : 'text'}
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Totals Footer: Terms, Subtotal, Total, Signature */}
           <InvoiceTotalsFooter
@@ -650,6 +715,34 @@ export default function NewInvoicePage({ demoMode: demoProp } = {}) {
             signatureName={isDemo ? 'Your Business' : (businessProfile?.signatureName || businessProfile?.name)}
             onSignatureClick={() => setShowSignatureUpload(true)}
           />
+
+          {/* Custom Fields: footer zone */}
+          {(docTypeConfig?.customFields || []).filter(f => f.zone === 'footer').length > 0 && (
+            <div className="bg-white rounded-xl border border-border shadow-sm p-3 md:p-4 space-y-2.5">
+              {(docTypeConfig.customFields || []).filter(f => f.zone === 'footer').map((cf) => (
+                <div key={cf.id}>
+                  <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{cf.label}</label>
+                  {cf.type === 'textarea' ? (
+                    <textarea
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                    />
+                  ) : (
+                    <input
+                      type={cf.type === 'date' ? 'date' : 'text'}
+                      value={(invoice.customFields || {})[cf.id] || cf.defaultValue || ''}
+                      onChange={(e) => updateCustomField(cf.id, e.target.value)}
+                      placeholder={cf.placeholder || cf.label}
+                      className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bottom Action Bar */}

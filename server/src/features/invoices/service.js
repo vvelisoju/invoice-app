@@ -177,6 +177,7 @@ export const createInvoice = async (prisma, businessId, data) => {
       shipTo: data.shipTo || null,
       notes: data.notes || null,
       terms: data.terms || business.defaultTerms || null,
+      customFields: data.customFields || null,
       logoUrl: business.logoUrl || null,
       signatureUrl: business.signatureUrl || null,
       lineItems: {
@@ -226,7 +227,7 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
   if (data.dueDate) data.dueDate = new Date(data.dueDate).toISOString()
 
   // Extract fields that aren't direct Prisma update fields
-  const { customerId, customerStateCode, lineItems: rawLineItems, fromAddress, billTo, shipTo, documentType, ...restData } = data
+  const { customerId, customerStateCode, lineItems: rawLineItems, fromAddress, billTo, shipTo, documentType, customFields, ...restData } = data
 
   // Recalculate totals if line items changed
   let updateData = { ...restData }
@@ -336,6 +337,8 @@ export const updateInvoice = async (prisma, invoiceId, businessId, data) => {
       ...(fromAddress !== undefined && { fromAddress }),
       ...(billTo !== undefined && { billTo }),
       ...(shipTo !== undefined && { shipTo }),
+      // Custom fields
+      ...(customFields !== undefined && { customFields: customFields || null }),
       ...(rawLineItems && {
         lineItems: {
           create: rawLineItems.map(item => ({

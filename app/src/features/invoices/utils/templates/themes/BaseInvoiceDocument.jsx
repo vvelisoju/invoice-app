@@ -33,6 +33,7 @@ const getDocLabels = (invoice) => {
     showQty: cfg.fields?.showQty !== false,
     showUnitPrice: cfg.fields?.showUnitPrice !== false,
     lineItemsLayout: cfg.fields?.lineItemsLayout || 'full',
+    customFields: cfg.customFields || [],
   }
 }
 
@@ -466,6 +467,17 @@ function HeaderSection({ invoice, doc, palette, layout }) {
 }
 
 // ============================================================================
+// CUSTOM FIELDS — renders custom field values from invoice.customFields
+// ============================================================================
+
+function getCustomFieldsForZone(doc, invoice, zone) {
+  return (doc.customFields || [])
+    .filter(f => f.zone === zone && f.showOnPdf !== false && f.label)
+    .map(f => ({ label: f.label, value: (invoice.customFields || {})[f.id] || f.defaultValue || '' }))
+    .filter(f => f.value)
+}
+
+// ============================================================================
 // META BLOCK — invoice number, date, due date
 // ============================================================================
 
@@ -494,6 +506,12 @@ function MetaBlock({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 9, color: palette.text, fontWeight: 'bold' }}>{invoice.poNumber}</Text>
             </View>
           )}
+          {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+              <Text style={{ fontSize: 7, color: palette.primaryDark, textTransform: 'uppercase', fontWeight: 'bold' }}>{cf.label}</Text>
+              <Text style={{ fontSize: 9, color: palette.text, fontWeight: 'bold' }}>{cf.value}</Text>
+            </View>
+          ))}
         </View>
       )
 
@@ -520,6 +538,12 @@ function MetaBlock({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 9, color: palette.text, fontWeight: 'bold' }}>{invoice.poNumber}</Text>
             </View>
           )}
+          {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+            <View key={i} style={{ marginTop: 2 }}>
+              <Text style={{ fontSize: 7, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{cf.label}</Text>
+              <Text style={{ fontSize: 9, color: palette.text, fontWeight: 'bold' }}>{cf.value}</Text>
+            </View>
+          ))}
         </View>
       )
 
@@ -547,6 +571,12 @@ function MetaBlock({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 75 }}>{invoice.poNumber}</Text>
             </View>
           )}
+          {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 1 }}>
+              <Text style={{ fontSize: 8, color: palette.textLight, marginRight: 8, width: 60, textAlign: 'right' }}>{cf.label}</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text, width: 75 }}>{cf.value}</Text>
+            </View>
+          ))}
         </View>
       )
 
@@ -573,6 +603,12 @@ function MetaBlock({ invoice, doc, palette, layout }) {
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{invoice.poNumber}</Text>
             </View>
           )}
+          {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+              <Text style={{ fontSize: 7, color: palette.textMuted, fontWeight: 'bold' }}>{cf.label}</Text>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: palette.text }}>{cf.value}</Text>
+            </View>
+          ))}
         </View>
       )
 
@@ -588,6 +624,9 @@ function MetaBlock({ invoice, doc, palette, layout }) {
           {doc.showPoNumber && invoice.poNumber && (
             <Text style={{ fontSize: 8, color: palette.textLight }}>P.O.#: {invoice.poNumber}</Text>
           )}
+          {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+            <Text key={i} style={{ fontSize: 8, color: palette.textLight }}>{cf.label}: {cf.value}</Text>
+          ))}
         </View>
       )
   }
@@ -933,6 +972,21 @@ function NotesSection({ invoice, doc, palette, layout }) {
 // MAIN EXPORT: BaseInvoiceDocument
 // ============================================================================
 
+function CustomFieldsZoneBlock({ doc, invoice, palette, zone }) {
+  const fields = getCustomFieldsForZone(doc, invoice, zone)
+  if (fields.length === 0) return null
+  return (
+    <View style={{ marginVertical: 6 }}>
+      {fields.map((cf, i) => (
+        <View key={i} style={{ flexDirection: 'row', marginBottom: 2 }}>
+          <Text style={{ fontSize: 8, fontWeight: 'bold', color: palette.textMuted, textTransform: 'uppercase', width: 100 }}>{cf.label}</Text>
+          <Text style={{ fontSize: 9, color: palette.text, flex: 1 }}>{cf.value}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 export default function BaseInvoiceDocument({ invoice, theme }) {
   const { layout, palette } = theme
   const doc = getDocLabels(invoice)
@@ -963,14 +1017,23 @@ export default function BaseInvoiceDocument({ invoice, theme }) {
           {/* Addresses */}
           <AddressSection invoice={invoice} doc={doc} palette={palette} layout={layout} />
 
+          {/* Custom fields: before line items */}
+          <CustomFieldsZoneBlock doc={doc} invoice={invoice} palette={palette} zone="before-line-items" />
+
           {/* Line items table */}
           <TableSection invoice={invoice} doc={doc} palette={palette} layout={layout} />
+
+          {/* Custom fields: after line items */}
+          <CustomFieldsZoneBlock doc={doc} invoice={invoice} palette={palette} zone="after-line-items" />
 
           {/* Totals */}
           <TotalsSection invoice={invoice} doc={doc} palette={palette} layout={layout} />
 
           {/* Notes & Terms */}
           <NotesSection invoice={invoice} doc={doc} palette={palette} layout={layout} />
+
+          {/* Custom fields: footer */}
+          <CustomFieldsZoneBlock doc={doc} invoice={invoice} palette={palette} zone="footer" />
 
           {/* Bank Details + Signature */}
           {doc.showSignature && <BankAndSignature invoice={invoice} color={palette.primary} />}

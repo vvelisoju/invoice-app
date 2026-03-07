@@ -257,7 +257,8 @@ export default function InvoiceDetailPage() {
           discountTotal: invoice.discountTotal || 0,
           taxRate: invoice.taxRate || null,
           notes: invoice.notes || '',
-          terms: invoice.terms || ''
+          terms: invoice.terms || '',
+          customFields: invoice.customFields || {}
         }
       }
     })

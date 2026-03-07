@@ -104,6 +104,35 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
     onChange(updated)
   }
 
+  const handleAddCustomField = (typeKey) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = { ...(current[typeKey] || {}) }
+    const existing = typeOverrides.customFields || []
+    const id = `cf_${Date.now()}`
+    typeOverrides.customFields = [...existing, { id, label: '', type: 'text', zone: 'header-meta', defaultValue: '', required: false, showOnPdf: true }]
+    onChange({ ...current, [typeKey]: typeOverrides })
+  }
+
+  const handleUpdateCustomField = (typeKey, fieldId, key, value) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = { ...(current[typeKey] || {}) }
+    const fields = (typeOverrides.customFields || []).map(f =>
+      f.id === fieldId ? { ...f, [key]: value } : f
+    )
+    typeOverrides.customFields = fields
+    onChange({ ...current, [typeKey]: typeOverrides })
+  }
+
+  const handleRemoveCustomField = (typeKey, fieldId) => {
+    const current = documentTypeConfig || {}
+    const typeOverrides = { ...(current[typeKey] || {}) }
+    typeOverrides.customFields = (typeOverrides.customFields || []).filter(f => f.id !== fieldId)
+    if (typeOverrides.customFields.length === 0) delete typeOverrides.customFields
+    const updated = { ...current, [typeKey]: typeOverrides }
+    if (Object.keys(updated[typeKey] || {}).length === 0) delete updated[typeKey]
+    onChange(updated)
+  }
+
   const getOverride = (typeKey, labelKey) => {
     return documentTypeConfig?.[typeKey]?.labels?.[labelKey] || ''
   }
@@ -311,6 +340,101 @@ function DocumentTypeSettingsSection({ enabledTypes, documentTypeConfig, onChang
                   <p className="text-[10px] text-textSecondary">
                     Leave blank to use defaults. Changes apply to new documents.
                   </p>
+
+                  {/* Custom Fields */}
+                  <div>
+                    <p className={sectionTitleClass}>Custom Fields</p>
+                    <p className="text-[10px] text-textSecondary mb-2">Add extra fields that appear on the invoice form and PDF. E.g. "Period of Service", "Project Name".</p>
+                    <div className="space-y-2.5">
+                      {(documentTypeConfig?.[type.key]?.customFields || []).map((cf) => (
+                        <div key={cf.id} className="bg-white border border-border rounded-lg p-3 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <div>
+                                <label className={labelClass}>Field Label <span className="text-red-400">*</span></label>
+                                <input
+                                  type="text"
+                                  value={cf.label || ''}
+                                  onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'label', e.target.value)}
+                                  placeholder="e.g. Period of Service"
+                                  className={inputClass}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>Type</label>
+                                <select
+                                  value={cf.type || 'text'}
+                                  onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'type', e.target.value)}
+                                  className={inputClass}
+                                >
+                                  <option value="text">Text</option>
+                                  <option value="date">Date</option>
+                                  <option value="textarea">Multiline Text</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className={labelClass}>Placement</label>
+                                <select
+                                  value={cf.zone || 'header-meta'}
+                                  onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'zone', e.target.value)}
+                                  className={inputClass}
+                                >
+                                  <option value="header-meta">Header (beside Invoice #)</option>
+                                  <option value="before-line-items">Before Line Items</option>
+                                  <option value="after-line-items">After Line Items</option>
+                                  <option value="footer">Footer (below totals)</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className={labelClass}>Default Value</label>
+                                <input
+                                  type="text"
+                                  value={cf.defaultValue || ''}
+                                  onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'defaultValue', e.target.value)}
+                                  placeholder="Optional default"
+                                  className={inputClass}
+                                />
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveCustomField(type.key, cf.id)}
+                              className="mt-5 p-1.5 rounded-md text-red-400 active:text-red-600 md:hover:text-red-600 active:bg-red-50 md:hover:bg-red-50 transition-colors shrink-0"
+                              title="Remove field"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-4 pt-1 border-t border-border/50">
+                            <label className="flex items-center gap-1.5 text-[11px] text-textSecondary cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cf.showOnPdf !== false}
+                                onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'showOnPdf', e.target.checked)}
+                                className="rounded border-border text-primary focus:ring-primary/20 w-3.5 h-3.5"
+                              />
+                              Show on PDF
+                            </label>
+                            <label className="flex items-center gap-1.5 text-[11px] text-textSecondary cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cf.required === true}
+                                onChange={(e) => handleUpdateCustomField(type.key, cf.id, 'required', e.target.checked)}
+                                className="rounded border-border text-primary focus:ring-primary/20 w-3.5 h-3.5"
+                              />
+                              Required
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => handleAddCustomField(type.key)}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-primary bg-primary/5 border border-dashed border-primary/30 rounded-lg active:bg-primary/10 md:hover:bg-primary/10 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Custom Field
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

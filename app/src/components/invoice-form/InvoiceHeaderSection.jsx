@@ -29,7 +29,9 @@ export default function InvoiceHeaderSection({
   onEditSettings,
   demoLogoUrl,
   docTypeConfig,
-  defaultFromExpanded = false
+  defaultFromExpanded = false,
+  customFields = {},
+  onCustomFieldChange
 }) {
   const labels = docTypeConfig?.labels || {}
   const fields = docTypeConfig?.fields || {}
@@ -700,6 +702,37 @@ export default function InvoiceHeaderSection({
                 )}
               </>
             )}
+
+            {/* Custom Fields (header-meta zone) */}
+            {(docTypeConfig?.customFields || []).filter(f => f.zone === 'header-meta').map((cf) => (
+              <div key={cf.id}>
+                <label className="text-[11px] font-bold text-textSecondary uppercase tracking-wider mb-1 block">{cf.label}</label>
+                {cf.type === 'date' ? (
+                  <input
+                    type="date"
+                    value={customFields?.[cf.id] || cf.defaultValue || ''}
+                    onChange={(e) => onCustomFieldChange?.(cf.id, e.target.value)}
+                    className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                ) : cf.type === 'textarea' ? (
+                  <textarea
+                    value={customFields?.[cf.id] || cf.defaultValue || ''}
+                    onChange={(e) => onCustomFieldChange?.(cf.id, e.target.value)}
+                    placeholder={cf.placeholder || cf.label}
+                    rows={2}
+                    className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={customFields?.[cf.id] || cf.defaultValue || ''}
+                    onChange={(e) => onCustomFieldChange?.(cf.id, e.target.value)}
+                    placeholder={cf.placeholder || cf.label}
+                    className="w-full px-3 py-2 md:py-1.5 bg-white border border-border rounded-md text-sm text-textPrimary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

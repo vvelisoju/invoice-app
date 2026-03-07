@@ -273,6 +273,9 @@ model Invoice {
   notes String?
   terms String?
   
+  // Custom fields (JSON key-value pairs, e.g. { "period_of_service": "March 2026" })
+  customFields Json?
+  
   // Snapshot of business logo & signature at time of creation
   logoUrl      String?
   signatureUrl String?

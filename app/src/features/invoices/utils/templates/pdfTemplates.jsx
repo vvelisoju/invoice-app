@@ -34,7 +34,16 @@ const getDocLabels = (invoice) => {
     showQty: cfg.fields?.showQty !== false,
     showUnitPrice: cfg.fields?.showUnitPrice !== false,
     lineItemsLayout: cfg.fields?.lineItemsLayout || 'full',
+    customFields: cfg.customFields || [],
   }
+}
+
+// Extract custom field values for a given zone
+const getCustomFieldsForZone = (doc, invoice, zone) => {
+  return (doc.customFields || [])
+    .filter(f => f.zone === zone && f.showOnPdf !== false && f.label)
+    .map(f => ({ label: f.label, value: (invoice.customFields || {})[f.id] || f.defaultValue || '' }))
+    .filter(f => f.value)
 }
 
 const formatCurrency = (amount) => {
@@ -243,6 +252,9 @@ export function CleanTemplate({ invoice }) {
             <Text>{doc.dateLabel}: {formatDate(invoice.date)}</Text>
             {doc.showDueDate && invoice.dueDate && <Text>Due: {formatDate(invoice.dueDate)}</Text>}
             {doc.showPoNumber && invoice.poNumber && <Text>P.O.#: {invoice.poNumber}</Text>}
+            {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+              <Text key={i}>{cf.label}: {cf.value}</Text>
+            ))}
           </View>
         </View>
         <View style={cleanStyles.section}>
@@ -422,6 +434,12 @@ export function ModernRedTemplate({ invoice }) {
                   <Text style={modernRedStyles.metaValue}>{invoice.poNumber}</Text>
                 </View>
               )}
+              {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+                <View key={i} style={modernRedStyles.metaRow}>
+                  <Text style={modernRedStyles.metaLabel}>{cf.label}</Text>
+                  <Text style={modernRedStyles.metaValue}>{cf.value}</Text>
+                </View>
+              ))}
             </View>
           </View>
           <View style={modernRedStyles.divider} />
@@ -569,6 +587,12 @@ export function ClassicRedTemplate({ invoice }) {
                   <Text style={classicRedStyles.metaValue}>{invoice.poNumber}</Text>
                 </View>
               )}
+              {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+                <View key={i} style={classicRedStyles.metaRow}>
+                  <Text style={classicRedStyles.metaLabel}>{cf.label}</Text>
+                  <Text style={classicRedStyles.metaValue}>{cf.value}</Text>
+                </View>
+              ))}
             </View>
           </View>
           <View style={classicRedStyles.addressRow}>
@@ -686,6 +710,9 @@ export function WexlerTemplate({ invoice }) {
             <Text style={wexlerStyles.accentMetaValue}>{formatDate(invoice.date)}</Text>
             {doc.showDueDate && invoice.dueDate && <Text style={wexlerStyles.accentMetaText}>Due: {formatDate(invoice.dueDate)}</Text>}
             {doc.showPoNumber && invoice.poNumber && <Text style={wexlerStyles.accentMetaText}>P.O.#: {invoice.poNumber}</Text>}
+            {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+              <Text key={i} style={wexlerStyles.accentMetaText}>{cf.label}: {cf.value}</Text>
+            ))}
           </View>
         </View>
         <View style={wexlerStyles.content}>
@@ -839,6 +866,12 @@ export function PlexerTemplate({ invoice }) {
                   <Text style={plexerStyles.metaValue}>{invoice.poNumber}</Text>
                 </View>
               )}
+              {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+                <View key={i} style={plexerStyles.metaRow}>
+                  <Text style={plexerStyles.metaLabel}>{cf.label}</Text>
+                  <Text style={plexerStyles.metaValue}>{cf.value}</Text>
+                </View>
+              ))}
             </View>
           </View>
           <View style={plexerStyles.separator} />
@@ -980,6 +1013,12 @@ export function ContemporaryTemplate({ invoice }) {
                   <Text style={contemporaryStyles.metaValue}>{invoice.poNumber}</Text>
                 </>
               )}
+              {getCustomFieldsForZone(doc, invoice, 'header-meta').map((cf, i) => (
+                <View key={i}>
+                  <Text style={contemporaryStyles.metaLabel}>{cf.label}</Text>
+                  <Text style={contemporaryStyles.metaValue}>{cf.value}</Text>
+                </View>
+              ))}
               <View style={contemporaryStyles.totalBadge}>
                 <Text style={contemporaryStyles.totalBadgeLabel}>{doc.heading} Total</Text>
                 <Text style={contemporaryStyles.totalBadgeValue}>{formatCurrency(computeInvoiceTotal(invoice))}</Text>

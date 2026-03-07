@@ -436,5 +436,7 @@ export function getDocTypeConfig(typeKey, businessOverrides = null) {
       ...defaults.fields,
       ...(overrides.fields || {}),
     },
+    // Custom fields config: array of { id, label, type, zone, defaultValue, required, showOnPdf }
+    ...(overrides.customFields && { customFields: overrides.customFields }),
   }
 }

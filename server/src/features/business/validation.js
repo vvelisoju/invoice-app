@@ -56,6 +56,18 @@ export const updateBusinessSchema = z.object({
       fields: z.record(z.string(), z.any()).optional(),
       prefix: z.string().max(10).optional(),
       nextNumber: z.number().int().positive().optional(),
+      defaultNotes: z.string().max(1000).optional(),
+      defaultTerms: z.string().max(1000).optional(),
+      customFields: z.array(z.object({
+        id: z.string(),
+        label: z.string().max(100),
+        type: z.enum(['text', 'date', 'textarea']).default('text'),
+        zone: z.enum(['header-meta', 'before-line-items', 'after-line-items', 'footer']).default('header-meta'),
+        defaultValue: z.string().max(500).optional().default(''),
+        required: z.boolean().optional().default(false),
+        showOnPdf: z.boolean().optional().default(true),
+        placeholder: z.string().max(200).optional(),
+      })).optional(),
     })).optional()
   ),
   defaultDocType: z.preprocess(
@@ -120,6 +132,18 @@ export const updateInvoiceSettingsSchema = z.object({
       fields: z.record(z.string(), z.any()).optional(),
       prefix: z.string().max(10).optional(),
       nextNumber: z.number().int().positive().optional(),
+      defaultNotes: z.string().max(1000).optional(),
+      defaultTerms: z.string().max(1000).optional(),
+      customFields: z.array(z.object({
+        id: z.string(),
+        label: z.string().max(100),
+        type: z.enum(['text', 'date', 'textarea']).default('text'),
+        zone: z.enum(['header-meta', 'before-line-items', 'after-line-items', 'footer']).default('header-meta'),
+        defaultValue: z.string().max(500).optional().default(''),
+        required: z.boolean().optional().default(false),
+        showOnPdf: z.boolean().optional().default(true),
+        placeholder: z.string().max(200).optional(),
+      })).optional(),
     })).optional()
   ),
   defaultDocType: z.preprocess(
