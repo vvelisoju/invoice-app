@@ -73,7 +73,7 @@ export default function PlanLimitModal({ isOpen, onClose, resourceType = 'invoic
 
   const handleUpgrade = () => {
     onClose()
-    history.push('/plans')
+    history.push('/settings?section=plans')
   }
 
   return (
