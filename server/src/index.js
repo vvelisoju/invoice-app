@@ -46,9 +46,11 @@ await fastify.register(helmet, {
 const NATIVE_APP_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost']
 // External websites that submit enquiries via public API
 const EXTERNAL_SITE_ORIGINS = ['https://www.ignitelabs.co.in', 'https://ignitelabs.co.in']
+// Dev origins for ignitelabs-website local development
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174']
 const allowedOrigins = isProduction
   ? [...config.corsOrigin.split(',').map(s => s.trim()), ...NATIVE_APP_ORIGINS, ...EXTERNAL_SITE_ORIGINS]
-  : true
+  : [...DEV_ORIGINS, ...NATIVE_APP_ORIGINS, ...EXTERNAL_SITE_ORIGINS, 'http://localhost:3001', 'http://localhost:3000']
 
 await fastify.register(cors, {
   origin: allowedOrigins,
