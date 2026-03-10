@@ -662,3 +662,26 @@ model PlatformSetting {
   updatedBy String?
   updatedAt DateTime @updatedAt
 }
+
+// ============================================================================
+// EXTERNAL ENQUIRIES (Reusable for multiple external websites)
+// ============================================================================
+
+model ExternalEnquiry {
+  id           String   @id @default(uuid())
+  source       String   // "ignitelabs", "other-website", etc.
+  name         String
+  phone        String
+  interestedIn String
+  message      String?
+  formType     String   // "register", "apply", "contact", etc.
+  status       String   @default("new") // new, contacted, converted, closed
+  notes        String?
+  extraData    Json?    // batch info, UTM params, etc.
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([source])
+  @@index([status])
+  @@index([createdAt])
+}

@@ -20,6 +20,7 @@ import planRoutes from './features/plans/routes.js'
 import taxRateRoutes from './features/tax-rates/routes.js'
 import adminRoutes from './features/admin/routes.js'
 import notificationRoutes from './features/notifications/routes.js'
+import { externalEnquiryPublicRoutes, externalEnquiryAdminRoutes } from './features/external-enquiries/routes.js'
 import { startNotificationCron, stopNotificationCron } from './features/notifications/cron.js'
 import { startSubscriptionCron, stopSubscriptionCron } from './features/plans/subscriptionCron.js'
 import { initFirebase } from './common/firebase.js'
@@ -43,8 +44,10 @@ await fastify.register(helmet, {
 
 // Capacitor native apps send these origins — always allow them
 const NATIVE_APP_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost']
+// External websites that submit enquiries via public API
+const EXTERNAL_SITE_ORIGINS = ['https://www.ignitelabs.co.in', 'https://ignitelabs.co.in']
 const allowedOrigins = isProduction
-  ? [...config.corsOrigin.split(',').map(s => s.trim()), ...NATIVE_APP_ORIGINS]
+  ? [...config.corsOrigin.split(',').map(s => s.trim()), ...NATIVE_APP_ORIGINS, ...EXTERNAL_SITE_ORIGINS]
   : true
 
 await fastify.register(cors, {
@@ -109,6 +112,8 @@ await fastify.register(planRoutes, { prefix: '/plans' })
 await fastify.register(taxRateRoutes, { prefix: '/tax-rates' })
 await fastify.register(adminRoutes, { prefix: '/admin' })
 await fastify.register(notificationRoutes, { prefix: '/notifications' })
+await fastify.register(externalEnquiryPublicRoutes)
+await fastify.register(externalEnquiryAdminRoutes, { prefix: '/admin' })
 
 fastify.get('/health', async (request, reply) => {
   try {

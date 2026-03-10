@@ -274,4 +274,10 @@ export const adminApi = {
   getNotification: (id) => api.get(`/notifications/admin/${id}`),
   sendNotification: (data) => api.post('/notifications/admin', data),
   getNotificationTemplates: () => api.get('/notifications/admin/templates'),
+
+  // External Enquiries
+  listExternalEnquiries: (params) => api.get('/admin/external-enquiries', { params }),
+  getExternalEnquiry: (id) => api.get(`/admin/external-enquiries/${id}`),
+  updateExternalEnquiry: (id, data) => api.patch(`/admin/external-enquiries/${id}`, data),
+  getExternalEnquiryStats: () => api.get('/admin/external-enquiries/stats'),
 }

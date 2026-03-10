@@ -43,6 +43,7 @@ import AdminSettingsPage from './features/admin/AdminSettingsPage'
 import AdminAuditLogPage from './features/admin/AdminAuditLogPage'
 import AdminBillingPage from './features/admin/AdminBillingPage'
 import AdminNotificationsPage from './features/admin/AdminNotificationsPage'
+import AdminExternalEnquiriesPage from './features/admin/AdminExternalEnquiriesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -158,6 +159,7 @@ function AdminApp() {
         <Route exact path="/admin/plans" component={AdminPlanListPage} />
         <Route exact path="/admin/billing" component={AdminBillingPage} />
         <Route exact path="/admin/notifications" component={AdminNotificationsPage} />
+        <Route exact path="/admin/external-enquiries" component={AdminExternalEnquiriesPage} />
         <Route exact path="/admin/settings" component={AdminSettingsPage} />
         <Route exact path="/admin/audit-logs" component={AdminAuditLogPage} />
         <Route exact path="/">
