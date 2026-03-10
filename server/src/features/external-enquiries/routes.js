@@ -20,9 +20,9 @@ export async function externalEnquiryPublicRoutes(fastify) {
           name: { type: 'string' },
           phone: { type: 'string' },
           interestedIn: { type: 'string' },
-          message: { type: 'string' },
+          message: { type: ['string', 'null'] },
           formType: { type: 'string' },
-          extraData: { type: 'object' },
+          extraData: { type: ['object', 'null'] },
         },
         required: []
       }
